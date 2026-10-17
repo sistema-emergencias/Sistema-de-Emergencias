@@ -1,0 +1,95 @@
+/* Esquema del formulario de campo: define pasos y campos. El administrador maestro puede cambiar
+   rótulos, ocultar campos, exigir/permitir «No aplica», cambiar opciones y agregar campos extra
+   desde la página de Estadística; esos cambios se guardan en la central y se aplican sobre este esquema. */
+(function (g) {
+  'use strict';
+  const CATS = [['CAÍDA / CORTES DE ARBOL','OTROS'],['CONTROL DE ABEJAS','OTROS'],['CONTROL DE AVISPAS','OTROS'],['CAÍDA DE CUERDAS','OTROS'],['CORTO CIRCUITO','INCENDIOS'],['COLAPSO DE ESTRUCTURAS','OTROS'],['CAPACITACIONES','OTROS'],['EXTRICACIÓN VEHICULAR','RESCATES'],['FUGA DE GAS NATURAL','OTROS'],['FUGA DE GAS GLP','MATERIALES PELIGROSOS'],['INCENDIO FORESTAL','INCENDIOS'],['INCENDIO ESTRUCTURAL','INCENDIOS'],['INCENDIO VEHICULAR','INCENDIOS'],['INUNDACIÓN','OTROS'],['LABORES DE PREVENCION O ACOMPAÑAMIENTO EN GESTION DEL RIESGO','OTROS'],['MATERIALES PELIGROSOS / DERRAMES','MATERIALES PELIGROSOS'],['PRIMEROS AUXILIOS','OTROS'],['RESCATE DE PERSONA / PARAPENTE','RESCATES'],['RESCATE DE ANIMAL','RESCATES'],['REUNIÓN EN LA ALCALDÍA','OTROS'],['REUNIONES DE SERVICIO SOCIAL','OTROS'],['SUMINISTROS DE AGUA','OTROS'],['VISITAS DE SEGURIDAD','INSPECCIONES DE SEGURIDAD']];
+  const TIPOS = ['INCENDIOS','RESCATES','OTROS','MATERIALES PELIGROSOS','INSPECCIONES DE SEGURIDAD'];
+  const VEH = ['B-1','B-2','B-3','B-4','T-1','L-1','L-2','L-3'];
+  const SNIF = {
+    tipo: [['SUP','Superficial'],['C','Copa'],['SUB','Subterráneo'],['M','Mixto'],['O','Otros'],['NS','No seleccionado']],
+    causa: [['Q','Quemas fuera de control'],['D','Descuido y negligencia'],['A','Accidental'],['R','Reactivación de focos'],['I','Intencional'],['O','Otros'],['SID','Sin definir']],
+    area: [['BND','Bosque Natural Denso'],['BP','Bosque plantado'],['BS','Bosque Seco'],['C','Cultivos'],['P','Páramos'],['BI','Bosque intervenido'],['R','Rastrojos'],['VS','Vegetación Seca'],['SBN_PST','Sabanas pastizales'],['PST_MNJ','Pastos manejados'],['CBR_SIN_DTR','Coberturas sin determinar'],['SP','Sabanas y pastizales'],['PM','Pastos mejorados']]
+  };
+  const VEH_INFO = 'B = máquina con bomba y tanque de agua (la B-3 solo tiene bomba, sin agua) · L = apoyo logístico.';
+  const YN = ['SI', 'NO'];
+  /* Sistema de Comando de Incidentes: funciones y apoyos. No se activa todo en todos los incidentes. */
+  const SCI_ROLES = [['ci','Comandante del incidente','Asume el mando y todas las funciones que no delegue'],['seg','Oficial de seguridad','Vigila los riesgos y la seguridad del personal'],['inf','Oficial de información pública','Atiende a la prensa y a la comunidad'],['enl','Oficial de enlace','Coordina con otras instituciones'],['ops','Jefe de operaciones','Dirige las acciones tácticas en la escena'],['pla','Jefe de planificación','Recoge información y prepara el plan'],['log','Jefe de logística','Provee recursos, equipos y servicios'],['adm','Jefe de administración y finanzas','Costos, tiempos y compras']];
+  const SCI_FUNC = ['Ataque / extinción','Rescate','Suministro de agua','Control de tráfico y seguridad','Búsqueda y reconocimiento','Apoyo logístico','Reserva (en espera)','Otra función'];
+  const SCI_NOACT = 'No se activó (la asume el comandante del incidente)';
+  /* Instalaciones del SCI */
+  const SCI_INST = [['Puesto de Comando (PC)','Lugar desde donde el comandante dirige el incidente. Debe ser seguro, con buena visibilidad y comunicaciones, y estar identificado.'],['Área de espera (AE)','Sitio donde los recursos llegan, se registran y esperan una asignación.'],['Base','Lugar donde se coordinan y administran las funciones logísticas del incidente (suministros, equipos, servicios).'],['Campamento','Lugar con servicios mínimos (descanso, alimentación, aseo) para el personal que lo necesita.'],['Helibase / Helipunto','Zona para operaciones de helicópteros: la helibase es el sitio principal; el helipunto es un punto temporal de aterrizaje.'],['Área de concentración de víctimas (A.C.V.)','Lugar donde se reúnen, clasifican y atienden las víctimas antes de su traslado.']];
+  /* Los 8 pasos del primer respondedor al llegar a la escena (SCI) */
+  const SCI_PASOS = ['Informar a su base de su arribo a la escena','Asumir el mando y establecer el Puesto de Comando (PC)','Evaluar la situación','Establecer su perímetro de seguridad','Establecer sus objetivos','Determinar las estrategias','Determinar la necesidad de recursos y posibles instalaciones','Preparar la información para transferir el mando'];
+  const CANAL = ['Llamada telefónica','Radio','Personal en la estación','Policía o autoridad','Redes o WhatsApp','De oficio'];
+  const PTIPO = ['Vivienda','Finca','Comercial','Agrícola','Vía pública','Lote baldío','Industrial','Otro'];
+  const INST = [['dc','Defensa Civil'],['cr','Cruz Roja'],['pn','Policía Nacional'],['pcar','Policía de Carreteras'],['hosp','Hospitales']];
+  const LISTAS = {
+    les:  { max: 6,  cols: [['n','Nombre'],['d','Documento'],['e','Edad','number'],['t','Trasladado a'],['p','Trasladado por']], no: 'No hubo lesionados' },
+    vimp: { max: 4,  cols: [['c','Conductor'],['d','Documento'],['v','Vehículo'],['col','Color'],['pl','Placa']], no: 'No hubo vehículos implicados' },
+    acc:  { max: 57, cols: [['h','Hora','time'],['a','Acción realizada']], no: '' }
+  };
+  const F = (p, l, t, x) => Object.assign({ p, l, t }, x || {});
+  const STEPS = [
+    { id: 'esencial', t: '1 · Identificación y localización del evento', f: [
+      F('cat', 'Incidente o actividad', 'cat', { naOk: false }),
+      F('fecha', 'Día del evento', 'date', { naOk: false }),
+      F('lat', 'Ubicación (GPS)', 'gps'),
+      F('dir', 'Dirección o lugar de referencia', 'text'),
+      F('bar', 'Barrio, corregimiento o vereda', 'text'),
+      F('zona', 'Zona', 'chip1', { o: ['URBANA', 'RURAL'] }) ] },
+    { id: 'tiempos', t: '2 · Cronología de la respuesta', f: [
+      F('hora', 'Hora de la alerta', 'time', { naOk: false }),
+      F('hsal', 'Salida de la estación', 'time'),
+      F('hlle', 'Llegada al sitio', 'time'),
+      F('hfin', 'Fin del servicio', 'time'),
+      F('durmin', 'Duración del evento (minutos)', 'num', { hint: 'Se calcula con la hora de alerta y la de fin; puede cambiarla.' }) ] },
+    { id: 'quepaso', t: '3 · Descripción y características del evento', f: [
+      F('desc', 'Descripción de los hechos (en tercera persona)', 'area', { naOk: false, hint: 'Redáctela en tercera persona. Puede armarla sola desde la Bitácora en vivo. Va en el numeral 9 del reporte.' }),
+      F('canal', 'Cómo se recibió el aviso', 'sel', { o: CANAL }),
+      F('rep', 'Quién reportó', 'text'),
+      F('area', 'Área afectada (se convierte a hectáreas)', 'hec', { when: 'forest', naOk: false }),
+      F('veg', 'Vegetación afectada', 'text', { when: 'forest' }),
+      F('inc.tipo', 'Tipo de incendio', 'selv', { o: SNIF.tipo, when: 'forest', naOk: false }),
+      F('inc.causa', 'Causa del incendio', 'selv', { o: SNIF.causa, when: 'forest', naOk: false }),
+      F('inc.areaTipo', 'Tipo de cobertura afectada', 'selv', { o: SNIF.area, when: 'forest', naOk: false }),
+      F('inc.prot', '¿Es área protegida de orden nacional?', 'yn', { when: 'forest', naOk: false }),
+      F('inc.protNom', 'Nombre del área protegida', 'text', { when: 'forest', whenp: ['inc.prot', 'SI'], naOk: false }) ] },
+    { id: 'quien', t: '4 · Personal y recursos desplegados', f: [
+      F('pers', 'Personal que atendió', 'pers'),
+      F('uni', 'N° de unidades que asistieron', 'auto', { naOk: false, hint: 'Se calcula solo con las personas seleccionadas arriba.' }),
+      F('veh', 'Vehículo(s)', 'chipsN', { hint: VEH_INFO }) ] },
+    { id: 'fotos', t: '5 · Registro fotográfico', f: [ F('fotos', 'Registro fotográfico del evento', 'photos', { hint: 'Recomendado: mínimo 3 fotografías: 1) la situación al llegar, 2) el personal trabajando y 3) los vehículos en la escena.' }) ] },
+    { id: 'r_prop', t: '6a · Propiedad afectada y propietario', f: [
+      F('rpt.prop.tipo', 'Tipo de propiedad', 'sel', { o: PTIPO }),
+      F('rpt.prop.nom', 'Nombre del propietario', 'text'),
+      F('rpt.prop.doc', 'Documento del propietario', 'text'),
+      F('rpt.prop.tel', 'Teléfono de contacto', 'text') ] },
+    { id: 'r_pc', t: '6b · Puesto de comando y áreas operativas', f: [
+      F('rpt.pc', 'Ubicación del puesto de comando', 'text'),
+      F('rpt.pcid', 'Identificación del puesto', 'text'),
+      F('rpt.ae', 'Área de espera', 'text'),
+      F('rpt.acv', 'A.C.V.', 'text') ] },
+    { id: 'r_eval', t: '6c · Evaluación inicial de la situación', f: [
+      F('rpt.amen', 'Amenazas del incidente', 'area'),
+      F('rpt.obj', 'Objetivos iniciales', 'area') ] },
+    { id: 'r_esc', t: '6d · Condición de la escena', f: [
+      F('rpt.esc.alt', '¿Hubo alteración de la escena antes de llegar?', 'yn'),
+      F('rpt.esc.altc', '¿Cómo se alteró?', 'text', { whenp: ['rpt.esc.alt', 'SI'] }),
+      F('rpt.esc.prot', '¿Se protegió el área al llegar?', 'yn'),
+      F('rpt.esc.protc', '¿Cómo?', 'text', { whenp: ['rpt.esc.prot', 'SI'] }),
+      F('rpt.esc.int', '¿Intervino alguien antes de llegar?', 'yn'),
+      F('rpt.esc.intc', '¿Quiénes?', 'text', { whenp: ['rpt.esc.int', 'SI'] }) ] },
+    { id: 'r_inst', t: '6e · Instituciones de apoyo', f: INST.map(([k, n]) => F('rpt.inst.' + k, n, 'pair', { hint: 'Unidades y vehículos que enviaron' })) },
+    { id: 'r_les', t: '6f · Personas lesionadas', f: [ F('rpt.les', 'Lesionados', 'list', { lista: 'les' }) ] },
+    { id: 'r_vimp', t: '6g · Vehículos implicados', f: [ F('rpt.vimp', 'Vehículos implicados', 'list', { lista: 'vimp' }) ] },
+    { id: 'r_cmd', t: '6h · Comandante del incidente', f: [
+      F('rpt.cmd.n', 'Nombres y apellidos', 'cmdn', { naOk: false, hint: 'Es la misma persona que figura como Comandante del incidente en el organigrama.' }),
+      F('rpt.cmd.g', 'Grado', 'text'),
+      F('rpt.cmd.c', 'Cargo', 'text') ] },
+    { id: 'r_sci', t: '6i · Estructura organizacional del incidente (SCI)', f: [ F('rpt.sci', 'Funciones activadas', 'sci', { naOk: false, hint: 'Es opcional: marque solo las funciones que se activaron. Las que no se marquen las asume el Comandante del incidente.' }) ] },
+    { id: 'r_acc', t: '6j · Bitácora de operaciones y resumen de acciones', f: [ F('rpt.acc', 'Resumen de acciones realizadas, con su hora (obligatorio)', 'list', { lista: 'acc', naOk: false, hint: 'Cada acción con su hora. Puede ir llenándola en vivo con el botón «Bitácora».' }) ] },
+    { id: 'r_obs', t: '6k · Observaciones adicionales (opcional)', f: [ F('rpt.obs', 'Observaciones adicionales', 'area', { naOk: false, opt: true, hint: 'Opcional. Anexe aquí lo que el comandante considere necesario. La descripción de los hechos y el resumen de acciones ya van en el numeral 9 del reporte.' }) ] }
+  ];
+  g.CBV_ESQ = { CATS, TIPOS, VEH, SNIF, YN, CANAL, PTIPO, INST, LISTAS, STEPS, SCI_ROLES, SCI_FUNC, SCI_NOACT, SCI_PASOS, SCI_INST, VEH_INFO };
+})(typeof window !== 'undefined' ? window : globalThis);
