@@ -247,7 +247,8 @@
     obs.push(blank(rp.obs) ? 'Sin observaciones adicionales del comandante del incidente.' : rp.obs);
     obs.push(`Duración: ${durOf(r)}. Unidades que asistieron: ${na(r.uni)}. Vehículos: ${na(r.veh)}.`);
     if (r.hsal) obs.push('Salida de estación: ' + h24(r.hsal) + ' h.');
-    if (r.hfin) obs.push('Fin del servicio: ' + h24(r.hfin) + ' h.');
+    if (r.hfin) obs.push('Terminación de la emergencia: ' + h24(r.hfin) + ' h.');
+    if (r.hreg) obs.push('Llegada a la estación: ' + h24(r.hreg) + ' h.');
     if (r.area) obs.push('Área afectada: ' + r.area + (r.veg ? ' (' + r.veg + ')' : '') + '.');
     if (r.inc && (r.inc.tipo || r.inc.causa || r.inc.areaTipo)) { const i = r.inc; obs.push('Incendio forestal: tipo ' + (SNIF_TIPO[i.tipo] || na(i.tipo)) + ', causa ' + (SNIF_CAUSA[i.causa] || na(i.causa)) + ', cobertura ' + (SNIF_AREA[i.areaTipo] || na(i.areaTipo)) + '. Área protegida de orden nacional: ' + na(i.prot) + (i.protNom ? ' (' + i.protNom + ')' : '') + '.'); }
     if (r.extraTxt) obs.push(r.extraTxt);
@@ -447,7 +448,7 @@ ${gr ? `<div><b>Función de cada unidad</b></div><div class="row">${gr}</div>` :
 <div class="sec">11. UNIDADES QUE INTERVINIERON EN EL INCIDENTE</div>
 <table><tr><td>${pers.map(p => E(p)).join('</td><td>').replace(/(<td>[^]*?){0}/, '')}</td></tr></table>
 <div class="sec">12. OBSERVACIONES ADICIONALES (LEGALES, DISCIPLINARIAS, NORMATIVAS O DE REQUERIMIENTOS Y NECESIDADES)</div>
-<table><tr><td>${v(rp.obs)}<br>Duración: ${E(durOf(r))}. Unidades que asistieron: ${E(na(r.uni))}. Vehículos: ${E(na(r.veh))}.${r.hsal ? ' Salida de estación: ' + E(h24(r.hsal)) + ' h.' : ''}${r.hfin ? ' Fin del servicio: ' + E(h24(r.hfin)) + ' h.' : ''}${r.area ? ' Área afectada: ' + E(r.area) + '.' : ''} ${E(r.extraTxt || '')}</td></tr></table>
+<table><tr><td>${v(rp.obs)}<br>Duración: ${E(durOf(r))}. Unidades que asistieron: ${E(na(r.uni))}. Vehículos: ${E(na(r.veh))}.${r.hsal ? ' Salida de estación: ' + E(h24(r.hsal)) + ' h.' : ''}${r.hfin ? ' Terminación de la emergencia: ' + E(h24(r.hfin)) + ' h.' : ''}${r.hreg ? ' Llegada a la estación: ' + E(h24(r.hreg)) + ' h.' : ''}${r.area ? ' Área afectada: ' + E(r.area) + '.' : ''} ${E(r.extraTxt || '')}</td></tr></table>
 <div class="sec">13. RECEPCIÓN Y APROBACIÓN DEL INFORME</div>
 <table><tr><th>Guardia que recibe el informe</th><th>Grado</th><th>Estado en que recibe</th><th>Firma</th></tr><tr><td class="sign"></td><td></td><td>${chk(false, 'COMPLETO')}${chk(false, 'INCOMPLETO')}</td><td></td></tr></table>
 ${fotos.length ? `<div class="sec" style="page-break-before:always">14. REGISTRO FOTOGRÁFICO DEL INCIDENTE</div><div class="ph">${fotos.map((p, i) => `<figure><img src="${p.src}" alt="Fotografía ${i + 1}"><figcaption>${i + 1}. ${E(p.desc || '')}</figcaption></figure>`).join('')}</div>` : '<div class="sec">14. REGISTRO FOTOGRÁFICO DEL INCIDENTE</div><table><tr><td>Sin fotografías.</td></tr></table>'}
@@ -936,6 +937,14 @@ ${fotos.length ? `<div class="sec" style="page-break-before:always">14. REGISTRO
     cap: (n, t) => '<w:p><w:pPr><w:pStyle w:val="BodyText"/><w:keepNext/><w:spacing w:before="47"/><w:ind w:left="338" w:right="334"/><w:jc w:val="center"/></w:pPr>' + run('Figura ' + n + ': ', { b: 1 }) + run(t) + '</w:p>',
     fuente: org => '<w:p><w:pPr><w:pStyle w:val="BodyText"/><w:spacing w:before="44"/><w:ind w:left="1" w:right="1"/><w:jc w:val="center"/></w:pPr>' + run('Fuente: ', { b: 1 }) + run(org + '.') + '</w:p>'
   };
+  /* mantiene el párrafo unido al siguiente y sin cortarse entre páginas (para que la firma no quede sola) */
+  const keep = p => {
+    if (/<w:keepLines\/>/.test(p)) return p;
+    if (/<w:keepNext\/>/.test(p)) return p.replace('<w:keepNext/>', '<w:keepNext/><w:keepLines/>');
+    if (/<w:pStyle [^>]*\/>/.test(p)) return p.replace(/(<w:pStyle [^>]*\/>)/, '$1<w:keepNext/><w:keepLines/>');
+    return p.replace('<w:pPr>', '<w:pPr><w:keepNext/><w:keepLines/>');
+  };
+  const marcoFoto = inner => '<w:tbl><w:tblPr><w:tblW w:w="7200" w:type="dxa"/><w:jc w:val="center"/><w:tblBorders><w:top w:val="single" w:sz="6" w:space="0" w:color="808080"/><w:left w:val="single" w:sz="6" w:space="0" w:color="808080"/><w:bottom w:val="single" w:sz="6" w:space="0" w:color="808080"/><w:right w:val="single" w:sz="6" w:space="0" w:color="808080"/></w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="7200"/></w:tblGrid><w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="4800" w:hRule="exact"/></w:trPr><w:tc><w:tcPr><w:tcW w:w="7200" w:type="dxa"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:pPr><w:keepNext/><w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/><w:jc w:val="center"/></w:pPr>' + inner + '</w:p></w:tc></w:tr></w:tbl>';
   const wmDe = (xml, id) => { // marca de agua del ejemplo (primer dibujo anclado del cuerpo)
     const m = xml.match(/<w:r><w:rPr\/>(<w:drawing><wp:anchor[\s\S]*?<\/w:drawing>)<\/w:r>/);
     return m ? '<w:r><w:rPr/>' + m[1].replace(/(<wp:docPr id=")\d+/, '$1' + id).replace(/(<pic:cNvPr id=")\d+/, '$1' + (id + 1)) + '</w:r>' : '';
@@ -973,10 +982,12 @@ ${fotos.length ? `<div class="sec" style="page-break-before:always">14. REGISTRO
     b.push(P.cuerpo('La presente constancia se expide con fundamento en los registros oficiales del servicio. La información corresponde a lo observado y registrado por el personal que atendió el incidente; no constituye dictamen técnico pericial ni reemplaza los informes emitidos por otras autoridades competentes.'));
     if ((d.recomend || []).length) sec('Recomendaciones', () => d.recomend.forEach(t => b.push(P.pun('', t))));
     if ((d.fotos || []).length) b.push(P.cuerpo('Se anexan registros fotográficos como evidencia documental de la atención prestada.'));
-    b.push(P.cuerpo(d.expide));
-    for (let i = 0; i < 5; i++) b.push(P.vacio());
-    b.push(P.firmaN(String(d.firma && d.firma.nombre || '').toUpperCase()));
-    b.push(P.firmaC((d.firma && d.firma.cargo) || 'Comandante / Representante Legal'));
+    /* bloque de firma: el último párrafo del texto, la fecha de expedición, el espacio, el nombre y el cargo van siempre en la misma página */
+    if (b.length) b[b.length - 1] = keep(b[b.length - 1]);
+    b.push(keep(P.cuerpo(d.expide)));
+    b.push(keep('<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/></w:pPr><w:r><w:br/></w:r><w:r><w:br/></w:r><w:r><w:br/></w:r></w:p>'));
+    b.push(keep(P.firmaN(String(d.firma && d.firma.nombre || '').toUpperCase())));
+    b.push(keep(P.firmaC((d.firma && d.firma.cargo) || 'Comandante / Representante Legal')));
     b.push(P.firmaC(ciudad));
     let rels = await zip.file('word/_rels/document.xml.rels').async('string');
     let ct = await zip.file('[Content_Types].xml').async('string');
@@ -987,8 +998,9 @@ ${fotos.length ? `<div class="sec" style="page-break-before:always">14. REGISTRO
         const nm = 'media/anexo' + (i + 1) + '.jpeg', rid = 'rIdAnexo' + (i + 1);
         zip.file('word/' + nm, f.data);
         rels = rels.replace('</Relationships>', '<Relationship Id="' + rid + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="' + nm + '"/></Relationships>');
-        const maxW = 5300000, maxH = 3500000, sc = Math.min(maxW / f.w, maxH / f.h), W = Math.round(f.w * sc), H = Math.round(f.h * sc);
-        b.push('<w:p><w:pPr><w:keepNext/><w:spacing w:before="160" w:after="0"/><w:jc w:val="center"/></w:pPr>' + (i && i % 2 === 0 ? '' : '') + imgRun(rid, W, H, id++, 'Anexo ' + (i + 1)) + '</w:p>');
+        const maxW = 4500000, maxH = 2900000, sc = Math.min(maxW / f.w, maxH / f.h), W = Math.round(f.w * sc), H = Math.round(f.h * sc);
+        b.push('<w:p><w:pPr><w:keepNext/><w:spacing w:before="120" w:after="0" w:line="120" w:lineRule="exact"/></w:pPr></w:p>');
+        b.push(marcoFoto(imgRun(rid, W, H, id++, 'Anexo ' + (i + 1))));
         b.push(P.cap(i + 1, f.desc || (d.tituloFoto || 'Atención del incidente')));
         b.push(P.fuente(d.orgNombre || org));
         if (i % 2 === 1 && i < d.fotos.length - 1) b.push('<w:p><w:r><w:br w:type="page"/></w:r></w:p>');
@@ -1095,4 +1107,200 @@ ${fotos.length ? `<div class="sec" style="page-break-before:always">14. REGISTRO
   g.GEN.constancia = constancia;
   g.GEN.fotograficoMulti = fotograficoMulti;
   g.GEN.fotografico = (JSZip, tpl, o) => fotograficoMulti(JSZip, tpl, [{ titulo: o.titulo, fotos: o.fotos }]);
+})(typeof window !== 'undefined' ? window : globalThis);
+
+/* V2: estadística institucional. Actualiza EL MISMO libro Excel de la institución (hojas, fórmulas, gráficos y estilos intactos):
+   agrega a la hoja del año los registros del sistema que todavía no estén (sin duplicar), dentro del bloque de su mes,
+   y reajusta los rangos de las fórmulas mensuales. Edición a nivel XML para no perder los gráficos.
+   Creado por Cristhian Steven Blandón Henao. */
+(function (g) {
+  'use strict';
+  const GEN = g.GEN;
+  const MESES = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+  const X = s => String(s == null ? '' : s).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const UP = s => String(s == null ? '' : s).trim().toUpperCase();
+  const norm = s => UP(s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Z0-9]/g, '');
+  const unX = s => String(s).replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&');
+  const serial = f => { const m = String(f || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? Math.round((Date.UTC(+m[1], +m[2] - 1, +m[3]) - Date.UTC(1899, 11, 30)) / 86400000) : null; };
+  const mesDeSerial = n => new Date(Date.UTC(1899, 11, 30) + n * 86400000).getUTCMonth();
+  const colN = c => c.split('').reduce((a, ch) => a * 26 + ch.charCodeAt(0) - 64, 0);
+
+  function leerCompartidas(xml) {
+    const out = [];
+    (xml.match(/<si>[\s\S]*?<\/si>|<si\/>/g) || []).forEach(si => out.push(unX((si.match(/<t[^>]*>([^<]*)<\/t>/g) || []).map(t => t.replace(/<[^>]+>/g, '')).join(''))));
+    return out;
+  }
+  function parseFilas(sd) {
+    const out = [];
+    const re = /<row r="(\d+)"([^>]*?)(?:\/>|>([\s\S]*?)<\/row>)/g; let m;
+    while ((m = re.exec(sd))) {
+      const cells = {}, body = m[3] || '';
+      const rc = /<c r="([A-Z]+)\d+"([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g; let c;
+      while ((c = rc.exec(body))) cells[c[1]] = { attr: c[2], inner: c[3] || '', s: (c[2].match(/ s="(\d+)"/) || [])[1] };
+      out.push({ r: +m[1], attr: m[2], cells, xml: m[0] });
+    }
+    return out;
+  }
+  const valCelda = (cell, ss) => {
+    if (!cell) return '';
+    const v = (cell.inner.match(/<v>([^<]*)<\/v>/) || [])[1];
+    if (/ t="s"/.test(cell.attr)) return v == null ? '' : (ss[+v] || '');
+    if (/ t="inlineStr"/.test(cell.attr)) return unX((cell.inner.match(/<t[^>]*>([^<]*)<\/t>/) || [])[1] || '');
+    if (/ t="str"/.test(cell.attr)) return unX(v || '');
+    return v == null ? '' : v;
+  };
+  const renum = (xml, n) => xml.replace(/ r="([A-Z]*)\d+"/g, (m, c) => ' r="' + c + n + '"');
+  const txtCell = (col, n, s, t) => '<c r="' + col + n + '"' + (s ? ' s="' + s + '"' : '') + ' t="inlineStr"><is><t xml:space="preserve">' + X(t) + '</t></is></c>';
+  const numCell = (col, n, s, v) => '<c r="' + col + n + '"' + (s ? ' s="' + s + '"' : '') + '><v>' + v + '</v></c>';
+  const vacCell = (col, n, s) => '<c r="' + col + n + '"' + (s ? ' s="' + s + '"' : '') + '/>';
+
+  /** opts: {anio, rows:[{cat,tipo,fecha,dir,bar,desc,area,uni,veh,lat,lon,durmin}]}  → {bytes, agregados, duplicados, sinFila[], hoja} */
+  async function estadisticaInst(JSZip, tpl, opts) {
+    const zip = await JSZip.loadAsync(tpl);
+    const wb = await zip.file('xl/workbook.xml').async('string');
+    const rels = await zip.file('xl/_rels/workbook.xml.rels').async('string');
+    const hojas = {}; (wb.match(/<sheet [^>]*\/>/g) || []).forEach(s => { const n = unX((s.match(/name="([^"]*)"/) || [])[1]), id = (s.match(/r:id="([^"]*)"/) || [])[1]; const t = (rels.match(new RegExp('<Relationship [^>]*Id="' + id + '"[^>]*Target="([^"]*)"')) || rels.match(new RegExp('<Relationship [^>]*Target="([^"]*)"[^>]*Id="' + id + '"')) || [])[1]; hojas[n] = 'xl/' + t; });
+    const anio = String(opts.anio), pathAnio = hojas[anio], pathDet = hojas['DETALLADO X MES ' + (Object.keys(hojas).filter(k => /^\d{4}$/.test(k)).sort().pop())] || hojas[Object.keys(hojas).find(k => /^DETALLADO/.test(k))], pathCon = hojas[Object.keys(hojas).find(k => /^CONSOLIDADO A.O \d{4}$/.test(k))];
+    if (!pathAnio) throw new Error('El libro institucional no tiene una hoja llamada «' + anio + '». Agréguela (copiando la del año anterior) y vuelva a generar.');
+    const ss = leerCompartidas(await zip.file('xl/sharedStrings.xml').async('string'));
+    const oficiales = new Set();
+    if (pathCon) { const cx = parseFilas(await zip.file(pathCon).async('string')); cx.filter(r => r.r >= 3 && r.r <= 25).forEach(r => { const v = valCelda(r.cells.A, ss); if (v) oficiales.add(norm(v)); }); }
+
+    let sx = await zip.file(pathAnio).async('string');
+    const a0 = sx.indexOf('<sheetData>') + 11, a1 = sx.indexOf('</sheetData>');
+    const filas = parseFilas(sx.slice(a0, a1));
+    const pre = filas.filter(r => r.r < 3);
+    let i = filas.findIndex(r => r.r >= 3);
+    const bloques = []; let total = null; const post = [];
+    for (; i >= 0 && i < filas.length; i++) {
+      const f = filas[i], a = valCelda(f.cells.A, ss), b = valCelda(f.cells.B, ss);
+      if (/^TOTAL/i.test(a)) { total = f; continue; }
+      if (total) { post.push(f); continue; }
+      const mi = MESES.indexOf(UP(a));
+      if (mi >= 0 && !b) { bloques.push({ mes: mi, hdr: f, datos: [] }); continue; }
+      if (!bloques.length) { pre.push(f); continue; }
+      f.fecha = +valCelda(f.cells.D, ss) || 0; f.cat = valCelda(f.cells.B, ss); f.dir = valCelda(f.cells.F, ss);
+      bloques[bloques.length - 1].datos.push(f);
+    }
+    const c2 = (pre.find(r => r.r === 2) || { cells: {} }).cells.C; const refCat = c2 ? valCelda(c2, ss) : '';
+    /* duplicados: misma fecha + categoría + inicio de la dirección */
+    const clave = (n, cat, dir) => n + '|' + norm(cat) + '|' + norm(dir).slice(0, 14);
+    const vistos = new Set(); bloques.forEach(b => b.datos.forEach(f => vistos.add(clave(f.fecha, f.cat, f.dir))));
+    const nuevos = [], dup = [], sinFila = [], otroAnio = [];
+    (opts.rows || []).slice().sort((p, q) => String(p.fecha).localeCompare(String(q.fecha))).forEach(r => {
+      const n = serial(r.fecha); if (n == null) return;
+      if (String(r.fecha).slice(0, 4) !== anio) { otroAnio.push(r); return; }
+      if (r.anulado) return;
+      if (oficiales.size && !oficiales.has(norm(r.cat))) { sinFila.push(r); return; }
+      const k = clave(n, r.cat, r.dir);
+      if (vistos.has(k)) { dup.push(r); return; }
+      vistos.add(k); nuevos.push({ r, n });
+    });
+    const altStyles = (b, idx) => (b.datos.length >= 2 ? b.datos[b.datos.length >= 2 && idx % 2 ? b.datos.length - 1 : b.datos.length - 2] : b.datos[0]);
+    let creados = 0;
+    nuevos.forEach(({ r, n }) => {
+      const mes = mesDeSerial(n);
+      let bl = bloques.find(b => b.mes === mes);
+      if (!bl) {
+        const ref = bloques[bloques.length - 1];
+        bl = { mes, hdr: { r: 0, attr: ref.hdr.attr, cells: ref.hdr.cells, xml: ref.hdr.xml, nuevo: true }, datos: [] };
+        let pos = bloques.findIndex(b => b.mes > mes); if (pos < 0) pos = bloques.length; bloques.splice(pos, 0, bl);
+      }
+      let pos = bl.datos.length; for (let k = 0; k < bl.datos.length; k++) if (bl.datos[k].fecha > n) { pos = k; break; }
+      const donante = (() => { let ds = bl.datos.filter(d => d.cells); if (!ds.length) ds = (bloques.filter(x => x !== bl).map(x => x.datos.filter(d => d.cells)).find(l => l.length) || []); if (!ds.length) return null; return ds[(pos % 2 === 0 ? 0 : 1) % ds.length] || ds[0]; })();
+      bl.datos.splice(pos, 0, { r: 0, nuevoReg: { r, n }, donante, fecha: n, cat: r.cat, dir: r.dir });
+      creados++;
+    });
+    /* reconstrucción de las filas */
+    let n = 3; const salida = []; const merges = []; const rangos = {}; const mapaViejo = {};
+    const durTxt = m => GEN.durTxt ? GEN.durTxt(m) : (m ? m + ' MINUTOS' : '');
+    bloques.forEach(b => {
+      const hdrN = n++;
+      salida.push(b.hdr.nuevo ? ('<row r="' + hdrN + '"' + b.hdr.attr + '>' + Object.keys(b.hdr.cells).map(c => c === 'A' ? txtCell('A', hdrN, b.hdr.cells.A.s, MESES[b.mes]) : vacCell(c, hdrN, b.hdr.cells[c].s)).join('') + '</row>') : renum(b.hdr.xml, hdrN));
+      if (!b.hdr.nuevo) mapaViejo[b.hdr.r] = hdrN;
+      const ini = n, fin = n + b.datos.length - 1;
+      const cPrimera = (b.datos.find(d => !d.nuevoReg) || { cells: {} }).cells.C;
+      const cResto = ((b.datos.filter(d => !d.nuevoReg)[1]) || { cells: {} }).cells.C;
+      const sPrim = (cPrimera && cPrimera.s) || '576', sResto = (cResto && cResto.s) || sPrim;
+      b.datos.forEach((d, k) => {
+        const rn = n++;
+        if (d.nuevoReg) {
+          const { r } = d.nuevoReg, dn = d.donante, st = col => dn && dn.cells[col] ? dn.cells[col].s : undefined;
+          const lugar = UP(r.dir) || '.', bar = UP(r.bar) || '.';
+          const coord = (r.lat !== '' && r.lat != null && r.lon !== '' && r.lon != null && isFinite(+r.lat)) ? (+r.lat).toFixed(6) + ', ' + (+r.lon).toFixed(6) : '.';
+          const aPart = UP(r.area); const area = !aPart || aPart === 'N/A' ? '.' : aPart;
+          const cel = [txtCell('A', rn, st('A'), UP(r.tipo)), txtCell('B', rn, st('B'), UP(r.cat)), k === 0 ? vacCell('C', rn, sPrim) : vacCell('C', rn, sResto), numCell('D', rn, st('D'), d.nuevoReg.n),
+            txtCell('E', rn, st('E'), UP(r.dur_txt || durTxt(r.durmin))), txtCell('F', rn, st('F'), lugar), txtCell('G', rn, st('G'), bar), txtCell('H', rn, st('H'), UP(r.desc) || '.'), txtCell('I', rn, st('I'), area),
+            r.uni !== '' && r.uni != null && isFinite(+r.uni) ? numCell('J', rn, st('J'), +r.uni) : txtCell('J', rn, st('J'), '.'), txtCell('K', rn, st('K'), UP(r.veh) || '.'), txtCell('L', rn, st('L'), coord)];
+          salida.push('<row r="' + rn + '"' + (dn ? dn.attr : ' spans="1:12" ht="15.8" customHeight="1"') + '>' + cel.join('') + '</row>');
+        } else {
+          mapaViejo[d.r] = rn;
+          let x = renum(d.xml, rn);
+          x = x.replace(/<c r="C\d+"[^>]*?(?:\/>|>[\s\S]*?<\/c>)/, '<c r="C' + rn + '" s="' + (k === 0 ? sPrim : sResto) + '"/>');
+          salida.push(x);
+        }
+      });
+      if (b.datos.length) {
+        const cnt = b.datos.filter(d => norm(d.cat || (d.nuevoReg && d.nuevoReg.r.cat)) === norm(refCat)).length;
+        const primero = salida.length - b.datos.length;
+        salida[primero] = salida[primero].replace(/<c r="C(\d+)" s="(\d+)"\/>/, '<c r="C$1" s="$2"><f>COUNTIF(B' + ini + ':B' + fin + ',C2)</f><v>' + cnt + '</v></c>');
+        if (fin > ini) merges.push('C' + ini + ':C' + fin);
+        rangos[b.mes] = [ini, fin];
+      }
+    });
+    const ultimo = n - 1;
+    let totalXml = '';
+    if (total) {
+      const tn = n++, old = total.r; mapaViejo[old] = tn;
+      let x = renum(total.xml, tn).replace(/<f>COUNTA\(B\d+:B\d+\)<\/f><v>[^<]*<\/v>/, '<f>COUNTA(B4:B' + ultimo + ')</f><v>' + (ultimo - 3 - bloques.length + bloques.length) + '</v>').replace(/<f>SUM\(C\d+:C\d+\)<\/f><v>[^<]*<\/v>/, '<f>SUM(C4:C' + ultimo + ')</f><v>0</v>');
+      totalXml = x;
+    }
+    const postXml = post.map(p => { const nn = n++; return renum(p.xml, nn); });
+    const todo = pre.map(p => p.xml).join('') + salida.join('') + totalXml + postXml.join('');
+    let nuevo = sx.slice(0, a0) + todo + sx.slice(a1);
+    const hasta = n - 1;
+    nuevo = nuevo.replace(/<dimension ref="[^"]*"\/>/, '<dimension ref="A1:L' + hasta + '"/>');
+    const fijas = (nuevo.match(/<mergeCell ref="[A-Z]+[12]:[A-Z]+[12]"\/>/g) || []);
+    nuevo = nuevo.replace(/<mergeCells[\s\S]*?<\/mergeCells>/, '<mergeCells count="' + (fijas.length + merges.length) + '">' + fijas.join('') + merges.map(m => '<mergeCell ref="' + m + '"/>').join('') + '</mergeCells>');
+    const mp = r => mapaViejo[r] || (r > 3 ? (r >= (total ? total.r : 1e9) ? mapaViejo[total.r] : ultimo) : r);
+    nuevo = nuevo.replace(/(<conditionalFormatting sqref=")([^"]*)"/g, (m0, a, b) => a + b.split(' ').map(t => t.replace(/^([A-Z]+)(\d+)(?::([A-Z]+)(\d+))?$/, (m1, c1, r1, c2_, r2) => c2_ ? (+r2 >= 1048576 ? c1 + mp(+r1 > 559 ? hasta + 1 : +r1) + ':' + c2_ + r2 : c1 + mp(+r1) + ':' + c2_ + mp(+r2)) : c1 + mp(+r1))).join(' ') + '"');
+    nuevo = nuevo.replace(/<pane [^>]*\/>/, '<pane ySplit="2" topLeftCell="A3" activePane="bottomLeft" state="frozen"/>').replace(/<selection pane="bottomLeft"[^>]*\/>/, '<selection pane="bottomLeft" activeCell="A3" sqref="A3"/>');
+    zip.file(pathAnio, nuevo);
+
+    /* fórmulas mensuales del libro (hoja DETALLADO): SUM('año'!C a:C b) */
+    if (pathDet) {
+      let dx = await zip.file(pathDet).async('string');
+      const fe = new RegExp("<c r=\"([A-Z]+)(\\d+)\"([^>]*)>(?:<f>SUM\\('" + anio + "'!C\\d+:C\\d+\\)</f>(?:<v>[^<]*</v>)?)</c>", 'g');
+      const filasDet = []; let mm; while ((mm = fe.exec(dx))) filasDet.push(+mm[2]);
+      const fila = filasDet.length ? filasDet[0] : null;
+      if (fila) {
+        const rowRe = new RegExp('(<row r="' + fila + '"[^>]*>)([\\s\\S]*?)(</row>)');
+        dx = dx.replace(rowRe, (m0, a, body, c) => {
+          for (let mes = 0; mes < 12; mes++) {
+            const col = String.fromCharCode(66 + mes), rg = rangos[mes];
+            const cr = new RegExp('<c r="' + col + fila + '"([^>]*?)(?:/>|>[\\s\\S]*?</c>)');
+            const st = (body.match(cr) || [])[1];
+            if (st == null) continue;
+            const s = (st.match(/ s="(\d+)"/) || [])[1];
+            const sum = rg ? (() => { let t = 0; const b = bloques.find(x => x.mes === mes); b.datos.forEach(d => { if (norm(d.cat || (d.nuevoReg && d.nuevoReg.r.cat)) === norm(refCat)) t++; }); return t; })() : 0;
+            body = body.replace(cr, '<c r="' + col + fila + '"' + (s ? ' s="' + s + '"' : '') + (rg ? '><f>SUM(\'' + anio + '\'!C' + rg[0] + ':C' + rg[1] + ')</f><v>' + sum + '</v></c>' : '/>'));
+          }
+          return a + body + c;
+        });
+        zip.file(pathDet, dx);
+      }
+    }
+    /* recálculo al abrir; se retira la cadena de cálculo (Excel la reconstruye) */
+    let wbx = wb.replace(/<calcPr[^>]*\/>/, '<calcPr calcId="191029" iterateDelta="1E-4" fullCalcOnLoad="1"/>');
+    zip.file('xl/workbook.xml', wbx);
+    if (zip.file('xl/calcChain.xml')) {
+      zip.remove('xl/calcChain.xml');
+      zip.file('xl/_rels/workbook.xml.rels', rels.replace(/<Relationship [^>]*calcChain[^>]*\/>/, ''));
+      const ct = await zip.file('[Content_Types].xml').async('string');
+      zip.file('[Content_Types].xml', ct.replace(/<Override [^>]*calcChain[^>]*\/>/, ''));
+    }
+    const bytes = await zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
+    return { bytes, agregados: creados, duplicados: dup.length, sinFila: sinFila.map(r => r.cat), otroAnio: otroAnio.length, hoja: anio, rangos };
+  }
+  GEN.estadisticaInst = estadisticaInst;
 })(typeof window !== 'undefined' ? window : globalThis);

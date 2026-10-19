@@ -29,12 +29,19 @@
     vimp: { max: 4,  cols: [['c','Conductor'],['d','Documento'],['v','Vehículo'],['col','Color'],['pl','Placa']], no: 'No hubo vehículos implicados' },
     acc:  { max: 57, cols: [['h','Hora','time'],['a','Acción realizada']], no: '' }
   };
+  /* Actividades logísticas o institucionales: formulario simplificado (secciones 1, 2, 4 y 5; la numeración original se conserva). */
+  const SIMPLE_CATS = ['CAPACITACIONES','REUNIÓN EN LA ALCALDÍA','REUNIONES DE SERVICIO SOCIAL','SUMINISTROS DE AGUA','VISITAS DE SEGURIDAD'];
+  const ASK_CATS = ['LABORES DE PREVENCION O ACOMPAÑAMIENTO EN GESTION DEL RIESGO'];
+  const MODO_SIMPLE = 'ACOMPAÑAMIENTO O PREVENCIÓN', MODO_EMERG = 'ATENCIÓN DE EMERGENCIA';
+  const SIMPLE_STEPS = ['esencial','tiempos','quien','fotos'];
+  const RANGOS_ORDEN = ['comandante','subcomandante','inspector','capitán','capitan','mayor','teniente coronel','coronel','teniente','subteniente','sargento','cabo','bombero','brigadista','aspirante','oficial'];
   const F = (p, l, t, x) => Object.assign({ p, l, t }, x || {});
   const STEPS = [
     { id: 'esencial', t: '1 · Identificación y localización del evento', f: [
       F('cat', 'Incidente o actividad', 'cat', { naOk: false }),
+      F('extra._modo', '¿Fue acompañamiento/prevención o atención de una emergencia?', 'chip1', { o: [MODO_SIMPLE, MODO_EMERG], naOk: false, when: 'ask', hint: 'Si fue acompañamiento o prevención se habilita el formulario simplificado; si fue una emergencia, el completo.' }),
       F('fecha', 'Día del evento', 'date', { naOk: false }),
-      F('lat', 'Ubicación (GPS)', 'gps'),
+      F('lat', 'Ubicación (GPS)', 'gps', { naOk: false, hint: 'Obligatoria en todos los registros. Si olvidó marcarla y ya se retiró del sitio, use «Agregar o corregir ubicación» y márquela en el mapa.' }),
       F('dir', 'Dirección o lugar de referencia', 'text'),
       F('bar', 'Barrio, corregimiento o vereda', 'text'),
       F('zona', 'Zona', 'chip1', { o: ['URBANA', 'RURAL'] }) ] },
@@ -42,7 +49,8 @@
       F('hora', 'Hora de la alerta', 'time', { naOk: false }),
       F('hsal', 'Salida de la estación', 'time'),
       F('hlle', 'Llegada al sitio', 'time'),
-      F('hfin', 'Fin del servicio', 'time'),
+      F('hfin', 'Terminación de la emergencia o actividad', 'time', { hint: 'Hora en que terminó la atención en el sitio. No es la hora de regreso a la estación.' }),
+      F('hreg', 'Llegada a la estación', 'time', { hint: 'Hora en que la unidad regresó a la estación.' }),
       F('durmin', 'Duración del evento (minutos)', 'num', { hint: 'Se calcula con la hora de alerta y la de fin; puede cambiarla.' }) ] },
     { id: 'quepaso', t: '3 · Descripción y características del evento', f: [
       F('desc', 'Descripción de los hechos (en tercera persona)', 'area', { naOk: false, hint: 'Redáctela en tercera persona. Puede armarla sola desde la Bitácora en vivo. Va en el numeral 9 del reporte.' }),
@@ -91,5 +99,5 @@
     { id: 'r_acc', t: '6j · Bitácora de operaciones y resumen de acciones', f: [ F('rpt.acc', 'Resumen de acciones realizadas, con su hora (obligatorio)', 'list', { lista: 'acc', naOk: false, hint: 'Cada acción con su hora. Puede ir llenándola en vivo con el botón «Bitácora».' }) ] },
     { id: 'r_obs', t: '6k · Observaciones adicionales (opcional)', f: [ F('rpt.obs', 'Observaciones adicionales', 'area', { naOk: false, opt: true, hint: 'Opcional. Anexe aquí lo que el comandante considere necesario. La descripción de los hechos y el resumen de acciones ya van en el numeral 9 del reporte.' }) ] }
   ];
-  g.CBV_ESQ = { CATS, TIPOS, VEH, SNIF, YN, CANAL, PTIPO, INST, LISTAS, STEPS, SCI_ROLES, SCI_FUNC, SCI_NOACT, SCI_PASOS, SCI_INST, VEH_INFO };
+  g.CBV_ESQ = { SIMPLE_CATS, ASK_CATS, MODO_SIMPLE, MODO_EMERG, SIMPLE_STEPS, RANGOS_ORDEN, CATS, TIPOS, VEH, SNIF, YN, CANAL, PTIPO, INST, LISTAS, STEPS, SCI_ROLES, SCI_FUNC, SCI_NOACT, SCI_PASOS, SCI_INST, VEH_INFO };
 })(typeof window !== 'undefined' ? window : globalThis);

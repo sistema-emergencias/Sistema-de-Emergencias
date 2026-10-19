@@ -148,6 +148,25 @@ svg text.val{fill:var(--fg)}
 .chatlist{max-height:16rem;overflow:auto;border:1px solid var(--line,#ccc);border-radius:8px;padding:8px;margin-bottom:8px}
 .chatm{padding:4px 8px;margin:4px 0;border-radius:8px;background:rgba(127,127,127,.12)}.chatm.mio{background:rgba(30,120,60,.18)}
 
+.bell{position:relative;background:var(--card,#fff);border:1px solid var(--line,#ccc);border-radius:10px;font-size:20px;padding:6px 10px;cursor:pointer}
+.bell span{position:absolute;top:-6px;right:-6px;background:#d62a1c;color:#fff;border-radius:10px;font-size:11px;min-width:18px;padding:1px 4px;font-weight:700}
+.fab{position:fixed;right:16px;bottom:16px;z-index:60;background:#b4251b;color:#fff;border:0;border-radius:28px;padding:14px 20px;font-size:16px;font-weight:700;box-shadow:0 4px 14px rgba(0,0,0,.35);cursor:pointer}
+#toasts{position:fixed;left:50%;transform:translateX(-50%);bottom:76px;z-index:80;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;max-width:92vw}
+.toast{background:#1d2a33;color:#fff;padding:9px 16px;border-radius:20px;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.toast.bad{background:#b4251b}
+dialog#dlg{border:1px solid var(--line,#ccc);border-radius:12px;padding:16px;max-width:min(40rem,94vw);width:100%;background:var(--card,#fff);color:var(--fg,#111)}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+.pill.warn{background:#fff2cc;color:#7a5b00}.pill.info{background:#dcecff;color:#0b4a8f}
+.ntf{display:flex;gap:8px;justify-content:space-between;align-items:flex-start;border-bottom:1px solid var(--line,#ddd);padding:8px 0}
+.ntf.new{background:rgba(214,42,28,.07)}
+.emg{border:1px solid var(--line,#ccc);border-left:6px solid #1f9d55;border-radius:8px;padding:10px;margin-bottom:10px}
+.emg h4{margin:0 0 4px}
+.chk{display:flex;flex-wrap:wrap;gap:6px}.chk label{display:flex;gap:6px;align-items:center;border:1px solid var(--line,#ccc);border-radius:8px;padding:4px 8px;flex-direction:row;min-width:0}
+.chk input{width:auto}
+/* interfaz simplificada para los roles operativos (el superadministrador ve todas las explicaciones) */
+body.simple .expl,body.simple .card>p.derived:not([id]):not([role]),body.simple .sec>p.derived:not([id]):not([role]){display:none}
+body.simple dialog p.derived{display:block}
+
 .mini{display:inline-block;height:10px;background:var(--s25)}
 </style></head><body>
 <div class="wrap">
@@ -157,6 +176,7 @@ svg text.val{fill:var(--fg)}
       <h1 id="h1">Estadística</h1>
     </div>
     <div class="who" id="who"></div>
+    <button type="button" class="bell" id="bell" hidden aria-label="Notificaciones">🔔<span id="bell-n" hidden>0</span></button>
   </div>
   <div id="msg" class="note" hidden></div>
 
@@ -169,6 +189,9 @@ svg text.val{fill:var(--fg)}
       <button class="btn" type="submit" id="l_go">Entrar</button>
     </form>
   </section>
+<button type="button" class="fab" id="fab-ll" hidden>🚒 Llamado</button>
+<div id="toasts" aria-live="polite"></div>
+<dialog id="dlg"></dialog>
   <section id="v-pan" hidden>
     <div class="note" id="histbanner" hidden>Falta cargar el histórico (estadística 2013–2026). Vaya a <b>Administración → Histórico</b> y elija el archivo historico.json.</div>
     <div class="sec">
@@ -195,7 +218,7 @@ svg text.val{fill:var(--fg)}
       <div class="tabs" id="ptabs" role="tablist">
         <button role="tab" aria-selected="true" data-p="est">Estadística y archivos</button>
         <button role="tab" aria-selected="false" data-p="reg">Registros</button>
-        <button role="tab" aria-selected="false" data-p="vivo">En vivo</button>
+        <button role="tab" aria-selected="false" data-p="vivo">Operación</button>
         <button role="tab" aria-selected="false" data-p="calor">Mapa de calor</button>
         <button role="tab" aria-selected="false" data-p="per">Personal</button>
         <button role="tab" aria-selected="false" data-p="aud">Auditoría</button>
@@ -208,8 +231,8 @@ svg text.val{fill:var(--fg)}
         <div class="kpis" id="kpis"></div>
         <div class="card">
           <h3>Informe del periodo</h3>
-          <p class="derived" style="margin:0 0 10px">Genera una carpeta comprimida (.zip) con lo que está filtrado arriba, con las fotos que los bomberos tomaron en el lugar: Reporte de Comandancia, Registro de Actividades y el anexo fotográfico de cada emergencia, todo en el formato institucional.</p>
-          <div class="dl"><button class="btn alt" id="rp-com">Reporte de Comandancia (.xlsx)</button><button class="btn alt" id="rp-foto">Registro fotográfico para la alcaldía (.docx)</button><button class="btn alt" id="rp-act">Registro de actividades para la alcaldía (.xlsx)</button><button class="btn alt" id="gen-snif">Incendios forestales / SNIF (.xlsm)</button><button class="btn alt" id="rp-est">Estadística general actualizada (.xlsx)</button></div><div class="dl" style="margin-top:8px"><button class="btn" id="gen">Todo en una carpeta (.zip)</button></div>
+          <p class="derived expl" style="margin:0 0 10px">Genera una carpeta comprimida (.zip) con lo que está filtrado arriba, con las fotos que los bomberos tomaron en el lugar: Reporte de Comandancia, Registro de Actividades y el anexo fotográfico de cada emergencia, todo en el formato institucional.</p>
+          <div class="dl"><button class="btn" id="rp-alc">Generar reportes para la Alcaldía</button></div><details id="rp-det" style="margin-top:8px"><summary>Descargar cada documento por separado</summary><div class="dl" style="margin-top:8px"><button class="btn alt" id="rp-com">Reporte de Comandancia (.xlsx)</button><button class="btn alt" id="rp-foto">Registro fotográfico para la alcaldía (.docx)</button><button class="btn alt" id="rp-act">Registro de actividades para la alcaldía (.xlsx)</button><button class="btn alt" id="gen-snif">Incendios forestales / SNIF (.xlsm)</button><button class="btn alt" id="rp-est">Estadística institucional actualizada (.xlsx)</button></div><div class="dl" style="margin-top:8px"><button class="btn alt" id="gen">Todo en una carpeta (.zip)</button></div></details>
           <p class="derived" style="margin-top:8px" id="dlmsg"></p>
         </div>
         <div class="chart"><h3>Incidentes por mes</h3><div id="cm"></div></div>
@@ -233,56 +256,45 @@ svg text.val{fill:var(--fg)}
       <div id="p-per" class="sec" hidden>
         <div class="card">
           <h3>Personal de la estación</h3>
-          <p class="derived">La lista que aparece en el formulario de registro para marcar quién atendió cada emergencia. Las participaciones y horas se cuentan con el periodo y los filtros de arriba.</p>
+          <p class="derived expl">La lista que aparece en el formulario de registro para marcar quién atendió cada emergencia. Las participaciones y horas se cuentan con el periodo y los filtros de arriba.</p>
           <div class="tools"><label>Nombre y grado<input id="pnom" placeholder="Sbt. Apellido Nombre"></label><button class="btn sm" id="padd">Agregar</button></div>
           <div class="derived" id="pmsg" role="status"></div>
           <div class="scroll"><table id="ptab"></table></div>
         </div>
       </div>
       <div id="p-aud" class="sec" hidden>
-        <div class="card"><h3>Correcciones hechas por Comandancia</h3><p class="derived">Cada corrección queda anotada con el motivo, quién la hizo y qué valor tenía antes.</p>
+        <div class="card"><h3>Correcciones hechas por Comandancia</h3><p class="derived expl">Cada corrección queda anotada con el motivo, quién la hizo y qué valor tenía antes.</p>
         <div class="scroll"><table id="atab"></table></div></div>
       </div>
       <div id="p-cfg" class="sec" hidden>
         <div class="card">
           <h3>Conexión con los teléfonos, Drive y el Formulario de Google</h3>
           <p class="derived" id="c_sum"></p>
-          <p class="derived">Cada registro terminado en el lugar se guarda en la Hoja de cálculo de Google, las fotos en Drive, y se responde el Formulario de Google si lo conectó en el script (línea FORMULARIO_URL). Los que no pudieron responderse aparecen aquí para reenviarlos.</p>
+          <p class="derived expl">Cada registro terminado en el lugar se guarda en la Hoja de cálculo de Google, las fotos en Drive, y se responde el Formulario de Google si lo conectó en el script (línea FORMULARIO_URL). Los que no pudieron responderse aparecen aquí para reenviarlos.</p>
           <div class="derived" id="c_msg" role="status"></div>
           <div class="scroll"><table id="c_tab"></table></div>
         </div>
         <div class="card">
           <h3>Guardar en Drive los reportes que faltan</h3>
-          <p class="derived">Cada Reporte de Emergencias se guarda solo en la carpeta de su emergencia cuando el teléfono termina de enviar. Si alguno quedó sin guardar (por ejemplo, registros anteriores), este botón los genera desde aquí y los deja en su carpeta.</p>
+          <p class="derived expl">Cada Reporte de Emergencias se guarda solo en la carpeta de su emergencia cuando el teléfono termina de enviar. Si alguno quedó sin guardar (por ejemplo, registros anteriores), este botón los genera desde aquí y los deja en su carpeta.</p>
           <div class="dl"><button class="btn alt" id="docs-bulk">Guardar los reportes pendientes</button></div>
           <div class="derived" id="docs-msg" role="status"></div>
         </div>
       </div>
 
       <div id="p-vivo" class="sec" hidden>
-        <div class="card">
-          <h3>Alertas SOS y unidades en vivo</h3>
-          <p class="derived">La ubicación empieza sola cuando el bombero abre la aplicación y se corta cuando pulsa «Detener» (salvo que active el SOS). Si no ve a alguien, es porque cerró la aplicación, detuvo la ubicación o no tiene señal: los navegadores de los teléfonos no permiten seguir transmitiendo con la pantalla bloqueada.</p>
-          <div class="dl"><button class="btn" id="siren-on">Activar alarma sonora y avisos en este computador</button><span class="derived" id="siren-msg"></span></div>
-          <div id="v-alerts"></div>
-        </div>
-        <div class="card">
-          <h3>Llamar a las unidades a una emergencia</h3>
-          <p class="derived">A cada unidad con la aplicación abierta le sale el aviso con los botones «Unidad activa» (verde) y «Omitir». Al tocar «Unidad activa» empieza a compartir su ubicación y usted ve quién confirmó.</p>
-          <div class="tools"><label style="flex:2;min-width:14rem">Tipo de emergencia<select id="ll-tipo"></select></label><label>Lugar (opcional)<input id="ll-lugar" placeholder="Dirección o referencia"></label><label>Coordenadas (opcional)<input id="ll-co" placeholder="4°31'50&quot;N 76°06'29&quot;W o 4.5306, -76.1082"></label><button class="btn" id="ll-send">Llamar a las unidades</button></div>
+        <div class="card" id="op-ll">
+          <h3>Llamado rápido</h3>
+          <div class="tools"><label style="flex:2;min-width:14rem">Tipo de emergencia<select id="ll-tipo"></select></label><label>Lugar<input id="ll-lugar" placeholder="Dirección o referencia"></label><label>Teléfono de quien reporta<input id="ll-tel" inputmode="tel" placeholder="300 000 0000"></label><label>Coordenadas<input id="ll-co" placeholder="4°31'50&quot;N 76°06'29&quot;W o 4.5306, -76.1082"></label><button class="btn" id="ll-send">Llamar a las unidades</button></div>
           <div class="derived" id="ll-out" role="status"></div>
-          <div id="v-llam"></div>
         </div>
-        <div class="card">
-          <h3>Cargar coordenadas del sitio de la emergencia</h3>
-          <p class="derived">Úselo cuando ya llamó a las unidades y después conoce el punto exacto. Todas las unidades lo ven en su mapa (junto a su propia ubicación) y pueden abrirlo en Mapas o copiarlo.</p>
-          <div class="tools"><label>Coordenadas<input id="pt-co" placeholder="4°31'50&quot;N 76°06'29&quot;W o 4.5306, -76.1082"></label><label>Lugar (opcional)<input id="pt-lugar" placeholder="Dirección o referencia"></label><label>Nota (opcional)<input id="pt-msg" placeholder="Ej.: entrar por la vía de atrás"></label><button class="btn" id="pt-send">Enviar punto a las unidades</button></div>
-          <div class="derived" id="pt-out" role="status"></div>
-        </div>
-        <div class="card"><h3>Chat con las unidades</h3><p class="derived">Mensajes de texto y audios cortos (máx. 10 s) entre la central y los teléfonos con internet. No funciona por Bluetooth: el navegador de los teléfonos no lo permite.</p><div id="chat-box"></div></div>
-        <div class="card" id="pc-box"></div>
+        <div class="card" id="op-act"><h3>Emergencias activas</h3><div id="v-llam"></div></div>
+        <div class="card" id="op-alert"><h3>Alertas</h3><div class="dl"><button class="btn alt sm" id="siren-on">Activar alarma sonora y avisos</button><span class="derived" id="siren-msg"></span></div><div id="v-alerts"></div><div id="v-pend"></div></div>
+        <div class="card" id="op-uni"><h3>Unidades y conexión</h3><div class="scroll"><table id="uni-tab"></table></div></div>
+        <div class="card"><h3>Chat</h3><div id="chat-box"></div></div>
         <div id="map-vivo" class="map"></div>
         <div class="scroll"><table id="vivo-tab"></table></div>
+        <div class="card" id="pc-box"></div>
       </div>
 
       <div id="p-calor" class="sec" hidden>
@@ -307,6 +319,7 @@ svg text.val{fill:var(--fg)}
           <button role="tab" aria-selected="false" data-a="app">Aplicación y alertas</button>
           <button role="tab" aria-selected="false" data-a="mar">Marca y licencia</button>
           <button role="tab" aria-selected="false" data-a="wha">WhatsApp y notificaciones</button>
+          <button role="tab" aria-selected="false" data-a="perm">Funciones por rol</button>
           <button role="tab" aria-selected="false" data-a="seg">Seguridad y mantenimiento</button>
           <button role="tab" aria-selected="false" data-a="gfm">Formulario de Google</button>
           <button role="tab" aria-selected="false" data-a="his">Histórico</button>
@@ -333,7 +346,7 @@ svg text.val{fill:var(--fg)}
 'use strict';
 const CFG=window.CBV_CONFIG||{};
 const E=window.CBV_ESQ;
-const VERSION_ESPERADA='1.0';
+const VERSION_ESPERADA='2.0';
 const TIPO_CAT={"CAÍDA / CORTES DE ARBOL": "OTROS", "CONTROL DE ABEJAS": "OTROS", "CONTROL DE AVISPAS": "OTROS", "CAÍDA DE CUERDAS": "OTROS", "CORTO CIRCUITO": "INCENDIOS", "COLAPSO DE ESTRUCTURAS": "OTROS", "CAPACITACIONES": "OTROS", "EXTRICACIÓN VEHICULAR": "RESCATES", "FUGA DE GAS NATURAL": "OTROS", "FUGA DE GAS GLP": "MATERIALES PELIGROSOS", "INCENDIO FORESTAL": "INCENDIOS", "INCENDIO ESTRUCTURAL": "INCENDIOS", "INCENDIO VEHICULAR": "INCENDIOS", "INUNDACIÓN": "OTROS", "LABORES DE PREVENCION O ACOMPAÑAMIENTO EN GESTION DEL RIESGO": "OTROS", "MATERIALES PELIGROSOS / DERRAMES": "MATERIALES PELIGROSOS", "PRIMEROS AUXILIOS": "OTROS", "RESCATE DE PERSONA / PARAPENTE": "RESCATES", "RESCATE DE ANIMAL": "RESCATES", "REUNIÓN EN LA ALCALDÍA": "OTROS", "REUNIONES DE SERVICIO SOCIAL": "OTROS", "SUMINISTROS DE AGUA": "OTROS", "VISITAS DE SEGURIDAD": "INSPECCIONES DE SEGURIDAD"};
 let CATS=GEN.CATS.slice();
 const TIPOS=['INCENDIOS','RESCATES','MATERIALES PELIGROSOS','INSPECCIONES DE SEGURIDAD','FALSA ALARMA','BUSQUEDA Y RESCATE','OTROS'];
@@ -374,7 +387,7 @@ function getP(o,p){return p.split('.').reduce((a,k)=>a==null?a:a[k],o)}
 function setP(o,p,v){const ks=p.split('.');let a=o;for(let i=0;i<ks.length-1;i++){if(a[ks[i]]==null||typeof a[ks[i]]!=='object')a[ks[i]]={};a=a[ks[i]]}a[ks[ks.length-1]]=v}
 let SES=lsGet('cbv_central2',{});
 let USER=SES.u||'',TOKEN=SES.t||'',YO=SES.n||'',ROL=SES.r||'';
-let CFGP={};            /* configuración pública guardada en la central */
+let PERM=[];let CFGP={};            /* configuración pública guardada en la central */
 let ALL=[],SERIES={},OFICIAL=null,SNIF_SEED=[],SNIF_CORTE='',ROSTER=[],REGS=new Map(),LAST=0,HISTOK=false;
 const esMaster=()=>ROL==='master';
 
@@ -421,7 +434,7 @@ async function login(e){
   try{
     const r=await rawCall({a:'login',u,p},60000);
     if(!r.ok)$('l_err').textContent=r.error==='bloqueado'?'Demasiados intentos fallidos. Espere 10 minutos.':r.error==='credenciales'?'Usuario o clave incorrectos.':'No se pudo entrar ('+(r.detalle||r.error)+').';
-    else{LASTLOGIN=r;USER=r.usuario;TOKEN=r.token;YO=r.nombre;ROL=r.rol;lsSet('cbv_central2',{u:USER,t:TOKEN,n:YO,r:ROL});CFGP=r.cfg||{};enter()}
+    else{LASTLOGIN=r;USER=r.usuario;TOKEN=r.token;YO=r.nombre;ROL=r.rol;PERM=r.perm||[];lsSet('cbv_central2',{u:USER,t:TOKEN,n:YO,r:ROL});CFGP=r.cfg||{};enter()}
   }catch(x){$('l_err').textContent=humanErr(x)}
   $('l_go').disabled=false;
 }
@@ -487,7 +500,7 @@ function refreshSelectors(first){
 }
 const toRow=o=>{
   const rpt=o.rpt||null,L=rpt&&rpt.les?rpt.les.filter(x=>x.n).length:0,tr=rpt&&rpt.les?((rpt.les.find(x=>x.t)||{}).t||null):null;
-  return {src:'app',id:o.num,tmp:o.tmp,cat:o.cat,tipo:o.tipo,fecha:o.fecha,hora:h24(o.hora)||'',hsal:h24(o.hsal)||null,hlle:h24(o.hlle)||null,hfin:h24(o.hfin)||null,durmin:o.durmin,dir:o.dir,bar:o.bar,desc:o.desc,
+  return {src:'app',id:o.num,tmp:o.tmp,cat:o.cat,tipo:o.tipo,fecha:o.fecha,hora:h24(o.hora)||'',hsal:h24(o.hsal)||null,hlle:h24(o.hlle)||null,hfin:h24(o.hfin)||null,hreg:h24(o.hreg)||null,durmin:o.durmin,dir:o.dir,bar:o.bar,desc:o.desc,
     area:o.area||null,veg:o.veg||null,uni:o.uni,veh:o.veh,lat:o.lat||null,lon:o.lon||null,canal:o.canal||null,rep:o.rep||null,pers:o.pers||[],nfotos:o.nfotos||0,
     borrador:o.estado!=='final',_nombre:o.por,rpt,les:L,lesionados:L||null,tras:tr,trasladado:tr,form:o.form,carpeta:o.carpeta,creado:o.creado,zona:o.zona,
     inc:o.inc||null,na:o.na||null,extra:o.extra||null,completo:!!o.completo,doc:o.doc||'',anulado:!!o.anulado,usuario:o.usuario||'',estado:o.estado,extraTxt:extraTxtDe(o)};
@@ -768,7 +781,7 @@ async function pollVivo(){
   if(!USER)return;
   try{const r=await call('vivo');if(r&&r.ok){VIVO=r;drawAlertas();checkNuevos(r.nuevos);if(!$('p-vivo').hidden)drawVivo()}}catch(e){}
 }
-const sosList=()=>(VIVO.alertas||[]).filter(a=>a.tipo!=='llamado');
+const sosList=()=>(VIVO.alertas||[]).filter(a=>a.tipo==='sos');
 const llamList=()=>(VIVO.alertas||[]).filter(a=>a.tipo==='llamado');
 async function atender(a){
   const nota=prompt('Marcar como ATENDIDO al bombero caído ('+a.por+').\nEscriba una nota (opcional): quién llegó, estado del bombero, etc.');
@@ -834,7 +847,7 @@ function initMapVivo(){
   if(MV||typeof L==='undefined'){if(typeof L==='undefined')$('map-vivo').innerHTML='<p class="derived" style="padding:12px">No se pudo cargar la librería del mapa.</p>';return}
   MV=L.map('map-vivo').setView([4.5333,-76.0999],13);
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(MV);
-  MVL=L.layerGroup().addTo(MV);
+  MVL=L.layerGroup().addTo(MV);capasBase(MV);
   new ResizeObserver(()=>MV.invalidateSize()).observe($('map-vivo'));
 }
 function drawVivo(){
@@ -893,7 +906,7 @@ function initCalor(){
   if(typeof L==='undefined'){$('map-calor').innerHTML='<p class="derived" style="padding:12px">No se pudo cargar la librería del mapa.</p>';return}
   if(!MC){
     MC=L.map('map-calor').setView([4.5333,-76.0999],12);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(MC);
-    new ResizeObserver(()=>MC.invalidateSize()).observe($('map-calor'));CPTS=L.layerGroup().addTo(MC);
+    new ResizeObserver(()=>MC.invalidateSize()).observe($('map-calor'));CPTS=L.layerGroup().addTo(MC);capasBase(MC);
     $('calor-cat').innerHTML='<option value="">Todas las categorías</option>'+CATS.map(c=>'<option>'+esc(c)+'</option>').join('');
     $('calor-veh').innerHTML='<option value="">Todos los vehículos</option>'+vehOpts().map(c=>'<option>'+esc(c)+'</option>').join('');
     $('calor-d1').value=isoDate(new Date(Date.now()-30*86400000));$('calor-d2').value=isoDate(new Date());
@@ -990,12 +1003,12 @@ async function imprimirReporte(r){
   }catch(e){w.document.body.innerHTML='<p style="font:16px sans-serif;padding:24px">No se pudo preparar el reporte: '+esc(e.message||String(e))+'</p>'}
 }
 const TIPO_CAMB={crear:'Se creó el registro en el teléfono',terminar:'Se terminó y envió el reporte',correccion:'Corrección',anular:'Registro ANULADO',restaurar:'Registro restaurado',eliminar:'Registro ELIMINADO'};
-const CAMPO_TXT={cat:'Categoría',tipo:'Tipo',fecha:'Día',hora:'Hora de alerta',hsal:'Salida de estación',hlle:'Llegada al sitio',hfin:'Fin del servicio',durmin:'Duración (min)',dir:'Dirección',bar:'Barrio o vereda',zona:'Zona',lat:'Latitud',lon:'Longitud',area:'Área',veg:'Vegetación',canal:'Canal del aviso',rep:'Quién reportó',uni:'Unidades',veh:'Vehículo',desc:'Descripción',pers:'Personal',rpt:'Datos del reporte',inc:'Incendio forestal',extra:'Otros datos',estado:'Estado',_motivo:'Motivo',_registro:'Registro'};
+const CAMPO_TXT={cat:'Categoría',tipo:'Tipo',fecha:'Día',hora:'Hora de alerta',hsal:'Salida de estación',hlle:'Llegada al sitio',hfin:'Terminación de la emergencia',hreg:'Llegada a la estación',durmin:'Duración (min)',dir:'Dirección',bar:'Barrio o vereda',zona:'Zona',lat:'Latitud',lon:'Longitud',area:'Área',veg:'Vegetación',canal:'Canal del aviso',rep:'Quién reportó',uni:'Unidades',veh:'Vehículo',desc:'Descripción',pers:'Personal',rpt:'Datos del reporte',inc:'Incendio forestal',extra:'Otros datos',estado:'Estado',_motivo:'Motivo',_registro:'Registro'};
 function valTxt(k,v){
   if(v==null||v==='')return '—';
   if(k==='rpt'||k==='inc'||k==='extra'){try{return JSON.stringify(typeof v==='string'?JSON.parse(v):v).slice(0,160)+'…'}catch(e){return String(v).slice(0,120)}}
   if(Array.isArray(v))return v.map(x=>typeof x==='object'?JSON.stringify(x):x).join(', ').slice(0,200);
-  if(['hora','hsal','hlle','hfin'].includes(k))return h24(v)+' h';
+  if(['hora','hsal','hlle','hfin','hreg'].includes(k))return h24(v)+' h';
   return String(v).slice(0,300);
 }
 async function lineaTiempo(r,box){
@@ -1029,7 +1042,7 @@ async function showDetail(r){
   const co=coordDe(r);
   const hh=x=>x?x+' h':'';
   d.innerHTML='<div class="detail"><h3>'+esc(r.id)+' · '+esc(tc(r.cat))+' '+estadoPill(r)+'</h3><dl>'+
-    [['Día',GEN.dmy(r.fecha)],['Alerta',hh(r.hora)],['Salida de estación',hh(r.hsal)],['Llegada al sitio',hh(r.hlle)],['Fin del servicio',hh(r.hfin)],['Respuesta (alerta a llegada)',lapse(r.hora,r.hlle)!=null?lapse(r.hora,r.hlle)+' min':''],['Aviso recibido por',r.canal],['Quién reportó',r.rep],['Personal que atendió',(r.pers||[]).join(', ')],['Tipo',tc(r.tipo||'')],['Duración',dur],['Lugar',r.dir],['Barrio o vereda',r.bar],['Coordenadas',co?gms(co[0],co[1]):(r.coord||'')],['Área',r.area],['Incendio forestal',incTxt],['Unidades',r.uni],['Vehículo',r.veh],['Descripción',r.desc],['Registró',(r._nombre||'')+(r.usuario?' ('+r.usuario+')':'')],['Lesionados',r.les?r.les+(r.tras?' · trasladados a '+r.tras:''):''],['Puntos marcados «No aplica»',naL?String(naL):''],['Otros datos',r.extraTxt],['Formulario de Google',app?r.form||'':'']]
+    [['Día',GEN.dmy(r.fecha)],['Alerta',hh(r.hora)],['Salida de estación',hh(r.hsal)],['Llegada al sitio',hh(r.hlle)],['Terminación de la emergencia',hh(r.hfin)],['Llegada a la estación',hh(r.hreg)],['Respuesta (alerta a llegada)',lapse(r.hora,r.hlle)!=null?lapse(r.hora,r.hlle)+' min':''],['Aviso recibido por',r.canal],['Quién reportó',r.rep],['Personal que atendió',(r.pers||[]).join(', ')],['Tipo',tc(r.tipo||'')],['Duración',dur],['Lugar',r.dir],['Barrio o vereda',r.bar],['Coordenadas',co?gms(co[0],co[1]):(r.coord||'')],['Área',r.area],['Incendio forestal',incTxt],['Unidades',r.uni],['Vehículo',r.veh],['Descripción',r.desc],['Registró',(r._nombre||'')+(r.usuario?' ('+r.usuario+')':'')],['Lesionados',r.les?r.les+(r.tras?' · trasladados a '+r.tras:''):''],['Puntos marcados «No aplica»',naL?String(naL):''],['Otros datos',r.extraTxt],['Formulario de Google',app?r.form||'':'']]
       .filter(x=>x[1]!=null&&x[1]!=='').map(x=>'<dt>'+x[0]+'</dt><dd>'+esc(x[1])+'</dd>').join('')+'</dl><div id="d-ub"></div>'+
     (app?'<p>'+(!co&&r.dir?'<a href="https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(r.dir+', La Unión, Valle del Cauca')+'" target="_blank" rel="noopener">Buscar la dirección en el mapa (el registro no trae coordenadas)</a> · ':'')+(r.carpeta?'<a href="'+esc(r.carpeta)+'" target="_blank" rel="noopener">Carpeta de la emergencia en Drive</a>':'')+(r.doc?' · <a href="'+esc(r.doc)+'" target="_blank" rel="noopener">Reporte de Emergencias en Drive</a>':' · <span class="derived">el reporte aún no está en Drive</span>')+'</p>':'')+
     '<div class="fotos" id="dfotos"></div><div class="dl"><button class="btn sm" id="d-print">Imprimir reporte</button><button class="btn alt sm" id="d-rep">Descargar Reporte de Emergencias (.xlsx)</button>'+(app&&r.nfotos?'<button class="btn alt sm" id="d-foto">Registro fotográfico (.docx)</button>':'')+(app&&!r.borrador?'<button class="btn alt sm" id="d-drive">Guardar el reporte en Drive</button>':'')+(app&&esMaster()?'<button class="btn alt sm" id="d-edit">Corregir datos (superadministrador)</button><button class="btn alt sm" id="d-anul">'+(r.anulado?'Restaurar registro':'Anular registro')+'</button><button class="btn alt sm" id="d-del">Eliminar registro</button>':'')+'</div><div id="d-form"></div><div class="derived" id="d-msg"></div><div id="d-tl"></div></div>';
@@ -1121,7 +1134,7 @@ function editForm(r){
     const nv=clone(base);
     try{getters.forEach(g=>setP(nv,g.p,g.get()))}catch(e){err.textContent=e.message;return}
     nv.estado=est.value;nv.tipo=TIPO_CAT[nv.cat]||nv.tipo||'OTROS';
-    const KEYS=['cat','tipo','fecha','hora','hsal','hlle','hfin','durmin','dir','bar','zona','lat','lon','area','veg','canal','rep','uni','veh','desc','pers','rpt','inc','extra','estado'];
+    const KEYS=['cat','tipo','fecha','hora','hsal','hlle','hfin','hreg','durmin','dir','bar','zona','lat','lon','area','veg','canal','rep','uni','veh','desc','pers','rpt','inc','extra','estado'];
     const cambios={};KEYS.forEach(k=>{const a=JSON.stringify(base[k]==null?'':base[k]),b=JSON.stringify(nv[k]==null?'':nv[k]);if(a!==b)cambios[k]=nv[k]==null?'':nv[k]});
     if(!Object.keys(cambios).length){err.textContent='No hay cambios.';return}
     sv.disabled=true;
@@ -1201,8 +1214,19 @@ function admFrm(){
   const vi=H('input',{value:veh.join(', ')});vi.oninput=()=>veh=vi.value.split(',').map(s=>s.trim()).filter(Boolean);
   out.push(card(H('h3',{},'Vehículos'),H('p',{className:'derived'},'Separados por coma. Ojo: el formato «Reporte de Emergencias» solo tiene casillas para B-2, B-3, B-4, T-1, L-1, L-2 y L-3; otros salen en observaciones.'),vi));
   /* pasos y campos */
-  fo.hideSteps=fo.hideSteps||{};fo.extraSteps=fo.extraSteps||[];
-  const STP=E.STEPS.concat(fo.extraSteps.map(x=>({id:x.id,t:x.t,f:[],extra:true})));
+  fo.hideSteps=fo.hideSteps||{};fo.extraSteps=fo.extraSteps||[];fo.stepOrder=fo.stepOrder||[];fo.fieldOrder=fo.fieldOrder||{};
+  const ordA=(arr,lista,key)=>{if(!lista||!lista.length)return arr;const ix=x=>{const i=lista.indexOf(key(x));return i<0?1e6:i};return arr.map((x,n)=>[x,n]).sort((a,b)=>ix(a[0])-ix(b[0])||a[1]-b[1]).map(a=>a[0])};
+  const STP0=E.STEPS.concat(fo.extraSteps.map(x=>({id:x.id,t:x.t,f:[],extra:true})));
+  const STP=ordA(STP0,fo.stepOrder,s=>s.id);
+  const guardarYRedibujar=()=>{CFGP.form=fo;CFGP.cats=cats;CFGP.veh=veh;admFrm()};
+  const mover=(ids,i,d)=>{const j=i+d;if(j<0||j>=ids.length)return ids;const n=ids.slice();[n[i],n[j]]=[n[j],n[i]];return n};
+  /* orden de los pasos */
+  {const c=card(H('h3',{},'Orden de los pasos del formulario'),H('p',{className:'derived'},'Suba o baje cada paso. El nuevo orden se guarda con «Guardar los cambios del formulario»; los registros anteriores no se alteran. La numeración del título («1 ·», «2 ·»…) no cambia sola: edite el título del paso si quiere renumerarlo.'));
+    STP.forEach((s,i)=>{const row=H('div',{className:'adm-f'});const ids=STP.map(x=>x.id);
+      const up=H('button',{className:'btn alt sm',textContent:'↑ Subir',disabled:i===0,ariaLabel:'Subir el paso '+(fo.labels['step.'+s.id]||s.t)});up.onclick=()=>{fo.stepOrder=mover(ids,i,-1);guardarYRedibujar()};
+      const dn=H('button',{className:'btn alt sm',textContent:'↓ Bajar',disabled:i===STP.length-1,ariaLabel:'Bajar el paso '+(fo.labels['step.'+s.id]||s.t)});dn.onclick=()=>{fo.stepOrder=mover(ids,i,1);guardarYRedibujar()};
+      row.append(H('b',{},(i+1)+'. '+(fo.labels['step.'+s.id]||s.t)),H('span',{}),up,dn);c.append(row)});
+    out.push(c)}
   STP.forEach(s=>{
     const c=card(H('h3',{},'Paso: '+s.t));
     {const sh=H('input',{type:'checkbox',checked:!fo.hideSteps[s.id]});sh.onchange=()=>{if(sh.checked)delete fo.hideSteps[s.id];else fo.hideSteps[s.id]=true};c.append(H('label',{style:'display:flex;gap:8px;align-items:center;flex-direction:row'},sh,'Mostrar este paso en el formulario del celular'));
@@ -1219,6 +1243,14 @@ function admFrm(){
       const naDef=f.naOk!==false;const na=H('input',{type:'checkbox',checked:fo.naOk[f.p]!=null?!!fo.naOk[f.p]:naDef});na.onchange=()=>{if(na.checked!==naDef)fo.naOk[f.p]=na.checked;else delete fo.naOk[f.p]};
       row.append(l,op,H('label',{},show,'Mostrar'),H('label',{},na,'No aplica'));c.append(row);
     });
+    /* orden de las preguntas del paso */
+    {const base=s.f.map(f=>({p:f.p,l:fo.labels[f.p]||f.l})).concat(fo.extras.filter(x=>x.step===s.id&&x.l&&x.l.trim()).map(x=>({p:'extra.'+x.id,l:x.l})));
+      const lista=ordA(base,fo.fieldOrder[s.id],x=>x.p);
+      if(lista.length>1){const ob=H('div',{className:'adm-f'});ob.append(H('b',{},'Orden en que aparecen las preguntas'));c.append(ob);
+        lista.forEach((q,i)=>{const row=H('div',{className:'adm-f'});const ids=lista.map(x=>x.p);
+          const up=H('button',{className:'btn alt sm',textContent:'↑',disabled:i===0,ariaLabel:'Subir: '+q.l});up.onclick=()=>{fo.fieldOrder[s.id]=mover(ids,i,-1);guardarYRedibujar()};
+          const dn=H('button',{className:'btn alt sm',textContent:'↓',disabled:i===lista.length-1,ariaLabel:'Bajar: '+q.l});dn.onclick=()=>{fo.fieldOrder[s.id]=mover(ids,i,1);guardarYRedibujar()};
+          row.append(H('span',{},(i+1)+'. '+q.l),H('span',{}),up,dn);c.append(row)})}}
     /* extras */
     const ex=H('div');const drawE=()=>{ex.innerHTML='';fo.extras.forEach((x,i)=>{if(x.step!==s.id)return;const row=H('div',{className:'adm-f'});
       const l=H('input',{value:x.l||'',placeholder:'Texto de la pregunta nueva'});l.oninput=()=>x.l=l.value;
@@ -1456,7 +1488,7 @@ async function admApp(){
       lbl('Correos que reciben los avisos (separados por coma)',em),
       H('label',{style:'display:flex;gap:8px;align-items:center;flex-direction:row'},ci,'Enviar avisos por correo'),
       H('p',{className:'derived'},'El servicio de WhatsApp (GREEN-API u otro) se configura en la pestaña «WhatsApp y notificaciones».'),
-      H('h4',{},'Qué avisos se envían'),chk('sos','Alerta SOS / bombero caído'),chk('reporte','Nuevo reporte recibido'),chk('recordatorio','Recordatorio de borradores pendientes'),H('div',{className:'dl'},test)),
+      H('h4',{},'Qué avisos se envían'),chk('sos','Alerta SOS / bombero caído'),chk('reporte','Nuevo reporte recibido'),chk('borrador','Borrador generado'),chk('cargado','Reporte cargado a Drive'),chk('seguimiento','Operaciones que requieren seguimiento (errores de sincronización)'),chk('recordatorio','Recordatorio de borradores pendientes'),H('div',{className:'dl'},test)),
     card(H('h3',{},'Quiénes atienden emergencias'),lbl('Grados que atienden emergencias (separados por coma; vacío = lista normal desde «bombero»)',ro)),
     card(H('h3',{},'Formato de incendios forestales (SNIF)'),H('label',{style:'display:flex;gap:8px;align-items:center;flex-direction:row'},ln,'Escribir los grados de longitud con signo negativo (-76). Déjelo apagado para que salga 76, como en el archivo que ya usan.')),
     card(H('div',{className:'dl'},b),msg));
@@ -1498,14 +1530,6 @@ function irCampo(){
   try{localStorage.removeItem('cbv_central2')}catch(e){}
   location.href='index.html';
 }
-function tabsPorRol(){
-  const ok=TABS_ROL[ROL]||TABS;
-  document.querySelectorAll('#ptabs button').forEach(b=>{b.hidden=!ok.includes(b.dataset.p)});
-  const fc=$('fcard');
-  if(ROL==='central'&&fc){fc.querySelector('.tools').hidden=true;$('fsum').hidden=true;$('backup').hidden=true}
-  if(ROL!=='master'&&$('backup'))$('backup').hidden=true;
-}
-const primeraTab=()=>(TABS_ROL[ROL]||TABS)[0];
 
 /* ---------- llamado con lista de emergencias ---------- */
 function bindLlamado(){
@@ -1660,11 +1684,11 @@ async function pcTodo(){
 /* ---------- arranque V1 ---------- */
 function v1Init(){
   const sel=$('ll-tipo');if(sel)sel.innerHTML='<option value="">Elija el tipo de emergencia…</option>'+CATS.map(c=>'<option>'+esc(c)+'</option>').join('');
-  bindPunto();chatUI();bindInformes();
+  chatUI();bindInformes();
   const pc=$('pc-box');if(pc&&!pc._b){pc._b=1;
     pc.innerHTML='<h3>Copia automática en este computador</h3><p class="derived">Elija una carpeta del computador de la central. Cada reporte nuevo o modificado se guarda solo (Drive y esta carpeta): una subcarpeta por emergencia con el reporte, la constancia y todas las fotos. Funciona en Chrome o Edge con esta página abierta.</p><div class="dl"><button class="btn alt sm" id="pc-pick">Elegir carpeta</button><button class="btn alt sm" id="pc-all">Guardar todas las emergencias ahora</button><span class="derived" id="pc-est"></span></div><div class="derived" id="pc-msg" role="status"></div>';
     $('pc-pick').onclick=pcElegir;$('pc-all').onclick=pcTodo;pcGet().then(h=>{if(h)$('pc-est').textContent='Carpeta: '+h.name})}
-  showTab(primeraTab());
+  v2Init();showTab(primeraTab());
 }
 
 /* ================= V1: constancia de atención y botones de informes separados ================= */
@@ -1688,7 +1712,7 @@ async function constanciaDatos(r){
   if((rp.les||[]).filter(x=>x.n).length)desc.push('Se atendió a '+rp.les.filter(x=>x.n).length+' persona(s) lesionada(s)'+(r.tras?', trasladada(s) a '+r.tras:'')+'.');
   if(r.hfin)desc.push('Se dio por finalizada la atención a las '+hh(r.hfin)+' horas'+(r.durmin?' (duración total: '+GEN.durTxt(r.durmin)+')':'')+'.');
   let acc=(rp.acc||[]).filter(x=>x&&x.h&&x.a).map(x=>[hh(x.h),x.a.replace(/\.?$/,'.')]);
-  if(!acc.length)acc=[[r.hora,'Recepción del reporte.'],[r.hsal,'Salida de la estación.'],[r.hlle,'Llegada al sitio.'],[r.hfin,'Finalización de las labores.']].filter(x=>x[0]).map(x=>[hh(x[0]),x[1]]);
+  if(!acc.length)acc=[[r.hora,'Recepción del reporte.'],[r.hsal,'Salida de la estación.'],[r.hlle,'Llegada al sitio.'],[r.hfin,'Terminación de las labores en el sitio.'],[r.hreg,'Llegada de la unidad a la estación.']].filter(x=>x[0]).map(x=>[hh(x[0]),x[1]]);
   acc.sort((a,b)=>a[0].localeCompare(b[0]));acc.forEach(a=>a.dia=diaLargo(r.fecha));
   const predio=[];if(prop.tipo)predio.push(['Tipo de predio',prop.tipo+'.']);if(prop.tipo||r.area){predio.push(['Ubicación',dir||'No registrada']);if(prop.nom)predio.push(['Propietario',prop.nom+'.']);if(r.area)predio.push(['Área afectada','Aproximadamente '+r.area+'.'])}
   const hoy=new Date();
@@ -1736,17 +1760,24 @@ async function repFotografico(btn){
 async function repEstadistica(btn){
   const per=period(),m=$('dlmsg');btn.disabled=true;
   await run(m,async()=>{
-    const rows=CUR.slice();if(!rows.length){m.textContent='No hay registros con estos filtros.';return}
-    const yrs=[...new Set(ALL.map(r=>+r.fecha.slice(0,4)))].sort().slice(-5);
-    const datos={},tot={};CATS.forEach(c=>{datos[c]={}});
-    ALL.forEach(r=>{const y=+r.fecha.slice(0,4);if(!yrs.includes(y))return;(datos[r.cat]=datos[r.cat]||{})[y]=((datos[r.cat]||{})[y]||0)+1;tot[y]=(tot[y]||0)+1});
-    await save('ESTADISTICA GENERAL - '+per.file+'.xlsx',await GEN.estadistica(JSZip,{titulo:'ESTADÍSTICA GENERAL '+per.label.toUpperCase(),subtitulo:ORG_NOM()+' · generado '+new Date().toLocaleDateString('es-CO')+' con los registros del sistema',rows,comparar:{anios:yrs,datos,totales:tot,nota:'Comparativo de emergencias por año (histórico 2013–2020 y registros del sistema).'}}));
-    m.textContent='Listo: estadística general actualizada con los registros del sistema.';
+    const hoy=new Date().getFullYear();let anio=+String(per.from).slice(0,4);
+    const anios=(anio>=2013&&anio<=2100&&per.p!=='todo')?[anio]:[2021,2022,2023,2024,2025,2026].filter(y=>y<=hoy||y===2026);
+    let bytes=await tpl('estadistica_institucional.xlsx'),ag=0,du=0,sf=[];const fallas=[];
+    for(const y of anios){
+      const rows=ALL.filter(r=>r.src==='app'&&String(r.fecha).slice(0,4)===String(y)&&!r.anulado);
+      if(!rows.length)continue;
+      m.textContent='Actualizando el libro institucional: hoja '+y+'…';
+      try{const r=await GEN.estadisticaInst(JSZip,bytes,{anio:y,rows});bytes=r.bytes;ag+=r.agregados;du+=r.duplicados;sf=sf.concat(r.sinFila)}catch(e){fallas.push(y+': '+(e&&e.message||e))}
+    }
+    anio=anios[anios.length-1];
+    const r={bytes,agregados:ag,duplicados:du,sinFila:sf};
+    await save('ESTADISTICA EMERGENCIAS ANOS '+anio+' - CBV LA UNION.xlsx',r.bytes);
+    m.textContent='Listo: '+r.agregados+' registro(s) nuevo(s) agregado(s) en las hojas '+anios.join(', ')+', '+r.duplicados+' ya estaban (no se duplicaron)'+(r.sinFila.length?'. Sin fila en el formato institucional (no se agregaron): '+[...new Set(r.sinFila)].join(', '):'')+(fallas.length?'. Con problemas: '+fallas.join('; '):'')+'. Los totales y gráficos se recalculan al abrir en Excel.';
   });
   btn.disabled=false;
 }
 function bindInformes(){
-  const map={'rp-com':repComandancia,'rp-foto':repFotografico,'rp-act':repActividades,'rp-est':repEstadistica};
+  const map={'rp-alc':repAlcaldia,'rp-com':repComandancia,'rp-foto':repFotografico,'rp-act':repActividades,'rp-est':repEstadistica};
   Object.keys(map).forEach(id=>{const b=$(id);if(b&&!b._b){b._b=1;b.onclick=()=>map[id](b)}});
 }
 
@@ -1838,11 +1869,361 @@ async function admSeg(){
     card(msg));
 }
 
+/* ================= V2: operación de la central, permisos por función, notificaciones, despacho y perfiles ================= */
+const puedeF=f=>ROL==='master'||(PERM||[]).includes(f);
+const TAB_F={est:'estadistica',reg:'registros',vivo:'operacion',calor:'calor',per:'personal',aud:'auditoria',cfg:'conexion',ser:'historico'};
+const horaTxt=t=>new Date(t).toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit',hour12:false});
+const fechaHora=t=>new Date(t).toLocaleString('es-CO',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});
+function tabsPorRol(){
+  document.querySelectorAll('#ptabs button').forEach(b=>{const p=b.dataset.p;b.hidden=p==='adm'?ROL!=='master':!puedeF(TAB_F[p])});
+  const fc=$('fcard');
+  if(ROL==='central'&&fc){fc.querySelector('.tools').hidden=true;$('fsum').hidden=true;$('backup').hidden=true}
+  if(ROL!=='master'&&$('backup'))$('backup').hidden=true;
+  const fab=$('fab-ll');if(fab)fab.hidden=!puedeF('llamados');
+  const bell=$('bell');if(bell)bell.hidden=!puedeF('notificaciones');
+}
+const primeraTab=()=>{const b=[...document.querySelectorAll('#ptabs button')].find(x=>!x.hidden);return b?b.dataset.p:'reg'};
+
+/* ---------- avisos breves: solo resultados verificados ---------- */
+function toast(t,mal){const b=$('toasts');if(!b)return;const d=document.createElement('div');d.className='toast'+(mal?' bad':'');d.textContent=t;b.append(d);setTimeout(()=>d.remove(),mal?7000:3800)}
+function dlg(html,onopen){const d=$('dlg');d.innerHTML=html;if(!d.open)d.showModal();if(onopen)onopen(d);return d}
+function dlgCerrar(){const d=$('dlg');if(d.open)d.close()}
+$('dlg')&&$('dlg').addEventListener('click',e=>{if(e.target===$('dlg'))dlgCerrar()});
+
+/* ---------- llamado: crear (panel y botón flotante), con un identificador que evita duplicados al reintentar ---------- */
+let LL_CID='';
+const canalTxt=c=>{if(!c)return '';const w=String(c.whatsapp||'');return w.startsWith('enviado')?'WhatsApp enviado al grupo.':w==='sin_configurar'?'WhatsApp NO configurado: no se envió.':'WhatsApp NO se envió ('+w.replace(/^fallo:\s*/,'')+').'};
+async function enviarLlamado(v,out,btn,despues){
+  const m=v.tipo,lug=(v.lugar||'').trim(),co=(v.co||'').trim(),tel=(v.tel||'').replace(/[^\d+]/g,'');
+  if(!m){out.textContent='Elija el tipo de emergencia.';return false}
+  if(v.tel&&tel.replace(/\D/g,'').length<7){out.textContent='El teléfono parece incompleto. Revíselo o déjelo en blanco.';return false}
+  let lat='',lon='';if(co){const p=parseCoord(co);if(!p){out.textContent='No entendí las coordenadas. Escríbalas en grados, minutos y segundos (4°31\'50"N 76°06\'29"W) o en decimales (4.5306, -76.1082).';return false}lat=+p.lat;lon=+p.lon}
+  if(!LL_CID)LL_CID='c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  if(btn)btn.disabled=true;out.textContent='Enviando…';
+  try{
+    const r=need(await call('llamado',{msg:m,lugar:lug,lat,lon,tel,cid:LL_CID}));
+    LL_CID='';
+    const wa=canalTxt(r.canales),pu=r.push&&r.push.enviados?' Aviso a '+r.push.enviados+' teléfono(s).':' Ningún teléfono recibió aviso push (verán el llamado al abrir la aplicación).';
+    out.textContent=(r.repetida?'Ese llamado ya estaba registrado: no se duplicó. ':'Llamado registrado en el servidor. ')+wa+pu;
+    toast(r.repetida?'Llamado ya registrado (sin duplicar).':'Llamado registrado.');
+    if(despues)despues();pollVivo();return true;
+  }catch(e){out.textContent='No se pudo enviar: '+humanErr(e)+'. Sus datos siguen aquí; pulse de nuevo para reintentar (no se duplicará).';return false}
+  finally{if(btn)btn.disabled=false}
+}
+function bindLlamado(){
+  const b=$('ll-send');if(!b||b._b)return;b._b=1;
+  const sel=$('ll-tipo');if(sel&&!sel.options.length)sel.innerHTML='<option value="">Elija el tipo de emergencia…</option>'+CATS.map(c=>'<option>'+esc(c)+'</option>').join('');
+  b.onclick=async()=>{const ok=await enviarLlamado({tipo:sel.value,lugar:$('ll-lugar').value,co:$('ll-co').value,tel:$('ll-tel').value},$('ll-out'),b);if(ok){sel.value='';$('ll-lugar').value='';$('ll-co').value='';$('ll-tel').value=''}};
+  const fab=$('fab-ll');if(fab&&!fab._b){fab._b=1;fab.onclick=()=>abrirLlamadoRapido()}
+}
+function abrirLlamadoRapido(){
+  dlg('<h3>Llamado rápido</h3><div class="tools" style="flex-direction:column;align-items:stretch"><label>Tipo de emergencia<select id="d-tipo"><option value="">Elija…</option>'+CATS.map(c=>'<option>'+esc(c)+'</option>').join('')+'</select></label><label>Lugar<input id="d-lugar"></label><label>Teléfono de quien reporta<input id="d-tel" inputmode="tel"></label><label>Coordenadas<input id="d-co" placeholder="4.5306, -76.1082"></label></div><div class="derived" id="d-out" role="status"></div><div class="dl"><button class="btn" id="d-ok">Llamar a las unidades</button><button class="btn alt" id="d-no">Cerrar</button></div>',d=>{
+    $('d-no').onclick=dlgCerrar;
+    $('d-ok').onclick=async()=>{const ok=await enviarLlamado({tipo:$('d-tipo').value,lugar:$('d-lugar').value,co:$('d-co').value,tel:$('d-tel').value},$('d-out'),$('d-ok'));if(ok)setTimeout(dlgCerrar,900)}});
+}
+
+/* ---------- emergencias activas: repetir, ubicación, despacho, cierre ---------- */
+const EST_DESP={asignado:'Asignado','confirmado':'Confirmado','en camino':'En camino','en sitio':'En sitio',finalizado:'Finalizado'};
+function drawLlamados(){
+  const box=$('v-llam');if(!box)return;
+  if(box.querySelector('.ed'))return; /* no se redibuja mientras se edita la ubicación */
+  const l=llamList();box.innerHTML='';
+  if(!l.length){box.innerHTML='<p class="derived">No hay emergencias activas.</p>';return}
+  l.forEach(a=>{
+    const cf=a.conf||[],ds=(VIVO.despachos||[]).filter(x=>x.emerg===a.id);
+    const d=document.createElement('div');d.className='emg';
+    d.innerHTML='<h4>🚒 '+esc(a.msg)+(a.rep?' <span class="pill info">repetido '+a.rep+' vez/veces</span>':'')+(a.v?' <span class="pill info">actualizado '+a.v+'×</span>':'')+'</h4>'+
+      '<div class="derived">'+(a.lugar?'Lugar: '+esc(a.lugar)+' · ':'<b>Sin lugar todavía</b> · ')+(okNum(a.lat)?esc(gms(a.lat,a.lon))+' · ':'sin coordenadas · ')+(a.tel?'Contacto: <a href="tel:'+esc(a.tel)+'">'+esc(a.tel)+'</a> · ':'')+'enviado '+horaTxt(a.cuando)+' h por '+esc(a.por)+'</div>'+
+      '<div><b>'+cf.length+'</b> unidad(es) confirmaron: '+(cf.length?cf.map(c=>esc(c.por)+(c.veh?' ('+esc(c.veh)+')':'')+' '+horaTxt(c.t)).join(' · '):'ninguna todavía')+'</div>'+
+      (ds.length?'<div>'+ds.map(x=>'<span class="pill on">'+esc(x.veh)+' · '+x.pers.length+' persona(s) · '+esc(EST_DESP[x.estado]||x.estado)+'</span>').join(' ')+'</div>':'<div class="derived">Sin vehículos asignados.</div>');
+    const b=document.createElement('div');b.className='dl';
+    const mk=(t,f,cl)=>{const x=document.createElement('button');x.className='btn '+(cl||'alt')+' sm';x.textContent=t;x.onclick=()=>f(x);return x};
+    b.append(mk('Repetir llamado / Recordar emergencia',x=>repetirLlamado(a,x)),mk('Agregar o actualizar ubicación',()=>editarUbic(a,d)));
+    if(puedeF('despacho'))b.append(mk('Despachar',()=>despachoUI(a)));
+    b.append(mk('Cerrar llamado',async x=>{if(!confirm('¿Cerrar este llamado? Las asignaciones de vehículos terminan.'))return;x.disabled=true;try{need(await call('alertAck',{id:a.id,nota:'Llamado cerrado'}));toast('Llamado cerrado.');pollVivo()}catch(e){toast('No se pudo cerrar: '+humanErr(e),1);x.disabled=false}}));
+    if(okNum(a.lat))b.append(ubicActs(a.lat,a.lon,'Llamado'));
+    d.append(b);box.append(d);
+  });
+}
+async function repetirLlamado(a,btn){
+  if(!confirm('¿Repetir el llamado «'+a.msg+'»? Se vuelve a avisar a las unidades y al grupo, sin crear otra emergencia.'))return;
+  btn.disabled=true;
+  try{const r=need(await call('llamadoRepetir',{id:a.id}));toast('Recordatorio n.º '+r.rep+' enviado. '+canalTxt(r.canales)+(r.push&&r.push.enviados?'':' Sin aviso push a teléfonos.'));pollVivo()}
+  catch(e){toast('No se repitió: '+humanErr(e),1)}
+  btn.disabled=false;
+}
+function editarUbic(a,card){
+  let ed=card.querySelector('.ed');if(ed){ed.remove();return}
+  ed=document.createElement('div');ed.className='ed tools';ed.style.marginTop='8px';
+  ed.innerHTML='<label>Dirección o lugar<input class="e-lug"></label><label>Coordenadas<input class="e-co" placeholder="4.5306, -76.1082"></label><label>Teléfono de quien reporta<input class="e-tel" inputmode="tel"></label><button class="btn sm e-ok">Guardar</button><button class="btn alt sm e-no">Cancelar</button><div class="derived e-out" role="status" style="flex-basis:100%"></div>';
+  card.append(ed);
+  ed.querySelector('.e-lug').value=a.lugar||'';ed.querySelector('.e-co').value=okNum(a.lat)?(+a.lat).toFixed(6)+', '+(+a.lon).toFixed(6):'';ed.querySelector('.e-tel').value=a.tel||'';
+  ed.querySelector('.e-no').onclick=()=>ed.remove();
+  const out=ed.querySelector('.e-out');
+  ed.querySelector('.e-ok').onclick=async function(){
+    const co=ed.querySelector('.e-co').value.trim(),tel=ed.querySelector('.e-tel').value.replace(/[^\d+]/g,'');
+    let lat,lon;if(co){const p=parseCoord(co);if(!p){out.textContent='No entendí las coordenadas.';return}lat=+p.lat;lon=+p.lon}
+    if(tel&&tel.replace(/\D/g,'').length<7){out.textContent='El teléfono parece incompleto.';return}
+    this.disabled=true;out.textContent='Guardando…';
+    try{
+      const r=need(await call('llamadoEdit',{id:a.id,lugar:ed.querySelector('.e-lug').value,tel,...(co?{lat,lon}:{})}));
+      if(r.sinCambios){out.textContent='No había cambios que guardar.';this.disabled=false;return}
+      const av=r.push&&r.push.enviados?'Avisados '+r.push.enviados+' teléfono(s) y la central.':'Avisada la central; ningún teléfono recibió push (verán el cambio al abrir la aplicación).';
+      if(r.verificado){toast('Ubicación guardada y confirmada por el servidor.');out.textContent='Guardado y confirmado. '+av}
+      else{toast('Se envió, pero el servidor no confirmó la lectura. Revise.',1);out.textContent='No se pudo confirmar. Revise antes de continuar.'}
+      pollVivo();setTimeout(()=>ed.remove(),1500);
+    }catch(e){out.textContent='No se guardó: '+humanErr(e)+'. Lo escrito se conserva.';this.disabled=false}
+  };
+}
+
+/* ---------- despacho: vehículos y personal ---------- */
+let ROSTERD=null;
+async function despachoUI(a){
+  if(!ROSTERD){try{ROSTERD=need(await call('roster'))}catch(e){toast('No se pudo cargar el personal: '+humanErr(e),1);return}}
+  const veh=ROSTERD.veh&&ROSTERD.veh.length?ROSTERD.veh:E.VEH,ds=(VIVO.despachos||[]).filter(x=>x.emerg===a.id);
+  const ocup=new Set((VIVO.despachos||[]).flatMap(x=>x.pers.map(p=>p.u)));
+  dlg('<h3>Despachar · '+esc(a.msg)+'</h3><div id="ds-lst">'+(ds.length?ds.map(x=>'<div class="ntf"><div><b>'+esc(x.veh)+'</b> · '+esc(EST_DESP[x.estado]||x.estado)+' · '+x.pers.length+' persona(s)<br><span class="derived">'+x.pers.map(p=>esc(p.n)+(p.rol?' ('+esc(p.rol)+')':'')).join(', ')+' · confirmaron '+(x.conf||[]).length+'</span></div><button class="btn alt sm" data-q="'+esc(x.id)+'">Quitar</button></div>').join(''):'<p class="derived">Aún no hay vehículos asignados.</p>')+'</div>'+
+    '<label>Vehículo<select id="ds-veh">'+veh.map(v=>'<option>'+esc(v)+'</option>').join('')+'</select></label>'+
+    '<p class="derived" style="margin:6px 0 2px">Personal que va en el vehículo (los ya asignados a una emergencia aparecen marcados):</p><div class="chk" id="ds-per">'+ROSTERD.personal.map(p=>'<label><input type="checkbox" value="'+esc(p.usuario)+'" data-n="'+esc(p.nombre)+'" '+(ocup.has(p.usuario)?'disabled':'')+'>'+esc(p.nombre)+(ocup.has(p.usuario)?' · ocupado':'')+'</label>').join('')+'</div>'+
+    '<label>Nota (opcional)<input id="ds-nota"></label><div class="derived" id="ds-out" role="status"></div><div class="dl"><button class="btn" id="ds-ok">Asignar</button><button class="btn alt" id="ds-no">Cerrar</button></div>',d=>{
+      $('ds-no').onclick=dlgCerrar;
+      d.querySelectorAll('[data-q]').forEach(b=>b.onclick=async()=>{try{need(await call('despQuitar',{id:b.dataset.q}));toast('Asignación cancelada.');ROSTERD=null;dlgCerrar();pollVivo()}catch(e){$('ds-out').textContent='No se pudo quitar: '+humanErr(e)}});
+      $('ds-ok').onclick=async()=>{
+        const pers=[...d.querySelectorAll('#ds-per input:checked')].map(i=>({u:i.value,n:i.dataset.n}));
+        if(!pers.length){$('ds-out').textContent='Marque al menos una persona.';return}
+        $('ds-ok').disabled=true;$('ds-out').textContent='Asignando…';
+        try{const r=need(await call('despAsignar',{emerg:a.id,veh:$('ds-veh').value,pers,nota:$('ds-nota').value}));
+          toast('Asignado y confirmado por el servidor: '+r.personal+' persona(s) en '+r.despacho.veh+'.'+(r.push&&r.push.enviados?' Avisados '+r.push.enviados+' teléfono(s).':' Sin push: lo verán al abrir la aplicación.'));ROSTERD=null;dlgCerrar();pollVivo()}
+        catch(e){$('ds-out').textContent='No se asignó: '+humanErr(e);$('ds-ok').disabled=false}};
+    });
+}
+
+/* ---------- unidades, estados de conexión y perfil ---------- */
+const ESTADO_U={compartiendo:['on','Compartiendo ubicación'],'ubic-antigua':['warn','Ubicación desactualizada'],conectado:['info','Conectado (sin compartir)'],detenido:['off','Dejó de compartir'],sinsenal:['off','Sin señal reciente']};
+function drawUnidades(){
+  const t=$('uni-tab');if(!t)return;const us=(VIVO.usuarios||[]).slice().sort((a,b)=>(b.tp||b.tc||0)-(a.tp||a.tc||0)),ahora=VIVO.ahora||Date.now();
+  if(!us.length){t.innerHTML='<tr><td>Ninguna unidad ha abierto la aplicación hoy.</td></tr>';return}
+  t.innerHTML='<tr><th>Persona</th><th>Estado</th><th>Ubicación</th><th>Pendientes en su teléfono</th><th></th></tr>';
+  us.forEach(u=>{
+    const e=ESTADO_U[u.estado]||['off',u.estado];const tr=document.createElement('tr');
+    const vivo=u.pos,ult=u.ult;
+    const ub=vivo?'<b>En vivo</b> · hace '+Math.max(0,Math.round((ahora-u.tp)/1000))+' s<br><span class="m">'+esc(gms(vivo.lat,vivo.lon))+'</span>':ult?'<b>Última conocida</b> · '+fechaHora(ult.t)+'<br><span class="m">'+esc(gms(ult.lat,ult.lon))+'</span>':'—';
+    const c=u.cola||{},pend=[c.borr?c.borr+' borrador(es)':'',c.pend?c.pend+' por enviar':'',c.err?'<span class="pill bad">'+c.err+' con error</span>':''].filter(Boolean).join(' · ')||'—';
+    tr.innerHTML='<td>'+esc(u.n)+'</td><td><span class="pill '+e[0]+'">'+e[1]+'</span></td><td>'+ub+'</td><td>'+pend+'</td>';
+    const td=document.createElement('td');
+    const la=vivo?vivo.lat:ult?ult.lat:null,lo=vivo?vivo.lon:ult?ult.lon:null;
+    if(la!=null){const z=document.createElement('button');z.className='btn alt sm';z.textContent='Ver en mapa';z.onclick=()=>{if(MV)MV.setView([la,lo],17);$('map-vivo').scrollIntoView({behavior:'smooth',block:'center'})};td.append(z,' ')}
+    if(puedeF('perfiles')){const p=document.createElement('button');p.className='btn alt sm';p.textContent='Perfil';p.onclick=()=>perfilUI(u.u,u.n);td.append(p)}
+    tr.append(td);t.append(tr);
+  });
+}
+async function perfilUI(u,n){
+  dlg('<h3>'+esc(n||u)+'</h3><p class="derived">Cargando…</p>');
+  try{
+    const r=need(await call('perfilUsuario',{usuario:u})),p=r.persona,e=r.estado;
+    const lista=(arr,f)=>arr.length?'<ul style="margin:4px 0 8px 18px;padding:0">'+arr.slice(0,12).map(f).join('')+'</ul>':'<p class="derived">Ninguno.</p>';
+    const reg=x=>'<li>'+esc(x.num||x.tmp)+' · '+esc(tc(x.cat||''))+' · '+esc(x.fecha||'')+(x.estado!=='final'?' <span class="pill warn">'+(x.completo?'completo, falta enviar':'borrador incompleto')+'</span>':'')+'</li>';
+    dlg('<h3>'+esc(p.nombre)+'</h3><p class="derived">'+esc([p.grado,p.cargo,p.rol&&ROLNOM2(p.rol)].filter(Boolean).join(' · '))+(p.telefono?' · Tel. '+esc(p.telefono):'')+'</p>'+
+      '<p>'+(e?'<span class="pill '+(ESTADO_U[e.estado]||['off'])[0]+'">'+esc((ESTADO_U[e.estado]||[0,e.estado])[1])+'</span>':'<span class="pill off">Sin actividad reciente</span>')+(e&&e.pos?' · en vivo · '+esc(gms(e.pos.lat,e.pos.lon)):e&&e.ult?' · última ubicación conocida ('+fechaHora(e.ult.t)+'): '+esc(gms(e.ult.lat,e.ult.lon)):'')+'</p>'+
+      '<b>Borradores y pendientes</b>'+lista(r.borradores,reg)+'<b>Reportes que registró</b>'+lista(r.registros,reg)+'<b>Emergencias donde participó</b>'+lista(r.participaciones,reg)+
+      '<b>Asignaciones</b>'+lista(r.despachos,x=>'<li>'+esc(x.veh)+' · '+esc(EST_DESP[x.estado]||x.estado)+' · '+fechaHora(x.cuando)+'</li>')+'<b>Correcciones</b>'+lista(r.correcciones,x=>'<li>'+esc(x.num||'')+' · '+esc(x.tipo)+' · '+fechaHora(x.t)+'</li>')+
+      '<b>Acciones recientes</b>'+lista(r.acciones,x=>'<li>'+esc(x.accion)+' '+esc(x.registro||'')+' · '+(isNaN(+x.t)?'':fechaHora(+x.t))+'</li>')+'<div class="dl"><button class="btn alt" id="pf-no">Cerrar</button></div>',()=>{$('pf-no').onclick=dlgCerrar});
+  }catch(e){dlg('<h3>'+esc(n||u)+'</h3><p>No se pudo cargar el perfil: '+esc(humanErr(e))+'</p><div class="dl"><button class="btn alt" id="pf-no">Cerrar</button></div>',()=>{$('pf-no').onclick=dlgCerrar})}
+}
+const ROLNOM2=r=>({master:'superadministrador',estadistica:'central con estadística',central:'central operativa',campo:'bombero'}[r]||r);
+
+/* ---------- alertas de pendientes ---------- */
+let PEND=null;
+async function pollPend(){
+  if(!puedeF('pendientes'))return;
+  try{const r=await call('pendientes',{});if(r&&r.ok){PEND=r;drawPend()}}catch(e){}
+}
+function drawPend(){
+  const box=$('v-pend');if(!box)return;
+  if(!PEND){box.innerHTML='';return}
+  const f=PEND,fila=(x,tag)=>'<div class="ntf"><div>'+tag+' <b>'+esc(x.num||x.tmp)+'</b> · '+esc(tc(x.cat||''))+'<br><span class="derived">Responsable: '+esc(x.por||x.usuario||'—')+' · '+fechaHora(x.t)+'</span></div></div>';
+  const b=[];
+  f.borradores.forEach(x=>b.push(fila(x,x.completo?'<span class="pill warn">Completo, no enviado</span>':'<span class="pill off">Borrador incompleto</span>')));
+  f.sinDrive.forEach(x=>b.push(fila(x,'<span class="pill info">Esperando carga a Drive</span>')));
+  (f.sinUbic||[]).forEach(x=>b.push('<div class="ntf"><div><span class="pill bad">Falta registrar la ubicación del evento</span> <b>'+esc(x.num||x.tmp)+'</b> · '+esc(tc(x.cat||''))+'<br><span class="derived">Responsable: '+esc(x.por||x.usuario||'—')+' · '+fechaHora(x.t)+'</span><div class="dl">'+(puedeF('ubicacion')?'<button class="btn alt sm ub-add" data-t="'+esc(x.tmp)+'">Agregar ubicación en el mapa</button>':'')+(ROL==='master'?'<button class="btn alt sm ub-his" data-t="'+esc(x.tmp)+'">Recuperar ubicación histórica</button>':'')+'</div></div></div>'));
+  f.colas.forEach(x=>b.push('<div class="ntf"><div><span class="pill '+(x.cola.err?'bad':'info')+'">'+(x.cola.err?'Error de sincronización':'Esperando sincronizar')+'</span> <b>'+esc(x.n)+'</b>'+(x.enLinea?'':' <span class="derived">(sin conexión)</span>')+'<br><span class="derived">'+[x.cola.borr&&x.cola.borr+' borrador(es)',x.cola.pend&&x.cola.pend+' por enviar',x.cola.err&&x.cola.err+' con error'].filter(Boolean).join(' · ')+' · '+fechaHora(x.t)+'</span></div></div>'));
+  box.innerHTML='<h4 style="margin:12px 0 4px">Pendientes ('+b.length+')</h4>'+(b.length?b.slice(0,40).join(''):'<p class="derived">Nada pendiente.</p>')+(f.sinDrive.length&&puedeF('conexion')?'<div class="dl"><button class="btn alt sm" id="pd-drive">Cargar a Drive los '+f.sinDrive.length+' pendientes</button><span class="derived" id="pd-msg"></span></div>':'');
+  box.querySelectorAll('.ub-add').forEach(x=>x.onclick=()=>ubicCentral(x.dataset.t));
+  box.querySelectorAll('.ub-his').forEach(x=>x.onclick=()=>ubicHistorica(x.dataset.t));
+  const bd=$('pd-drive');if(bd)bd.onclick=async()=>{bd.disabled=true;$('docs-msg')||0;await docsBulkOp($('pd-msg'));bd.disabled=false;pollPend()};
+}
+async function docsBulkOp(m){
+  const falta=[...REGS.values()].filter(o=>o.estado==='final'&&!o.doc&&!o.anulado&&o.num);
+  if(!falta.length){m.textContent='Todo ya está en Drive.';return}
+  let ok=0,mal=0,ult='';
+  for(let i=0;i<falta.length;i++){m.textContent='Cargando '+(i+1)+' de '+falta.length+'…';try{await subirDoc(toRow(falta[i]));ok++}catch(e){mal++;ult=humanErr(e)}}
+  m.textContent=ok+' cargado(s) y confirmado(s)'+(mal?'; '+mal+' con error ('+ult+')':'')+'.';
+  toast(ok+' reporte(s) cargados a Drive'+(mal?'; '+mal+' con error':'')+'.',!!mal&&!ok);
+}
+
+/* ---------- mapa en vivo (estados y última ubicación) ---------- */
+function drawVivo(){
+  const ps=(VIVO.pos||[]).slice().sort((a,b)=>b.t-a.t),ahora=VIVO.ahora||Date.now();
+  const sosPor=new Set(sosList().map(a=>a.por));
+  if(MV&&MVL){MVL.clearLayers();const pts=[];
+    ps.forEach(p=>{const viejo=ahora-p.t>150000;
+      const ic=L.divIcon({className:'',html:'<div class="unit'+(viejo?' old':'')+(sosPor.has(p.por)||p.sos?' sos':'')+'"></div>',iconSize:[14,14],iconAnchor:[7,7]});
+      L.marker([p.lat,p.lon],{icon:ic}).bindTooltip('<b>'+esc(p.por)+'</b>'+(p.veh?' · '+esc(p.veh):'')+'<br>'+(viejo?'<b>Ubicación desactualizada</b> · ':'En vivo · ')+'hace '+Math.max(0,Math.round((ahora-p.t)/1000))+' s<br>'+esc(gms(p.lat,p.lon)),{permanent:!viejo,direction:'top',offset:[0,-8]}).addTo(MVL);
+      L.circle([p.lat,p.lon],{radius:Math.max(p.acc||0,5),color:viejo?'#999':'#2b7fb8',weight:1,fillOpacity:.08}).addTo(MVL);pts.push([p.lat,p.lon])});
+    (VIVO.usuarios||[]).filter(u=>!u.pos&&u.ult&&ahora-u.ult.t<24*3600000).forEach(u=>{
+      L.circleMarker([u.ult.lat,u.ult.lon],{radius:6,color:'#777',weight:2,dashArray:'3',fillOpacity:.1}).bindTooltip('<b>'+esc(u.n)+'</b><br>Última ubicación conocida · '+fechaHora(u.ult.t)).addTo(MVL)});
+    sosList().forEach(a=>{if(okNum(a.lat)){L.circleMarker([a.lat,a.lon],{radius:14,color:'#d62a1c',weight:3,fillOpacity:.25}).bindTooltip('SOS · '+esc(a.por)).addTo(MVL);pts.push([a.lat,a.lon])}});
+    llamList().forEach(a=>{if(okNum(a.lat)){L.circleMarker([a.lat,a.lon],{radius:12,color:'#1f9d55',weight:3,fillOpacity:.2}).bindTooltip('Llamado · '+esc(a.msg)).addTo(MVL);pts.push([a.lat,a.lon])}});
+    if(pts.length&&!MV._fitDone){MV.fitBounds(pts,{maxZoom:15,padding:[30,30]});MV._fitDone=true}}
+  const t=$('vivo-tab');if(t)t.innerHTML='';
+  drawLlamados();drawUnidades();drawPend();
+}
+function enVivoTab(on){if(on){initMapVivo();drawVivo();pollVivo();pollPend()}}
+
+/* ---------- capas de mapa: calles, topográfico y satélite ---------- */
+function capasBase(map){
+  if(!map||map._capas||typeof L==='undefined')return;map._capas=1;
+  const osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'});
+  const topo=L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{maxZoom:17,subdomains:'abc',attribution:'Mapa: © OpenStreetMap, SRTM | Estilo: © OpenTopoMap (CC-BY-SA)'});
+  const sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Imágenes © Esri, Maxar, Earthstar Geographics y comunidad GIS'});
+  map.eachLayer(l=>{if(l._url&&/openstreetmap/.test(l._url))map.removeLayer(l)});
+  let pref='calles';try{pref=localStorage.getItem('cbv_capa')||'calles'}catch(e){}
+  ({calles:osm,topo,sat}[pref]||osm).addTo(map);
+  L.control.layers({'Calles':osm,'Topográfico':topo,'Satélite':sat},null,{collapsed:true}).addTo(map);
+  map.on('baselayerchange',e=>{try{localStorage.setItem('cbv_capa',e.layer===topo?'topo':e.layer===sat?'sat':'calles')}catch(x){}});
+}
+
+/* ---------- centro de notificaciones ---------- */
+let NT=lsGet('cbv_nt2',{items:[],seen:{},ult:0}),NT_PRIMERA=true;
+const ntGuardar=()=>{NT.items=NT.items.slice(0,200);const s={};NT.items.forEach(i=>{if(NT.seen[i.id])s[i.id]=1});NT.seen=s;lsSet('cbv_nt2',NT)};
+function ntBadge(){const n=NT.items.filter(i=>!NT.seen[i.id]).length,b=$('bell-n');if(!b)return;b.hidden=!n;b.textContent=n>99?'99+':n}
+async function pollNotif(){
+  if(!puedeF('notificaciones')||!USER)return;
+  try{
+    const r=await call('notifGet',{desde:NT.ult});
+    if(!r||!r.ok)return;
+    const nuevos=(r.items||[]).filter(i=>!NT.items.some(x=>x.id===i.id));
+    if(nuevos.length){
+      NT.items=nuevos.concat(NT.items);NT.ult=Math.max(NT.ult,...nuevos.map(i=>i.t));
+      if(!NT_PRIMERA){nuevos.slice(0,3).forEach(i=>toast(i.titulo+(i.texto?' · '+i.texto:'')));if(nuevos.some(i=>i.accion))siren.beep(2)}
+      ntGuardar();
+    }
+    NT_PRIMERA=false;ntBadge();
+  }catch(e){}
+}
+function ntAbrir(i){
+  dlgCerrar();
+  if(i.refTipo==='llamado'){showTab('vivo');setTimeout(()=>$('op-act')&&$('op-act').scrollIntoView({behavior:'smooth'}),200)}
+  else if(i.refTipo==='registro'){loadAll().then(()=>{renderPanel();showTab('reg');const o=REGS.get(i.ref);if(o)showDetail(toRow(o))})}
+  else if(i.refTipo==='usuario'||i.refTipo==='despacho'){showTab('vivo');if(i.refTipo==='usuario'&&puedeF('perfiles'))perfilUI(i.ref,i.por)}
+}
+function centroNotif(){
+  const html=()=>'<h3>Notificaciones</h3><div class="dl"><button class="btn alt sm" id="nt-todo">Marcar todas como revisadas</button><button class="btn alt sm" id="nt-no">Cerrar</button></div><div id="nt-l">'+(NT.items.length?NT.items.map(i=>'<div class="ntf'+(NT.seen[i.id]?'':' new')+'" data-id="'+esc(i.id)+'"><div><b>'+esc(i.titulo)+'</b>'+(i.accion&&!NT.seen[i.id]?' <span class="pill warn">requiere atención</span>':'')+'<br><span class="derived">'+esc(i.texto||'')+' · '+fechaHora(i.t)+(NT.seen[i.id]?' · revisada':'')+'</span></div><div class="dl">'+(i.ref?'<button class="btn alt sm" data-a="ab">Abrir</button>':'')+(NT.seen[i.id]?'':'<button class="btn sm" data-a="ok">'+(i.accion?'Enterado':'Revisada')+'</button>')+'</div></div>').join(''):'<p class="derived">No hay notificaciones.</p>')+'</div>';
+  const bind=d=>{
+    $('nt-no').onclick=dlgCerrar;$('nt-todo').onclick=()=>{NT.items.forEach(i=>NT.seen[i.id]=1);ntGuardar();ntBadge();dlg(html(),bind)};
+    d.querySelectorAll('.ntf [data-a]').forEach(b=>b.onclick=()=>{const id=b.closest('.ntf').dataset.id,i=NT.items.find(x=>x.id===id);NT.seen[id]=1;ntGuardar();ntBadge();if(b.dataset.a==='ab')ntAbrir(i);else dlg(html(),bind)});
+  };
+  dlg(html(),bind);
+}
+
+/* ---------- administración: funciones por rol ---------- */
+async function admPerm(){
+  const box=$('a-box');
+  try{
+    const r=need(await call('permGet')),roles=[['central','Central operativa'],['estadistica','Central con estadística'],['campo','Bomberos (celular)']];
+    const fs=Object.keys(r.info);
+    box.innerHTML='<div class="card"><h3>Funciones por rol</h3><p class="derived">Marque qué puede usar cada rol. El servidor lo exige (no basta con ocultar el botón). El superadministrador siempre tiene todo. Desmarcar no borra datos: solo oculta y bloquea la función.</p><div class="scroll"><table id="pm-t"></table></div><div class="dl"><button class="btn" id="pm-ok">Guardar</button><button class="btn alt" id="pm-def">Restaurar valores de fábrica</button><span class="derived" id="pm-out" role="status"></span></div></div>';
+    const t=$('pm-t');t.innerHTML='<tr><th>Función</th>'+roles.map(x=>'<th>'+x[1]+'</th>').join('')+'</tr>'+fs.map(f=>'<tr><td>'+esc(r.info[f])+'</td>'+roles.map(x=>'<td style="text-align:center"><input type="checkbox" data-r="'+x[0]+'" data-f="'+f+'" '+(r.actual[x[0]].includes(f)?'checked':'')+'></td>').join('')+'</tr>').join('');
+    const lee=()=>{const o={};roles.forEach(x=>o[x[0]]=[...t.querySelectorAll('input[data-r="'+x[0]+'"]:checked')].map(i=>i.dataset.f));return o};
+    $('pm-ok').onclick=async()=>{const o=$('pm-out');o.textContent='Guardando…';try{need(await call('cfgSet',{clave:'permisos',valor:lee()}));const v=need(await call('permGet'));const igual=JSON.stringify(v.actual.central)===JSON.stringify(lee().central)&&JSON.stringify(v.actual.campo)===JSON.stringify(lee().campo)&&JSON.stringify(v.actual.estadistica)===JSON.stringify(lee().estadistica);o.textContent=igual?'Guardado y verificado en el servidor.':'Se guardó pero no coincide con lo marcado: revise.';toast(igual?'Funciones por rol guardadas.':'No coincide lo guardado',!igual)}catch(e){o.textContent='No se guardó: '+humanErr(e)}};
+    $('pm-def').onclick=()=>{t.querySelectorAll('input').forEach(i=>i.checked=(r.defecto[i.dataset.r]||[]).includes(i.dataset.f))};
+  }catch(e){box.innerHTML='<div class="card"><p>No se pudo cargar: '+esc(humanErr(e))+'</p></div>'}
+}
+function renderAdm(sub){
+  if(sub)ADMSUB=sub;
+  document.querySelectorAll('#atabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.a===ADMSUB));
+  const f={usr:admUsr,frm:admFrm,app:admApp,mar:admMar,wha:admWha,seg:admSeg,gfm:admGfm,his:admHis,dgn:admDgn,perm:admPerm}[ADMSUB]||admUsr;
+  $('a-box').innerHTML='<div class="card"><p class="derived">Cargando…</p></div>';f();
+}
+
+/* ---------- arranque V2 ---------- */
+function v2Init(){
+  document.body.classList.toggle('simple',ROL!=='master');
+  tabsPorRol();bindLlamado();
+  const bell=$('bell');if(bell&&!bell._b){bell._b=1;bell.onclick=centroNotif}
+  pollNotif();setInterval(pollNotif,12000);pollPend();setInterval(()=>{if(document.visibilityState==='visible')pollPend()},30000);
+}
+
+
+/* ---------- ubicación manual del evento (central) ---------- */
+const coordValidaC=(a,b)=>okNum(a)&&okNum(b)&&Math.abs(+a)<=90&&Math.abs(+b)<=180&&!(+a===0&&+b===0);
+const UBC={map:null,mk:null,lat:null,lon:null};
+function ubicCentral(tmp,previa){
+  const o=REGS.get(tmp)||{};const tiene=coordValidaC(o.lat,o.lon);
+  UBC.lat=previa?previa.lat:(tiene?+o.lat:null);UBC.lon=previa?previa.lon:(tiene?+o.lon:null);
+  dlg('<h3>'+(tiene?'Corregir':'Agregar')+' ubicación · '+esc(o.num||tmp)+'</h3><p class="derived">Toque el mapa o arrastre el marcador al punto exacto. Revise las coordenadas antes de guardar.'+(previa?' <b>Punto propuesto desde el historial de la unidad: confírmelo o muévalo.</b>':'')+'</p>'+
+    '<div style="display:grid;grid-template-columns:1fr auto;gap:6px"><input id="uc-q" type="search" placeholder="Buscar vereda, barrio, vía o lugar" aria-label="Buscar lugar"><button class="btn alt sm" id="uc-b">Buscar</button></div><div id="uc-r" class="derived" role="status"></div>'+
+    '<div id="uc-map" style="height:46vh;min-height:260px;border:2px solid var(--fg)"></div><div id="uc-i" class="derived" style="font-weight:700;margin-top:6px"></div>'+
+    '<input id="uc-p" placeholder="Pegar coordenadas (decimales o grados, minutos y segundos)" aria-label="Pegar coordenadas"><div class="dl"><button class="btn" id="uc-ok" disabled>Guardar ubicación</button><button class="btn alt" id="uc-no">Cancelar</button></div><div id="uc-m" class="derived" role="status"></div>',
+  d=>{
+    const pI=()=>{$('uc-i').textContent=UBC.lat==null?'Todavía no ha marcado el punto.':'Latitud '+UBC.lat.toFixed(6)+' · Longitud '+UBC.lon.toFixed(6)+' — '+gms(UBC.lat,UBC.lon);$('uc-ok').disabled=UBC.lat==null};
+    const poner=(la,lo,c)=>{UBC.lat=+la;UBC.lon=+lo;pI();if(UBC.map){if(!UBC.mk){UBC.mk=L.marker([UBC.lat,UBC.lon],{draggable:true}).addTo(UBC.map);UBC.mk.on('dragend',()=>{const q=UBC.mk.getLatLng();UBC.lat=q.lat;UBC.lon=q.lng;pI()})}else UBC.mk.setLatLng([UBC.lat,UBC.lon]);if(c)UBC.map.setView([UBC.lat,UBC.lon],Math.max(UBC.map.getZoom(),16))}};
+    if(UBC.map){try{UBC.map.remove()}catch(e){}UBC.map=null;UBC.mk=null}
+    if(typeof L==='undefined')$('uc-map').innerHTML='<p class="derived" style="padding:12px">El mapa necesita conexión a internet. Puede pegar las coordenadas.</p>';
+    else{UBC.map=L.map('uc-map').setView(UBC.lat!=null?[UBC.lat,UBC.lon]:[4.53,-76.1],UBC.lat!=null?17:12);capasBase(UBC.map);UBC.map.on('click',e=>poner(e.latlng.lat,e.latlng.lng,false));if(UBC.lat!=null)poner(UBC.lat,UBC.lon,false);setTimeout(()=>UBC.map&&UBC.map.invalidateSize(),150)}
+    pI();
+    $('uc-p').oninput=()=>{const c=parseCoord($('uc-p').value);if(c&&coordValidaC(c.lat,c.lon)){poner(c.lat,c.lon,true);$('uc-p').style.borderColor='var(--ok)'}else $('uc-p').style.borderColor=''};
+    const bus=async()=>{const q=$('uc-q').value.trim();const r=$('uc-r');if(q.length<3){r.textContent='Escriba al menos 3 letras.';return}r.textContent='Buscando…';
+      try{const x=await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&countrycodes=co&accept-language=es&q='+encodeURIComponent(q));const l=await x.json();r.innerHTML='';
+        if(!l.length){r.textContent='No se encontró. Marque el punto en el mapa.';return}
+        l.forEach(y=>{const b=document.createElement('button');b.className='btn alt sm';b.style.cssText='display:block;margin:3px 0;text-align:left';b.textContent=String(y.display_name).slice(0,70);b.onclick=()=>{poner(y.lat,y.lon,true);r.textContent='Lugar encontrado. Ajuste el punto exacto.'};r.append(b)});
+      }catch(e){r.textContent='No se pudo buscar. Marque el punto en el mapa.'}};
+    $('uc-b').onclick=bus;$('uc-q').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();bus()}};
+    $('uc-no').onclick=dlgCerrar;
+    $('uc-ok').onclick=async()=>{$('uc-ok').disabled=true;$('uc-m').textContent='Guardando…';
+      try{const r=await call('ubicSet',{tmp,lat:+UBC.lat.toFixed(6),lon:+UBC.lon.toFixed(6),origen:previa?'historica':'mapa'});
+        if(r&&r.ok&&r.confirmado!==false){const reg=REGS.get(tmp);if(reg){reg.lat=String(r.lat);reg.lon=String(r.lon)}dlgCerrar();toast('Ubicación guardada en el reporte '+(r.num||'')+' (confirmada por el servidor).');pollPend();if(typeof pollLista==='function')pollLista()}
+        else{$('uc-m').textContent='No se pudo guardar: '+(r&&r.error==='permiso'?'no tiene permiso para esta función.':r&&r.error==='cerrado'?'el reporte está anulado.':(r&&r.error)||'sin respuesta del servidor.');$('uc-ok').disabled=false}
+      }catch(e){$('uc-m').textContent='No se pudo guardar: '+humanErr(e);$('uc-ok').disabled=false}};
+  });
+}
+async function ubicHistorica(tmp){
+  try{const r=await call('ubicHistorica',{tmp});
+    if(!r||!r.ok){toast('No se pudo consultar el historial: '+((r&&r.error)||'sin respuesta'),true);return}
+    if(!r.encontrada){dlg('<h3>Ubicación histórica</h3><p>'+esc(r.mensaje||'No hay ubicaciones guardadas.')+'</p><div class="dl"><button class="btn" id="uh-m">Marcar en el mapa</button><button class="btn alt" id="uh-n">Cerrar</button></div>',()=>{$('uh-n').onclick=dlgCerrar;$('uh-m').onclick=()=>ubicCentral(tmp)});return}
+    dlg('<h3>Ubicación histórica de la unidad</h3><p>Última ubicación conocida de <b>'+esc(r.unidad)+'</b> '+(r.via==='reporte'?'asociada a este reporte':'durante el evento')+': <b>'+fechaHora(r.t)+'</b>.</p><p class="sa-co">'+esc(gms(r.lat,r.lon))+'<br>'+r.lat.toFixed(6)+', '+r.lon.toFixed(6)+'</p><p class="derived">Es un dato propuesto: confírmelo en el mapa antes de guardarlo.</p><div class="dl"><button class="btn" id="uh-ok">Revisar en el mapa</button><button class="btn alt" id="uh-n">Cerrar</button></div>',()=>{$('uh-n').onclick=dlgCerrar;$('uh-ok').onclick=()=>ubicCentral(tmp,{lat:r.lat,lon:r.lon})});
+  }catch(e){toast('No se pudo consultar el historial: '+humanErr(e),true)}
+}
+
+/* ---------- un solo botón: «Generar reportes para la Alcaldía» ---------- */
+function datosB64Alc(d){const b=d instanceof Blob?d:new Blob([d]);return new Promise((ok,mal)=>{const fr=new FileReader();fr.onload=()=>ok(String(fr.result).split(',')[1]);fr.onerror=()=>mal(fr.error);fr.readAsDataURL(b)})}
+async function repAlcaldia(btn){
+  const m=$('dlmsg'),per=period();btn.disabled=true;
+  const got=[],guardar=save;
+  try{
+    save=async(n,d)=>{got.push([n,d])};
+    const falso={disabled:false};
+    for(const f of [repComandancia,repActividades,repFotografico])await f(falso);
+  }finally{save=guardar}
+  if(!got.length){btn.disabled=false;return}
+  const res=[];
+  for(const [n,d] of got){
+    await guardar(n,d);
+    if(!puedeF('informes')){res.push(n+': descargado.');continue}
+    if(!confirm('¿Guardar «'+n+'» también en la carpeta de Drive «Informes Alcaldía / '+per.file+'»?\nSi ya existe uno con el mismo nombre, se reemplaza.'))continue;
+    m.textContent='Guardando «'+n+'» en Drive…';
+    try{const r=await call('docPeriodo',{d:await datosB64Alc(d),nombre:n,carpeta:'Informes Alcaldía',anio:String(per.file).slice(0,4)});
+      res.push(r&&r.ok?n+': guardado en Drive'+(r.reemplazo?' (reemplazó el anterior)':'')+'.':n+': NO se guardó en Drive ('+((r&&r.error)||'sin respuesta')+'); quedó descargado.')}
+    catch(e){res.push(n+': NO se guardó en Drive ('+humanErr(e)+'); quedó descargado.')}
+  }
+  m.textContent='Reportes para la Alcaldía listos. '+res.join(' ');btn.disabled=false;
+}
+
 $('flogin').onsubmit=login;$('docs-bulk').onclick=docsBulk;
 $('atabs').onclick=e=>{const b=e.target.closest('button');if(b)renderAdm(b.dataset.a)};
 (function(){
   if(!TOKEN)return;
-  rawCall({u:USER,t:TOKEN,a:'yo'},30000).then(r=>{if(r&&r.ok){ROL=r.rol;YO=r.nombre||YO;CFGP=r.cfg||{};enter()}else{try{localStorage.removeItem('cbv_central2')}catch(e){}TOKEN='';$('l_err').textContent='Su sesión venció. Entre de nuevo.'}}).catch(e=>{$('l_err').textContent=humanErr(e);});
+  rawCall({u:USER,t:TOKEN,a:'yo'},30000).then(r=>{if(r&&r.ok){ROL=r.rol;PERM=r.perm||[];YO=r.nombre||YO;CFGP=r.cfg||{};enter()}else{try{localStorage.removeItem('cbv_central2')}catch(e){}TOKEN='';$('l_err').textContent='Su sesión venció. Entre de nuevo.'}}).catch(e=>{$('l_err').textContent=humanErr(e);});
 })();
 
 </script></body></html>
