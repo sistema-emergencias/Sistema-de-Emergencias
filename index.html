@@ -25,9 +25,13 @@
   --body:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',sans-serif;
   --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
 }
-@media (prefers-color-scheme:dark){:root{
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#14181c; --surface:#1c2227; --fg:#e6eaed; --muted:#9aa5ae; --line:#2f373e;
-  --accent:#ef6a5d; --accent-fg:#14181c; --accent-soft:#3a2220; --ok:#5cc491; --ok-soft:#18332a; --warn:#e3b04f; --warn-soft:#35291a}}
+  --accent:#ef6a5d; --accent-fg:#14181c; --accent-soft:#3a2220; --ok:#5cc491; --ok-soft:#18332a; --warn:#e3b04f; --warn-soft:#35291a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#14181c; --surface:#1c2227; --fg:#e6eaed; --muted:#9aa5ae; --line:#2f373e;
+  --accent:#ef6a5d; --accent-fg:#14181c; --accent-soft:#3a2220; --ok:#5cc491; --ok-soft:#18332a; --warn:#e3b04f; --warn-soft:#35291a; color-scheme:dark}
+:root[data-theme="light"]{color-scheme:light}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.45;padding-bottom:calc(88px + env(safe-area-inset-bottom))}
@@ -222,7 +226,7 @@ h1{font-size:1.45rem}
 .sheet .bd .card{margin:0}
 .top .sos.hold::after{transition:width 1s linear}
 
-.trkban{padding:8px 12px;border-radius:8px;font-size:14px;font-weight:600;margin:6px 0;background:#e3f4e8;color:#14532d;border:1px solid #1f9d55}
+.trkban{padding:4px 0;font-size:14px;font-weight:600;margin:6px 0}.trkban .btn{width:100%}.trkban.warn{padding:8px 12px;border-radius:8px}
 .trkban.warn{background:#fff2cc;color:#7a5b00;border-color:#d9a400}
 .dlg{border:1px solid #bbb;border-radius:12px;padding:16px;max-width:min(36rem,94vw);width:100%}
 .dlg::backdrop{background:rgba(0,0,0,.45)}
@@ -236,6 +240,15 @@ h1{font-size:1.45rem}
 #btnNot{width:42px;height:42px;font-size:18px}
 html,body{overflow-x:hidden}
 .sin-ubic{color:#b00020;font-weight:700}.ov.ubic{place-items:start center;overflow:auto}
+/* encabezado: nunca más ancho que la pantalla */
+.top{max-width:100%;box-sizing:border-box}
+.top .brand{flex:1 1 0!important;min-width:0!important;overflow:hidden}
+.top .brand .eyebrow,.top .brand h1{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+@media(max-width:420px){.iconbtn{width:40px;height:40px}#btnNot{width:40px;height:40px}.top .sos{min-width:52px;padding:0 8px}.topbtns{gap:4px}.top{gap:6px}}
+.wrap{grid-template-columns:minmax(0,1fr)}.wrap>*{min-width:0;max-width:100%}
+.nav .in{grid-template-columns:auto minmax(0,1fr) minmax(0,1fr) minmax(0,1.2fr);gap:6px}.nav .btn{min-width:0;padding-left:8px;padding-right:8px;font-size:14px}
+
+#ov_llam.calmo{background:#16324f}#ov_llam.calmo .sa-big{color:#fff;font-size:22px}
 
 </style>
 </head>
@@ -243,7 +256,7 @@ html,body{overflow-x:hidden}
 <div class="wrap">
   <header class="top">
     <div class="brand"><img id="logo" class="logo" src="icon-192.png" alt="Escudo institucional"><div><div class="eyebrow" id="eyebrow">CBV La Unión</div><h1 id="h1">Registrar emergencia</h1></div></div>
-    <div class="topbtns"><button class="iconbtn loc off" id="btnLoc" type="button" aria-label="Ubicación" hidden><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.500a2.5 2.5 0 0 1 0 5z" fill="currentColor"/></svg></button><button class="iconbtn apo" id="btnApo" type="button" aria-label="Apoyos para emergencias" title="Apoyos para emergencias" hidden><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.4"/><circle cx="12" cy="12" r="3.6" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M5.600 5.600l3.800 3.800M18.400 5.600l-3.800 3.800M5.600 18.400l3.800-3.800M18.400 18.400l-3.800-3.800" stroke="currentColor" stroke-width="3"/></svg></button><button class="sos" id="btnSos" type="button" aria-label="Botón de emergencia SOS: mantenga presionado 1 segundo">SOS</button></div>
+    <div class="topbtns"><button class="iconbtn" id="btnTema" type="button" aria-label="Cambiar colores">🎨</button><button class="iconbtn loc off" id="btnLoc" type="button" aria-label="Ubicación" hidden><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.500a2.5 2.5 0 0 1 0 5z" fill="currentColor"/></svg></button><button class="iconbtn apo" id="btnApo" type="button" aria-label="Apoyos para emergencias" title="Apoyos para emergencias" hidden><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.4"/><circle cx="12" cy="12" r="3.6" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M5.600 5.600l3.800 3.800M18.400 5.600l-3.800 3.800M5.600 18.400l3.800-3.800M18.400 18.400l-3.800-3.800" stroke="currentColor" stroke-width="3"/></svg></button><button class="sos" id="btnSos" type="button" aria-label="Botón de emergencia SOS: mantenga presionado 1 segundo">SOS</button></div>
   </header>
   <div class="backbar" id="backbar" hidden><button class="btn alt menuback" id="btnMenu" type="button">⌂ Volver al menú</button></div>
   <div class="track sosb" id="sosban" hidden></div>
@@ -282,6 +295,7 @@ html,body{overflow-x:hidden}
       </div>
       <label class="nabox2"><input type="checkbox" id="a_fcopia"> Guardar también en el teléfono una copia de las fotos tomadas con la cámara</label>
       <div class="derived" id="a_msg" role="status"></div>
+      <div id="a_off" style="border-top:1px solid var(--line);padding-top:10px"><h3 style="margin:0 0 6px">Qué funciona sin internet</h3><div id="a_offb"></div></div>
       <div id="a_pwbox" style="display:grid;gap:8px;border-top:1px solid var(--line);padding-top:10px">
         <h3 style="margin:0">Cambiar mi clave</h3>
         <label><small>Clave actual</small><input id="a_pw0" type="password" autocomplete="current-password"></label>
@@ -343,6 +357,7 @@ html,body{overflow-x:hidden}
 </div></div>
 <input type="file" id="cam" accept="image/*" capture="environment" hidden>
 <input type="file" id="fotos" accept="image/*" multiple hidden>
+<input type="file" id="vids" accept="video/*" multiple hidden>
 
 <div class="sheet" id="logsheet" hidden>
   <div class="hd"><h2 style="margin:0">Bitácora en vivo</h2><button class="btn alt sm" id="log_close" type="button">Cerrar</button></div>
@@ -438,14 +453,14 @@ function modoSimple(){
   if(askCats().includes(c))return getP(D,'extra._modo')===E.MODO_SIMPLE;
   return false;
 }
-const SIMPLE_LBL={hora:'Hora de inicio de la actividad',hlle:'Llegada al lugar',hfin:'Terminación de la actividad',hsal:'Salida de la estación',hreg:'Llegada a la estación'};
-function rangoIdx(g){const x=String(g||'').toLowerCase().trim();const i=E.RANGOS_ORDEN.findIndex(r=>x===r||x.indexOf(r+' ')===0);return i<0?99:i}
+const SIMPLE_LBL={hora:'Hora de inicio de la actividad',hlle:'Llegada al lugar',hfin:'Terminación de la actividad',hsal:'Hora de salida de la estación',hreg:'Hora de llegada a la estación'};
+function rangoIdx(g){let x=String(g||'').toLowerCase().trim();if(x==='comandante'||x.indexOf('comandante ')===0)x='subteniente';const i=E.RANGOS_ORDEN.findIndex(r=>x===r||x.indexOf(r+' ')===0);return i<0?99:i}
 const gradoDe=n=>((AJ.plantilla||[]).find(x=>x.n===n)||{}).g||'';
 function ordenarPorRango(nombres){return nombres.slice().sort((a,b)=>rangoIdx(gradoDe(a))-rangoIdx(gradoDe(b))||String(a).localeCompare(String(b),'es'))}
 function stepsEff(){
   const base=stepsEff0();
   if(!modoSimple())return base;
-  return base.filter(s=>E.SIMPLE_STEPS.includes(s.id)).map(s=>s.id==='tiempos'?Object.assign({},s,{f:s.f.filter(f=>f.p!=='durmin'||true).map(f=>SIMPLE_LBL[f.p]?Object.assign({},f,{l:SIMPLE_LBL[f.p]}):f)}):s);
+  return base.filter(s=>E.SIMPLE_STEPS.includes(s.id)).map(s=>s.id==='tiempos'?Object.assign({},s,{f:s.f.filter(f=>f.p==='hsal'||f.p==='hreg').map(f=>SIMPLE_LBL[f.p]?Object.assign({},f,{l:SIMPLE_LBL[f.p]}):f)}):s);
 }
 function stepsEff0(){
   const fo=CF.form||{},L=fo.labels||{},H=fo.hide||{},N=fo.naOk||{},O=fo.opts||{};
@@ -507,7 +522,7 @@ const DB={
 /* ---------- estado ---------- */
 let AJ=lsGet('cbv_aj',{clave:'',nombre:'',roster:[]});
 const loggedIn=()=>!!AJ.t;
-const authBody=()=>({u:AJ.u,t:AJ.t,por:AJ.nombre});
+const authBody=()=>({u:AJ.u,t:AJ.t,por:AJ.nombre,canal:'celular',ua:(navigator.userAgent||'').replace(/^Mozilla\/5.0 /,'').slice(0,90)});
 let REG=null;          // registro abierto (copia del almacenado)
 let D={};              // datos del formulario en pantalla (fuente de verdad mientras se edita)
 let FOTOS=[];
@@ -570,7 +585,7 @@ async function plantillaRep(){
 }
 /* fotos reducidas para el formato del reporte (≈90 KB cada una) */
 async function fotosParaReporte(tmp){
-  const fs=(await DB.byTmp(tmp)).filter(f=>!f.del);const out=[];
+  const fs=(await DB.byTmp(tmp)).filter(f=>!f.del&&!f.video);const out=[];
   for(const f of fs){
     try{const c=await compress(f.blob,{max:900,q:.7,limit:90*1024});out.push({data:new Uint8Array(await c.blob.arrayBuffer()),w:c.w,h:c.h,desc:f.desc||''})}
     catch(e){out.push({data:new Uint8Array(await f.blob.arrayBuffer()),w:f.w,h:f.h,desc:f.desc||''})}
@@ -621,7 +636,7 @@ async function sync(){
           await DB.del('fotos',f.key);continue;
         }
         if(!f.up){
-          const r=await call('foto',{tmp:f.tmp,n:f.n,d:await blobB64(f.blob),desc:f.desc||''});
+          const r=await call('foto',{tmp:f.tmp,n:f.n,d:await blobB64(f.blob,f.video?f.mime:null),desc:f.desc||''});
           if(!r.ok){
             if(r.error==='clave'){sesionInvalida();return}
             if(r.error==='sin_registro'){await DB.upd('regs',reg.tmp,x=>{x.subida=0});throw new Error('reintentar')}
@@ -830,6 +845,7 @@ function allIssues(){const out=[];stepsEff().forEach((s,i)=>stepIssues(s).forEac
 function onChanged(p){
   if(p==='cat'){D.tipo=tipoDe(D.cat);if(!esAsk()&&D.extra)delete D.extra._modo;renderStep()}
   if(p==='extra._modo')renderStep();
+  if(modoSimple()&&(p==='hsal'||p==='hreg')){if(D.hsal)D.hora=D.hsal;if(D.hreg)D.hfin=D.hreg}
   if(p==='hora'||p==='hfin'){const d=lapse(D.hora,D.hfin);if(d!=null&&d>0&&d<1440&&!(D.na&&D.na.durmin)){D.durmin=d;const i=document.querySelector('[data-p="durmin"] input');if(i)i.value=d;fieldMark('durmin')}}
   if(p==='pers'){D.uni=(D.pers||[]).length;const i=document.querySelector('[data-p="uni"] input');if(i)i.value=D.uni}
   if(p==='rpt.cmd.n'){const o=Object.assign({grupos:[]},getP(D,'rpt.sci')||{});o.ci=getP(D,'rpt.cmd.n')||'';setP(D,'rpt.sci',o)}
@@ -869,11 +885,11 @@ function renderField(f){
   const v=getP(D,f.p);
   const inp=(type,extra)=>{const i=el('input');i.type=type||'text';i.disabled=dis;i.autocomplete='off';if(extra)Object.assign(i,extra);return i};
   switch(f.t){
-    case 'text':{const i=inp();i.value=v||'';i.oninput=()=>setV(f.p,i.value.trim()===''?'':i.value);ctl.append(i);break}
+    case 'text':{const i=inp();i.value=v||'';if(/\.(doc|tel)$/.test(f.p))soloDigitos(i);i.oninput=()=>setV(f.p,i.value.trim()===''?'':i.value);ctl.append(i);break}
     case 'num':{const i=inp('number',{min:0,inputMode:'numeric'});i.value=v==null?'':v;i.oninput=()=>setV(f.p,i.value===''?null:+i.value);ctl.append(i);break}
     case 'hec':{ctl.append(areaUI(f,dis));break}
     case 'auto':{const i=inp('text');i.disabled=true;i.value=String((D.pers||[]).length||D.uni||0);ctl.append(i);break}
-    case 'cmdn':{ctl.append(personaSel(getP(D,f.p)||'',n=>{setV(f.p,n);const pl=(AJ.plantilla||[]).find(x=>x.n===n);if(pl){if(!nonEmpty(getP(D,'rpt.cmd.g'))&&pl.g)setP(D,'rpt.cmd.g',pl.g);if(!nonEmpty(getP(D,'rpt.cmd.c'))&&pl.c)setP(D,'rpt.cmd.c',pl.c);renderStep()}},[],dis));break}
+    case 'cmdn':{ctl.append(personaSel(getP(D,f.p)||'',n=>{setV(f.p,n);const pl=(AJ.plantilla||[]).find(x=>x.n===n);if(pl){if(!nonEmpty(getP(D,'rpt.cmd.g'))&&pl.g)setP(D,'rpt.cmd.g',pl.g);autoCargoCmd(n);renderStep()}},[],dis));break}
     case 'date':{const i=inp('date');i.value=v||'';i.onchange=()=>setV(f.p,i.value);ctl.append(i);break}
     case 'time':{ctl.append(timePick(v||'',x=>setV(f.p,x),dis));break}
     case 'area':{const t=el('textarea');t.rows=3;t.disabled=dis;t.value=v||'';t.oninput=()=>setV(f.p,t.value.trim()===''?'':t.value);ctl.append(t);break}
@@ -911,6 +927,7 @@ function renderField(f){
   bad.hidden=!(showBad&&!fieldOk(f));if(!bad.hidden)box.classList.add('bad');box.append(bad);
   return box;
 }
+function soloDigitos(i){i.type='text';i.inputMode='numeric';i.pattern='[0-9]*';i.autocomplete='off';i.addEventListener('input',()=>{const c=i.value.replace(/\D+/g,'');if(c!==i.value)i.value=c})}
 function listUI(f,dis){
   const L=E.LISTAS[f.lista],wrap=el('div');wrap.style.display='grid';wrap.style.gap='8px';
   const rows=el('div');rows.style.display='grid';rows.style.gap='8px';wrap.append(rows);
@@ -919,7 +936,7 @@ function listUI(f,dis){
   const addRow=vals=>{if(rows.children.length>=L.max)return;const d=el('div','lrow');d._tp=[];
     L.cols.forEach(([k,lab,type])=>{const l=el('label');l.append(el('small','',lab));
       if(type==='time'){const p=timePick((vals&&vals[k])||'',commit,dis);d._tp.push([k,p]);l.append(p);l.classList.add('wide')}
-      else{const i=el('input');i.type=type||'text';i.dataset.k=k;i.value=(vals&&vals[k])||'';i.disabled=dis;i.oninput=commit;l.append(i)}
+      else{const i=el('input');i.type=type||'text';if(k==='d')soloDigitos(i);i.dataset.k=k;i.value=(vals&&vals[k])||'';i.disabled=dis;i.oninput=commit;l.append(i)}
       d.append(l)});
     const q=el('button','btn alt sm','Quitar');q.type='button';q.onclick=()=>{d.remove();commit()};d.append(q);rows.append(d)};
   (Array.isArray(getP(D,f.p))?getP(D,f.p):[]).forEach(addRow);
@@ -949,7 +966,7 @@ function timePick(val,onChange,dis,opt){
 }
 
 /* ---- organización del incidente (SCI) ---- */
-function personasD(){return [...new Set([...(Array.isArray(D.pers)?D.pers:[])])]}
+function personasD(){return ordenarPorRango([...new Set([...(Array.isArray(D.pers)?D.pers:[])])])}
 function personaSel(val,onSel,extraOpts,dis,vacio){
   const box=el('div');box.style.display='grid';box.style.gap='6px';
   const s=el('select');s.disabled=!!dis;
@@ -1138,6 +1155,29 @@ async function addFotos(files,desdeCamara){
   }
   drawThumbs();setChip();sync();if(currentStep()&&currentStep().f.some(f=>f.t==='photos'))renderStep();
 }
+const VID_MAX=20*1024*1024;
+function frameVideo(file){return new Promise(res=>{
+  try{const v=document.createElement('video');v.muted=true;v.playsInline=true;v.preload='metadata';const u=URL.createObjectURL(file);v.src=u;
+    const fin=(th,w,h)=>{URL.revokeObjectURL(u);res({thumb:th,w:w||0,h:h||0})};
+    v.onloadeddata=()=>{try{v.currentTime=0.1}catch(e){}};
+    v.onseeked=()=>{try{const c=document.createElement('canvas');const k=Math.min(1,160/(v.videoWidth||160));c.width=Math.round((v.videoWidth||160)*k);c.height=Math.round((v.videoHeight||120)*k);c.getContext('2d').drawImage(v,0,0,c.width,c.height);fin(c.toDataURL('image/jpeg',.6),v.videoWidth,v.videoHeight)}catch(e){fin(VID_ICON)}};
+    v.onerror=()=>fin(VID_ICON);setTimeout(()=>fin(VID_ICON),4000)
+  }catch(e){res({thumb:VID_ICON,w:0,h:0})}})}
+const VID_ICON='data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="160" height="120"><rect width="160" height="120" fill="#333"/><polygon points="65,35 65,85 105,60" fill="#fff"/></svg>');
+async function addVideos(files){
+  await asegurarReg();
+  if(!editable(REG)){msg('Ya pasó la hora para agregar videos a este registro.');return}
+  for(const file of files){
+    if(file.size>VID_MAX){toast('El video «'+file.name+'» pesa más de 20 MB y no se puede enviar. Grábelo más corto o en menor calidad.');continue}
+    try{
+      const fr=await frameVideo(file);
+      let n=0;await patchReg(r=>{n=1000+r.sig++;r.pedido=true;r.ver++;r.datos=clone(D)});
+      const f={key:REG.tmp+'#'+n,tmp:REG.tmp,n,blob:file,thumb:fr.thumb,w:fr.w,h:fr.h,desc:'',up:false,t:Date.now(),video:true,mime:file.type||'video/mp4'};
+      await DB.put('fotos',f);FOTOS.push(f);if(D.na&&D.na.fotos)delete D.na.fotos;
+    }catch(x){msg('No se pudo leer el video.')}
+  }
+  drawThumbs();setChip();sync();if(currentStep()&&currentStep().f.some(f=>f.t==='photos'))renderStep();
+}
 function photosUI(f){
   const w=el('div');w.style.display='grid';w.style.gap='8px';
   const dis=naOn(f);
@@ -1145,9 +1185,10 @@ function photosUI(f){
   const a=el('button','btn big','Tomar foto');a.type='button';a.disabled=dis;a.onclick=()=>$('cam').click();
   const b=el('button','btn alt big','Elegir de la galería');b.type='button';b.disabled=dis;b.onclick=()=>$('fotos').click();
   row.append(a,b);
+  const vb=el('button','btn alt big','Agregar video');vb.type='button';vb.disabled=dis;vb.onclick=()=>$('vids').click();row.append(vb);
   const c=el('span','derived');c.id='fcount';
   const t=el('div','thumbs');t.id='thumbs';
-  w.append(row,el('p','derived','Sin límite de fotos. Se reducen solas, se envían cuando haya internet y las tomadas con la cámara también quedan guardadas en su teléfono.'),c,t);
+  w.append(row,el('p','derived','Sin límite de fotos. También puede agregar videos cortos (máximo 20 MB cada uno). Las fotos se reducen solas, se envían cuando haya internet y las tomadas con la cámara también quedan guardadas en su teléfono.'),c,t);
   setTimeout(drawThumbs,0);return w;
 }
 function drawThumbs(){
@@ -1156,7 +1197,7 @@ function drawThumbs(){
   const t=$('thumbs');if(!t)return;t.innerHTML='';
   const fc=$('fcount');if(fc)fc.textContent=vis.length?vis.length+' foto'+(vis.length>1?'s':''):'';
   vis.forEach((f,i)=>{const d=el('div','thumb');
-    d.innerHTML='<img alt="Fotografía '+(i+1)+'" src="'+f.thumb+'"><div><input aria-label="Descripción de la fotografía '+(i+1)+'" placeholder="Qué muestra la foto (recomendado)" value="'+esc(f.desc||'')+'"><span class="up">'+(f.up?'enviada':'pendiente de enviar')+'</span></div><button type="button" class="btn alt sm" aria-label="Quitar fotografía '+(i+1)+'">Quitar</button>';
+    d.innerHTML='<img alt="'+(f.video?'Video ':'Fotografía ')+(i+1)+'" src="'+f.thumb+'"><div><input aria-label="Descripción de la fotografía '+(i+1)+'" placeholder="Qué muestra la foto (recomendado)" value="'+esc(f.desc||'')+'"><span class="up">'+(f.up?'enviada':'pendiente de enviar')+'</span></div><button type="button" class="btn alt sm" aria-label="Quitar fotografía '+(i+1)+'">Quitar</button>';
     d.querySelector('input').onchange=async e=>{f.desc=e.target.value;await DB.upd('fotos',f.key,x=>{x.desc=f.desc;if(x.up)x.dirtyDesc=true});await patchReg(r=>{r.pedido=r.pedido||r.subida>0})};
     d.querySelector('button').onclick=async()=>{
       if(!confirm('¿Quitar esta fotografía?'))return;
@@ -1247,9 +1288,9 @@ function renderDone(){
     (sent&&REG.docVer>=REG.ver?'<p class="derived">El Reporte de Emergencias ya quedó guardado en la carpeta de Drive de esta emergencia.</p>':(sent?'<p class="derived">Falta guardar el Reporte de Emergencias en Drive; se hará solo.</p>':''))+
     (REG.form&&REG.form.indexOf('enviado')===0?'<p class="derived">También se respondió el Formulario de Google.</p>':'')+
     (coordValida((REG.datos||{}).lat,(REG.datos||{}).lon)?'<p class="derived">Ubicación: '+esc((+REG.datos.lat).toFixed(6))+', '+esc((+REG.datos.lon).toFixed(6))+(ubicPendiente(REG.tmp)?' · por enviar a la central':'')+'</p>':'<p class="derived sin-ubic">⚠ Falta registrar la ubicación del evento</p>')+
-    '<div class="chips" style="margin-top:8px"><button type="button" class="btn alt" id="d-ubic">'+(coordValida((REG.datos||{}).lat,(REG.datos||{}).lon)?'Corregir ubicación':'Agregar ubicación')+'</button>'+(left>0?'<button type="button" class="btn alt" id="d-edit">Corregir (quedan '+leftTxt(left)+')</button>':'')+'<button type="button" class="btn" id="d-new">Nueva emergencia</button></div>';
+    '<div class="chips" style="margin-top:8px">'+(coordValida((REG.datos||{}).lat,(REG.datos||{}).lon)?'':'<button type="button" class="btn alt" id="d-ubic">Agregar ubicación</button>')+(left>0?'<button type="button" class="btn alt" id="d-edit">Corregir (quedan '+leftTxt(left)+')</button>':'')+'<button type="button" class="btn" id="d-new">Nueva emergencia</button></div>';
   $('d-new').onclick=()=>nuevaEmergencia();
-  $('d-ubic').onclick=()=>ubicReg(REG.tmp);
+  if($('d-ubic'))$('d-ubic').onclick=()=>ubicReg(REG.tmp);
   if($('d-edit'))$('d-edit').onclick=()=>abrir(REG.tmp);
 }
 function resetView(){$('done').hidden=true;$('stepbox').hidden=false;$('prog').hidden=false}
@@ -1279,7 +1320,7 @@ const sosOn=()=>!!SOSF();
 const guardiaTel=()=>String(APP().guardiaTel||APP().sosTel||'3117694047').replace(/\D/g,'');
 const telDigits=t=>{const d=String(t||'').replace(/\D/g,'');return d.length===10?'57'+d:d};
 const waUrl=(t,txt)=>'https://wa.me/'+telDigits(t)+(txt?'?text='+encodeURIComponent(txt):'');
-const toast=m=>{const t=$('toast');if(!t)return;t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,5000)};
+let toast=m=>{const t=$('toast');if(!t)return;t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,5000)};
 const copyTxt=async txt=>{try{await navigator.clipboard.writeText(txt);toast('Copiado: '+txt)}catch(e){const i=document.createElement('textarea');i.value=txt;document.body.append(i);i.select();try{document.execCommand('copy');toast('Copiado: '+txt)}catch(x){toast('No se pudo copiar')}i.remove()}};
 
 function updateTrackUI(){
@@ -1541,6 +1582,11 @@ function handleAlerts(list){
     seeNow(a.id);seeNow(k);
     const rec=cambio&&(a.rep||0)>prev.rep,tit=nuevo?'🚒 LLAMADO DE EMERGENCIA':rec?'🔁 RECORDATORIO DE EMERGENCIA':'🔄 LLAMADO ACTUALIZADO';
     const cuerpo=a.msg+(a.lugar?' · '+a.lugar:'')+(cambio&&!rec&&a.lat!==''&&a.lat!=null?' · '+gms(a.lat,a.lon):'');
+    const inst=esInst(a),aqui=(ASIG.lista||[]).some(x=>x.emerg===a.id),otra=(ASIG.lista||[]).some(x=>x.emerg!==a.id&&x.estado!=='finalizado');
+    if(AJ.rol&&AJ.rol!=='campo'){if(nuevo)toast((inst?'Actividad institucional: ':'Nuevo llamado: ')+cuerpo);return}
+    if(aqui||yaConf(a)){if(cambio){toast(tit.slice(3)+': '+cuerpo);if(LL.id===a.id)abrirLlamado(a,tit)}return}
+    if(otra){toast('Nuevo llamado: '+cuerpo+'. Usted ya está asignado a otra emergencia; la central decide si lo reasigna.');notify('Nuevo llamado',cuerpo+' · usted está asignado a otra emergencia','ll-'+k,[],'./?mapa=1');return}
+    if(inst){abrirLlamado(a,'📋 ACTIVIDAD INSTITUCIONAL',true);notify('📋 Actividad institucional',cuerpo,'ll-'+k,[{action:'activa',title:'Confirmar'},{action:'omitir',title:'Omitir'}],'./?llamado='+a.id);return}
     if(!yaConf(a)){abrirLlamado(a,cambio?tit:'');notify(tit,cuerpo,'ll-'+k,[{action:'activa',title:'Unidad activa'},{action:'omitir',title:'Omitir'}],'./?llamado='+a.id)}
     else if(cambio){toast(tit.slice(3)+': '+cuerpo);notify(tit,cuerpo,'ll-'+k,[],'./?mapa=1');if(LL.id===a.id)abrirLlamado(a,tit)}
   });
@@ -1586,7 +1632,8 @@ function cerrarAlarma(porFin){
   if(!sosOn())siren.stop();
   if(porFin)toast('El SOS fue atendido o cancelado.');
 }
-function abrirLlamado(a,titulo){
+const esInst=a=>/CAPACITACI|REUNI[ÓO]N|SERVICIO SOCIAL|SUMINISTRO|VISITA|ACTIVIDAD|INSTITUCIONAL|LOG[ÍI]STIC/i.test(String(a.msg||''));
+function abrirLlamado(a,titulo,calmo){
   LL.id=a.id;const box=$('ll_body');box.innerHTML='';
   box.append(el('p','sa-big',titulo?titulo.replace(/^\S+\s/,''):'LLAMADO DE EMERGENCIA'));
   box.append(el('p','ll-msg',a.msg));
@@ -1596,14 +1643,14 @@ function abrirLlamado(a,titulo){
   box.append(el('p','derived','Enviado por '+a.por+' a las '+new Date(a.cuando).toLocaleTimeString('es-CO',{hour:'numeric',minute:'2-digit'})));
   $('ll_ok').onclick=()=>aceptarLlamado(a);
   $('ll_skip').onclick=()=>{cerrarLlamado();toast('Llamado omitido.')};
-  $('ov_llam').hidden=false;if(!sosOn())siren.start('llamado');
+  $('ov_llam').hidden=false;$('ov_llam').classList.toggle('calmo',!!calmo);$('ll_ok').textContent=calmo?'Confirmar asistencia':'UNIDAD ACTIVA';if(!sosOn()&&!calmo&&!esInst(a))siren.start('llamado');
 }
 function cerrarLlamado(){LL.id=null;$('ov_llam').hidden=true;if(!sosOn()&&!ALM.id)siren.stop();else if(!sosOn()&&ALM.id)siren.start('sos')}
 async function aceptarLlamado(a){
   seeNow(a.id);cerrarLlamado();
   await startTrack();
   const body={id:a.id,veh:D.veh||''};
-  try{const r=await call('confirmar',body);if(!r.ok&&r.error!=='El llamado ya se cerró.')throw new Error(r.error||'servidor');toast(r.ok?'Unidad activa: la central ya lo sabe y ve su ubicación.':'Ese llamado ya se cerró.')}
+  try{const r=await call('confirmar',body);if(!r.ok&&r.error!=='El llamado ya se cerró.')throw new Error(r.error||'servidor');toast(r.ok?(r.asignado?'Confirmado: quedó asignado a esta emergencia y la central ya lo sabe.':'Unidad activa: la central ya lo sabe y ve su ubicación.'):'Ese llamado ya se cerró.');if(r.ok&&typeof asigPoll==='function')asigPoll()}
   catch(e){lsSet('cbv_confq',[...lsGet('cbv_confq',[]),body]);toast('Sin internet: se confirmará apenas haya señal. Su ubicación ya se está compartiendo.')}
   sendPos(true);
   if(a.lat!==''&&a.lat!=null&&isFinite(+a.lat))window.open(dirUrl(a.lat,a.lon),'_blank','noopener');
@@ -1651,6 +1698,7 @@ function pintarMenu(){
 }
 async function abrirRegistro(){
   if(REG&&REG.estado!=='final'||(!REG&&D&&D.fecha&&hasContent({datos:D}))){show('form');renderStep();return}
+  if(await preguntarVinculo())return;
   await nuevaEmergencia();
 }
 
@@ -1721,7 +1769,7 @@ function pintarMapaVista(ajustar){
   const box=$('mapinfo');box.innerHTML='';
   const mi=el('div','card');mi.append(el('h3','','Mi ubicación'));
   mi.append(el('p','sa-co',me?gms(me.lat,me.lon)+' (±'+Math.round(me.acc||0)+' m)':'Sin ubicación todavía. Active el ícono de ubicación (arriba) para verla.'));
-  if(me){const r=el('div','chips');const b=el('button','btn alt sm','Copiar mis coordenadas');b.type='button';b.onclick=()=>copyTxt(gms(me.lat,me.lon));const a=el('a','btn alt sm','Ver en Google Maps');a.href=mapsUrl(me.lat,me.lon);a.target='_blank';a.rel='noopener';r.append(b,a);mi.append(r)}
+  if(me){const r=el('div','chips');const b=el('button','btn alt sm','Copiar mis coordenadas');b.type='button';b.onclick=()=>copyTxt(gms(me.lat,me.lon));const a=el('a','btn alt sm','Ver en Google Maps');a.href=mapsUrl(me.lat,me.lon);a.target='_blank';a.rel='noopener';const sh=el('button','btn alt sm','Compartir mi ubicación');sh.type='button';sh.onclick=()=>compartirUbic(me.lat,me.lon);r.append(b,a,sh);mi.append(r)}
   box.append(mi);
   if(!pts.length){const c=el('div','card');c.append(el('h3','','Punto de la emergencia'),el('p','derived','La central todavía no ha cargado coordenadas. Cuando lo haga, llegará un aviso y el punto aparecerá aquí.'));box.append(c)}
   pts.forEach(p=>{
@@ -1859,18 +1907,40 @@ function trkNotify(on){
     });
   }catch(e){}
 }
+async function compartirUbic(lat,lon){
+  if(!okNum(lat)||!okNum(lon)){const q=TR.last;if(!q){toast('Todavía no hay ubicación. Active la ubicación con el ícono de arriba.');return}lat=q.lat;lon=q.lon}
+  const txt='Mi ubicación: '+gms(lat,lon)+' '+mapsUrl(lat,lon);
+  try{if(navigator.share){await navigator.share({title:'Mi ubicación',text:txt});return}}catch(e){if(e&&e.name==='AbortError')return}
+  copyTxt(txt);toast('Ubicación copiada: péguela en el medio que prefiera.');
+}
+function emergenciasActivas(){return (ACT||[]).filter(a=>a.tipo==='llamado'||a.tipo==='sos')}
 function pintarTrkBan(){
   const b=$('trkban');if(!b)return;
+  if(!loggedIn()){b.hidden=true;return}
   const on=TR.on||sosOn();
-  if(!on||!loggedIn()){b.hidden=true;return}
   const hace=TR.okAt?Math.round((Date.now()-TR.okAt)/1000):null,fmt=s=>s<90?s+' s':Math.round(s/60)+' min';
-  let t,warn=false;
-  if(!online){t='📍 Sin internet: su ubicación NO se está enviando'+(hace!=null?' (la última llegó a la central hace '+fmt(hace)+')':'')+'. Se reanuda sola al volver la señal.';warn=true}
-  else if(TR.err){t='📍 Ubicación activa con problema: '+TR.err;warn=true}
-  else if(hace==null){t='📍 Ubicación activa: esperando confirmar el primer envío a la central…';warn=true}
-  else if(hace>90){t='📍 Ubicación activa, pero la central no la recibe desde hace '+fmt(hace)+'.';warn=true}
-  else t='📍 Compartiendo ubicación con la central (confirmado hace '+fmt(hace)+').';
-  b.hidden=false;b.className='trkban'+(warn?' warn':'');b.textContent=t;
+  let t='',warn=false;
+  if(on){
+    if(!online){t='📍 Sin internet: su ubicación NO se está enviando'+(hace!=null?' (la última llegó a la central hace '+fmt(hace)+')':'')+'. Se reanuda sola al volver la señal.';warn=true}
+    else if(TR.err){t='📍 Ubicación activa con problema: '+TR.err;warn=true}
+    else if(hace==null){t='📍 Ubicación activa: esperando confirmar el primer envío a la central…';warn=true}
+    else if(hace>90){t='📍 Ubicación activa, pero la central no la recibe desde hace '+fmt(hace)+'.';warn=true}
+  }
+  const n=emergenciasActivas().length;
+  b.hidden=false;b.className='trkban'+(warn?' warn':'');b.textContent='';
+  if(t)b.append(el('div','',t));
+  const bt=el('button','btn '+(n?'':'alt'),'🚨 Emergencias activas'+(n?' ('+n+')':''));bt.type='button';bt.onclick=verEmergenciasActivas;b.append(bt);
+}
+function verEmergenciasActivas(){
+  const l=emergenciasActivas();
+  let h='<h3>Emergencias activas</h3>';
+  if(!l.length)h+='<p>No hay emergencias activas en este momento.</p>';
+  l.forEach(a=>{
+    const hay=a.lat!==''&&a.lat!=null&&isFinite(+a.lat);
+    h+='<div class="fnrow" style="display:block"><b>'+(a.tipo==='sos'?'🚨 SOS · '+esc(a.por||''):'🚒 '+esc(a.msg||'Llamado'))+'</b><br>'+(a.lugar?esc(a.lugar)+'<br>':'')+(a.tel?'Contacto: <a href="tel:'+esc(a.tel)+'">'+esc(a.tel)+'</a><br>':'')+(hay?'<span class="sa-co">'+esc(gms(a.lat,a.lon))+'</span><br><a class="btn alt sm" target="_blank" rel="noopener" href="'+dirUrl(a.lat,a.lon)+'">Cómo llegar</a> ':'<span class="derived">Sin ubicación todavía.</span> ')+'<span class="derived">'+fhTxt(a.cuando||a.t||Date.now())+'</span></div>';
+  });
+  h+='<div class="chips" style="margin-top:8px"><button class="btn alt" type="button" id="ea-ver">Ver en el mapa</button><button class="btn" type="button" id="ea-no">Cerrar</button></div>';
+  dlgA(h,()=>{$('ea-no').onclick=dlgC;$('ea-ver').onclick=()=>{dlgC();show('map')}});
 }
 
 /* ---------- latido: la central ve quién está conectado y qué tiene pendiente ---------- */
@@ -1888,7 +1958,7 @@ window.addEventListener('pagehide',()=>{
 
 /* ---------- notificaciones del celular ---------- */
 const NF=lsGet('cbv_nf2',{items:[],seen:{},ult:0});let NF_PRIMERA=true;
-const nfGuardar=()=>{NF.items=NF.items.slice(0,100);const s={};NF.items.forEach(i=>{if(NF.seen[i.id])s[i.id]=1});NF.seen=s;lsSet('cbv_nf2',NF)};
+const nfGuardar=()=>{NF.items=NF.items.slice(0,100);const dl=Object.keys(NF.del||{}).slice(-300),dd={};dl.forEach(k=>dd[k]=1);NF.del=dd;const s={};NF.items.forEach(i=>{if(NF.seen[i.id])s[i.id]=1});NF.seen=s;lsSet('cbv_nf2',NF)};
 function nfBadge(){
   const b=$('btnNot');if(!b)return;const n=NF.items.filter(i=>!NF.seen[i.id]).length;
   const x=b.querySelector('.nbadge');x.hidden=!n;x.textContent=n>99?'99+':n;
@@ -1898,7 +1968,7 @@ async function nfPoll(){
   try{
     const r=await call('notifGet',{desde:NF.ult});
     if(r&&r.ok){
-      const nuevos=(r.items||[]).filter(i=>!NF.items.some(x=>x.id===i.id));
+      const nuevos=(r.items||[]).filter(i=>!NF.items.some(x=>x.id===i.id)&&!(NF.del||{})[i.id]);
       if(nuevos.length){
         NF.items=nuevos.concat(NF.items);NF.ult=Math.max(NF.ult,...nuevos.map(i=>i.t));nfGuardar();
         if(!NF_PRIMERA)nuevos.slice(0,2).forEach(i=>toast(i.titulo+(i.texto?' · '+i.texto:'')));
@@ -1908,18 +1978,34 @@ async function nfPoll(){
     }
   }catch(e){}
 }
+/* deslizar hacia la izquierda para eliminar (también con el ratón) */
+function swipeDel(row,onDel){
+  let x0=null,dx=0;
+  const ini=x=>{x0=x;dx=0;row.style.transition='none'},mov=x=>{if(x0==null)return;dx=x-x0;if(dx<0)row.style.transform='translateX('+dx+'px)';row.style.opacity=String(Math.max(.3,1+dx/300))},
+    fin=()=>{if(x0==null)return;const d=dx;x0=null;row.style.transition='transform .18s,opacity .18s';if(d<-90){row.style.transform='translateX(-110%)';row.style.opacity='0';setTimeout(onDel,160)}else{row.style.transform='';row.style.opacity=''}row._swiped=d<-10;setTimeout(()=>row._swiped=false,50)};
+  row.addEventListener('touchstart',e=>ini(e.touches[0].clientX),{passive:true});row.addEventListener('touchmove',e=>mov(e.touches[0].clientX),{passive:true});row.addEventListener('touchend',fin);
+  row.addEventListener('mousedown',e=>{if(e.target.closest('button,a'))return;ini(e.clientX);const m=ev=>mov(ev.clientX),u=()=>{fin();document.removeEventListener('mousemove',m);document.removeEventListener('mouseup',u)};document.addEventListener('mousemove',m);document.addEventListener('mouseup',u)});
+}
+function nfBorrar(ids){NF.del=NF.del||{};ids.forEach(id=>NF.del[id]=1);NF.items=NF.items.filter(i=>!NF.del[i.id]);nfGuardar();nfBadge()}
+function nfDetalle(i){
+  NF.seen[i.id]=1;nfGuardar();nfBadge();
+  dlgA('<h3>'+esc(i.titulo)+'</h3><p>'+esc(i.texto||'Sin más detalle.')+'</p><p class="derived">'+fhTxt(i.t)+(i.por?' · de '+esc(i.por):'')+'</p><div class="chips"><button class="btn" type="button" id="nd-ab">'+(i.refTipo==='llamado'||i.refTipo==='despacho'?'Ver mis emergencias':'Ir al mapa')+'</button><button class="btn alt" type="button" id="nd-del">Eliminar</button><button class="btn alt" type="button" id="nd-back">Volver</button></div>',()=>{
+    $('nd-ab').onclick=()=>{dlgC();if(i.refTipo==='llamado'||i.refTipo==='despacho')verEmergenciasActivas();else show('map')};
+    $('nd-del').onclick=()=>{nfBorrar([i.id]);toast('Notificación eliminada.');nfAbrir()};$('nd-back').onclick=nfAbrir});
+}
 function nfAbrir(){
-  const html=()=>'<h3>Notificaciones</h3><div class="chips"><button class="btn alt sm" id="nf-todo" type="button">Marcar todas como revisadas</button><button class="btn alt sm" id="nf-no" type="button">Cerrar</button></div>'+(NF.items.length?NF.items.map(i=>'<div class="ntf'+(NF.seen[i.id]?'':' new')+'" data-id="'+i.id+'"><div><b>'+esc(i.titulo)+'</b><br><span class="derived">'+esc(i.texto||'')+' · '+fhTxt(i.t)+(NF.seen[i.id]?' · revisada':'')+'</span></div>'+(NF.seen[i.id]?'':'<button class="btn sm" type="button">Revisada</button>')+'</div>').join(''):'<p class="derived">No hay notificaciones.</p>');
+  const html=()=>'<h3>Notificaciones</h3><p class="derived" style="margin:0 0 6px">Toque una para ver su información. Deslícela a la izquierda para eliminarla.</p><div class="chips"><button class="btn alt sm" id="nf-todo" type="button">Marcar todas como revisadas</button><button class="btn alt sm" id="nf-del" type="button">Eliminar todas</button><button class="btn alt sm" id="nf-no" type="button">Cerrar</button></div>'+(NF.items.length?NF.items.map(i=>'<div class="ntf'+(NF.seen[i.id]?'':' new')+'" data-id="'+i.id+'" style="cursor:pointer"><div><b>'+esc(i.titulo)+'</b><br><span class="derived">'+esc(i.texto||'')+' · '+fhTxt(i.t)+(NF.seen[i.id]?' · revisada':'')+'</span></div></div>').join(''):'<p class="derived">No hay notificaciones.</p>');
   const bind=d=>{
-    $('nf-no').onclick=dlgC;$('nf-todo').onclick=()=>{NF.items.forEach(i=>NF.seen[i.id]=1);nfGuardar();nfBadge();dlgA(html(),bind)};
-    d.querySelectorAll('.ntf button').forEach(b=>b.onclick=()=>{NF.seen[b.closest('.ntf').dataset.id]=1;nfGuardar();nfBadge();dlgA(html(),bind)});
+    $('nf-no').onclick=dlgC;$('nf-todo').onclick=()=>{NF.items.forEach(i=>NF.seen[i.id]=1);nfGuardar();nfBadge();toast('Todas marcadas como revisadas.');dlgA(html(),bind)};
+    $('nf-del').onclick=()=>{if(!NF.items.length)return;if(!confirm('¿Eliminar todas las notificaciones de este teléfono?'))return;nfBorrar(NF.items.map(i=>i.id));toast('Notificaciones eliminadas.');dlgA(html(),bind)};
+    d.querySelectorAll('.ntf').forEach(r=>{const id=r.dataset.id;swipeDel(r,()=>{nfBorrar([id]);toast('Notificación eliminada.');dlgA(html(),bind)});r.onclick=()=>{if(r._swiped)return;const i=NF.items.find(x=>x.id===id);if(i)nfDetalle(i)}});
   };
   dlgA(html(),bind);
 }
 
 /* ---------- mis asignaciones (despacho) ---------- */
 let ASIG=lsGet('cbv_asig',{lista:[],t:0});
-const ESTADOS_SIG={asignado:['confirmado','Confirmar que voy'],confirmado:['en camino','Voy en camino'],'en camino':['en sitio','Ya estoy en el sitio'],'en sitio':['finalizado','Terminé']};
+const ESTADOS_SIG={asignado:['confirmado','Confirmar asignación']};
 async function asigPoll(){
   if(!loggedIn())return;
   if(!online){pintarAsig();return}
@@ -1932,18 +2018,39 @@ function pintarAsig(){
   if(!ASIG.lista.length)return;
   ASIG.lista.forEach(x=>{
     const c=el('section','card');
-    c.append(el('h3','','🚒 Asignado: vehículo '+x.veh));
+    c.append(el('h3','','🚒 Asignado'+(x.veh?': vehículo '+x.veh:'')));
     const e=x.emergencia||{};
     c.append(el('p','',(e.msg||'Emergencia')+(e.lugar?' · '+e.lugar:'')));
     if(e.lat!==''&&e.lat!=null&&isFinite(+e.lat))c.append(el('p','sa-co',gms(e.lat,e.lon)));
     c.append(el('p','derived','Coordina: '+x.coordina+' · Equipo: '+x.companeros.join(', ')+(x.nota?' · '+x.nota:'')));
-    c.append(el('p','','Estado: '+x.estado[0].toUpperCase()+x.estado.slice(1)));
+    c.append(el('p','',x.estado==='asignado'?'Pendiente de su confirmación.':'✅ Asignación confirmada.'));
     if(!online)c.append(el('p','derived','Sin internet: información recibida el '+fhTxt(ASIG.t)+'. Los cambios de estado necesitan conexión.'));
     const row=el('div','chips'),sig=ESTADOS_SIG[x.estado];
     if(sig){const b=el('button','btn',sig[1]);b.type='button';b.disabled=!online;b.onclick=async()=>{b.disabled=true;try{const r=await call('despEstado',{id:x.id,estado:sig[0]});if(!r.ok)throw new Error(r.error||'servidor');toast('Registrado en la central: '+r.estado+'.');asigPoll()}catch(er){toast('No se pudo registrar: '+humanErr(er));b.disabled=false}};row.append(b)}
     if(e.lat!==''&&e.lat!=null&&isFinite(+e.lat)){const a=el('a','btn alt','Cómo llegar');a.href=dirUrl(e.lat,e.lon);a.target='_blank';a.rel='noopener';row.append(a)}
     if(e.tel){const a=el('a','btn alt','Llamar a quien reporta');a.href='tel:'+e.tel;row.append(a)}
+    if(x.estado!=='asignado'&&x.emerg){const rb=el('button','btn',''+(x.reporte?'Continuar el reporte de esta emergencia':'Hacer el reporte de esta emergencia'));rb.type='button';rb.onclick=()=>reporteDeLlamado(x);row.append(rb)}
     c.append(row);box.append(c);
+  });
+}
+/* un reporte hecho desde una emergencia queda vinculado a ella (extra._llam); un reporte puede existir sin llamado */
+async function reporteDeLlamado(x){
+  const e=x.emergencia||{};
+  await nuevaEmergencia();
+  D.extra=D.extra||{};D.extra._llam=x.emerg;
+  const cats=(E.CATS||[]).map(c=>c[0]);const m=cats.find(c=>c===String(e.msg||'').toUpperCase());if(m)D.cat=m;
+  if(e.lugar&&!D.dir)D.dir=e.lugar;
+  if(e.lat!==''&&e.lat!=null&&isFinite(+e.lat)&&!okNum(D.lat)){D.lat=(+e.lat).toFixed(6);D.lon=(+e.lon).toFixed(6)}
+  renderStep();toast('Este reporte quedó vinculado a la emergencia.');
+}
+async function preguntarVinculo(){
+  const l=(ASIG.lista||[]).filter(x=>x.estado!=='asignado'&&x.emerg);
+  if(!l.length)return false;
+  const x=l[0],e=x.emergencia||{};
+  return new Promise(res=>{
+    dlgA('<h3>¿Es el reporte de esta emergencia?</h3><p>Usted está asignado a: <b>'+esc(e.msg||'Emergencia')+'</b>'+(e.lugar?' · '+esc(e.lugar):'')+'</p><div class="chips"><button class="btn" type="button" id="vq-si">Sí, es de esta emergencia</button><button class="btn alt" type="button" id="vq-no">No, es otro evento</button></div>',()=>{
+      $('vq-si').onclick=()=>{dlgC();reporteDeLlamado(x);res(true)};
+      $('vq-no').onclick=()=>{dlgC();res(false)}});
   });
 }
 
@@ -2026,14 +2133,21 @@ function cerrarCapaAbierta(){
   if($('ov_llam')&&!$('ov_llam').hidden){cerrarLlamado();return true}
   return false;
 }
+function cerrarCapaAbiertaMirar(){
+  const d=$('dlg');if(d&&d.open)return true;
+  if($('ov_sosa')&&!$('ov_sosa').hidden)return true;
+  for(const id of ['apsheet','pv_sheet','mp_sheet','logsheet','ov_alarm','ov_llam']){const e=$(id);if(e&&!e.hidden)return true}
+  return false;
+}
 function iniciarAtras(){
   try{history.replaceState({cbv:'base'},'');history.pushState({cbv:'app'},'')}catch(e){return}
   window.addEventListener('popstate',()=>{
+    const salir=BK.armado&&VISTA==='menu'&&!cerrarCapaAbiertaMirar();
+    if(salir){BK.armado=false;clearTimeout(BK.t);BK.saliendo=true;try{history.back()}catch(e){}return}
     try{history.pushState({cbv:'app'},'')}catch(e){}
     if(cerrarCapaAbierta())return;
     if(VISTA==='form'&&REG&&REG.estado!=='final')flushSave().catch(()=>{});
     if(VISTA!=='menu'&&VISTA!=='setup'){show('menu');return}
-    if(BK.armado){BK.armado=false;clearTimeout(BK.t);try{history.go(-2)}catch(e){}return}
     BK.armado=true;toast('Presione «atrás» otra vez para salir de la aplicación.');
     clearTimeout(BK.t);BK.t=setTimeout(()=>{BK.armado=false},2500);
   });
@@ -2182,6 +2296,23 @@ function medirPoligono(opts){
   bOk.onclick=async()=>{bOk.disabled=true;try{await opts.guardar(pts.map(p=>[+p[0].toFixed(6),+p[1].toFixed(6)]),areaPoligonoM2(pts));cerrar()}catch(e){est.textContent='No se pudo guardar: '+(e&&e.message||e);bOk.disabled=false}};
 }
 
+/* ---------- colores: automático (del teléfono), claro u oscuro ---------- */
+const TEMA_ROT=[['auto','Automático'],['claro','Claro'],['oscuro','Oscuro']];
+function temaGet(){try{return localStorage.getItem('cbv_tema')||'auto'}catch(e){return 'auto'}}
+function temaAplicar(t){const r=document.documentElement;if(t==='claro')r.setAttribute('data-theme','light');else if(t==='oscuro')r.setAttribute('data-theme','dark');else r.removeAttribute('data-theme');
+  const oscuro=t==='oscuro'||(t==='auto'&&window.matchMedia&&matchMedia('(prefers-color-scheme:dark)').matches);
+  try{const m=document.querySelector('meta[name=theme-color]');if(m)m.setAttribute('content',oscuro?'#14181c':'#f6f7f8')}catch(e){}
+  const b=document.getElementById('btnTema');if(b){b.textContent=t==='claro'?'☀️':t==='oscuro'?'🌙':'🎨';b.title='Colores: '+(TEMA_ROT.find(x=>x[0]===t)||TEMA_ROT[0])[1]+'. Toque para cambiar.';b.setAttribute('aria-label',b.title)}}
+function temaCiclo(){const t=temaGet(),n=TEMA_ROT[(TEMA_ROT.findIndex(x=>x[0]===t)+1)%3][0];try{localStorage.setItem('cbv_tema',n)}catch(e){}temaAplicar(n);
+  if(typeof toast==='function')toast('Colores: '+TEMA_ROT.find(x=>x[0]===n)[1]+'.')}
+(function(){temaAplicar(temaGet());const b=document.getElementById('btnTema');if(b)b.onclick=temaCiclo})();
+
+/* aviso rápido de éxito para toda acción que guarda algo en el servidor */
+const OK_MSG={llamado:'Llamado enviado',llamadoEdit:'Llamado actualizado',llamadoRepetir:'Recordatorio enviado',alertAck:'Cerrado correctamente',punto:'Punto de la emergencia cargado',despAsignar:'Asignación guardada',despQuitar:'Asignación cancelada',despEstado:'Asignación confirmada',confirmar:'Confirmado',ubicSet:'Ubicación guardada',cfgSet:'Configuración guardada',personalSet:'Personal guardado',userSet:'Cuenta guardada',userReset:'Clave restablecida',userDel:'Cuenta eliminada',edit:'Cambio guardado',anular:'Reporte anulado',eliminar:'Reporte eliminado',consecutivo:'Consecutivo cambiado',renumerar:'Consecutivos renumerados',licSet:'Licencia guardada',respaldoAhora:'Copia de seguridad realizada',archivarAnio:'Año archivado',histPut:'Información cargada',reenviarForm:'Formulario reenviado',doc:'Documento guardado',avisoPrueba:'Aviso de prueba enviado',pushTest:'Prueba enviada',cambiarClave:'Clave cambiada',borradorDel:'Borrador eliminado',consent:'Autorización registrada',chatBorrar:'Chat borrado',reparar:'Reparación realizada',sos:'SOS enviado',sosFin:'SOS desactivado'};
+{const c0=call;call=async function(a,...r){const t0=Date.now(),res=await c0.apply(this,[a,...r]);
+  if(res&&res.ok&&OK_MSG[a]){const m=OK_MSG[a];setTimeout(()=>{if((toast.last||0)<t0)toast(m+'.')},500)}return res}}
+{const t0=toast;toast=function(...x){toast.last=Date.now();return t0.apply(this,x)};toast.last=0}
+
 
 /* ================= MIS REGISTROS ================= */
 async function elimBorrador(r){
@@ -2236,7 +2367,7 @@ async function renderList(){
     c.append(pills);
     const row=el('div','chips');
     if(open){const b=el('button','btn alt sm',draft?'Continuar':'Corregir');b.type='button';b.onclick=()=>abrir(r.tmp);row.append(b)}
-    if(!(r.estado!=='final'&&!hasContent(r))){const u=el('button','btn alt sm',tieneU?'Corregir ubicación':'Agregar ubicación');u.type='button';u.onclick=()=>ubicReg(r.tmp);row.append(u)}
+    if(!tieneU&&!(r.estado!=='final'&&!hasContent(r))){const u=el('button','btn alt sm',tieneU?'Corregir ubicación':'Agregar ubicación');u.type='button';u.onclick=()=>ubicReg(r.tmp);row.append(u)}
     if(ubicPendiente(r.tmp))pill('ubicación por enviar a la central','off');
     if(!draft||hasContent(r)){const v=el('button','btn alt sm','Ver reporte');v.type='button';v.onclick=()=>verReporte(r);row.append(v)}
     if(draft){const q=el('button','btn alt sm danger','Eliminar borrador');q.type='button';q.onclick=()=>elimBorrador(r);row.append(q)}
@@ -2267,7 +2398,7 @@ function renderTools(box){
   card('Mi ubicación',c=>{
     const p=TR.last;
     c.append(el('p','sa-co',p?gms(p.lat,p.lon)+' (±'+Math.round(p.acc)+' m)':'Todavía sin ubicación. Active la ubicación con el ícono de arriba.'));
-    if(p){const r=el('div','chips');r.append(btn('Copiar coordenadas','alt',()=>copyTxt(gms(p.lat,p.lon))),lnk('Ver en Google Maps','alt',mapsUrl(p.lat,p.lon)),lnk('Compartir por WhatsApp','alt','https://wa.me/?text='+encodeURIComponent('Mi ubicación: '+gms(p.lat,p.lon)+' '+mapsUrl(p.lat,p.lon))));c.append(r)}});
+    if(p){const r=el('div','chips');r.append(btn('Copiar coordenadas','alt',()=>copyTxt(gms(p.lat,p.lon))),lnk('Ver en Google Maps','alt',mapsUrl(p.lat,p.lon)),btn('Compartir mi ubicación','alt',()=>compartirUbic(p.lat,p.lon)),lnk('Compartir por WhatsApp','alt','https://wa.me/?text='+encodeURIComponent('Mi ubicación: '+gms(p.lat,p.lon)+' '+mapsUrl(p.lat,p.lon))));c.append(r)}});
   card('Mapas',c=>{
     c.append(el('p','derived','Fuentes de agua e hidrantes del municipio.'));
     const r=el('div','chips');
@@ -2276,7 +2407,6 @@ function renderTools(box){
     if(!L.agua&&!L.hidrantes)r.append(el('span','derived','El administrador aún no ha cargado los mapas.'));
     c.append(r)});
   card('Guía de Respuesta a Emergencias GRE 2024',c=>greCard(c,L));
-  card('Qué funciona sin internet',c=>funcionesOffline(c));
   card('Los 8 pasos del SCI (primer respondiente)',c=>{
     const ol=el('ol','sci8');(E.SCI_PASOS||[]).forEach(p=>ol.append(el('li','',p)));c.append(ol)});
   card('SCI: funciones (roles) del incidente',c=>{
@@ -2294,6 +2424,7 @@ function fillSettings(){
   const ios=/iphone|ipad|ipod/i.test(navigator.userAgent)&&!navigator.standalone;$('a_ios').hidden=!ios;
   const nt=$('a_notif');const ok='Notification' in window;nt.hidden=!ok||(Notification.permission==='granted'&&lsGet('cbv_pushsig',''));
   $('a_fcopia').checked=lsGet('cbv_fcopia',true)!==false;
+  {const b=$('a_offb');if(b){b.innerHTML='';funcionesOffline(b)}}
   const lic=CF.lic;$('a_lic').hidden=!(lic&&lic.aviso);$('a_lic').textContent=lic&&lic.aviso?lic.aviso:'';
 }
 async function pingRoster(){const r=await call('ping');if(r.ok){AJ.roster=r.personal||AJ.roster;if(r.plantilla)AJ.plantilla=r.plantilla;if(r.yo)AJ.yo=r.yo;if(r.nombre)AJ.nombre=r.nombre;lsSet('cbv_aj',AJ);if(r.cfg)applyCfg(r.cfg);if(r.alertas)handleAlerts(r.alertas)}return r}
@@ -2332,7 +2463,7 @@ function startApp(){
 }
 function bindForm(){
   const onFiles=cam=>e=>{const fs=[...e.target.files];e.target.value='';if(fs.length)addFotos(fs,cam)};
-  $('barcam').onclick=()=>$('cam').click();$('cam').onchange=onFiles(true);$('fotos').onchange=onFiles(false);
+  $('barcam').onclick=()=>$('cam').click();$('cam').onchange=onFiles(true);$('fotos').onchange=onFiles(false);$('vids').onchange=async e=>{const l=[...e.target.files];e.target.value='';if(l.length)await addVideos(l)};
   $('btnPrev').onclick=()=>{msg('');goStep(stepIdx-1)};
   $('btnNext').onclick=nextStep;
   $('stepsel').onchange=e=>{showBad=true;goStep(+e.target.value)};
@@ -2435,7 +2566,7 @@ function irA(x){if(!loggedIn())return;if(x==='mapa')show('map');else if(x==='cha
 async function atenderDesdeAviso(id,accion){
   try{const r=await call('alertas');if(!(r&&r.ok))return;handleAlerts(r.alertas);
     const a=(r.alertas||[]).find(x=>x.id===id);
-    if(a&&accion==='activa')aceptarLlamado(a);else if(a&&accion!=='omitir'){seeNow(a.id);abrirLlamado(a)}}catch(e){}
+    if(a&&accion==='activa')aceptarLlamado(a);else if(a&&accion==='omitir'){seeNow(a.id);toast('Llamado omitido.')}else if(a&&accion!=='omitir'){seeNow(a.id);abrirLlamado(a)}}catch(e){}
 }
 async function finishSetup(){
   startApp();if(!REG&&!(await restoreCurrent()))await nuevaEmergencia(true);

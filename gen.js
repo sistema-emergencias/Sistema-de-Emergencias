@@ -122,15 +122,17 @@
     let body = '', n = 4, lastKey = rows.length ? rows[0].fecha.slice(0, 7) : null;
     let headFixed = head;
     if (rows.length) headFixed = setCell(head, 'A3', label(rows[0].fecha));
+    headFixed = headFixed.replace('<col min="13" max="16" width="11.5" style="20"/>', '<col min="13" max="13" width="19" style="20" customWidth="1"/><col min="14" max="16" width="11.5" style="20"/>')
+      .replace(/(<c r="L1"[^>]*>[\s\S]*?<\/c>)/, '$1' + istr('M1', 43, 'N.° CONSECUTIVO'));
     const labelRow = (rn, txt) => `<row r="${rn}" spans="1:41" customFormat="1" ht="15.8" customHeight="1">` + istr('A' + rn, 51, txt) +
       ['B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'].map(c => `<c r="${c}${rn}" s="${c === 'C' ? 53 : c === 'D' ? 54 : c === 'L' ? 55 : 52}"/>`).join('') + '</row>';
     rows.forEach(r => {
       const key = r.fecha.slice(0, 7);
       if (key !== lastKey) { body += labelRow(n, label(r.fecha)); n++; lastKey = key; }
-      body += `<row r="${n}" spans="1:12" customFormat="1" ht="15.8" customHeight="1">` +
+      body += `<row r="${n}" spans="1:13" customFormat="1" ht="${altoFila([[r.cat, 62], [na(r.dir), 38], [na(r.bar), 22], [na(r.desc), 62], [na(r.veh), 17]])}" customHeight="1">` +
         istr('A' + n, 26, r.tipo || 'OTROS') + istr('B' + n, 26, r.cat) + `<c r="C${n}" s="40"/>` + numc('D' + n, 29, serial(r.fecha)) +
         istr('E' + n, 26, durOf(r)) + istr('F' + n, 26, na(r.dir)) + istr('G' + n, 26, na(r.bar)) + istr('H' + n, 26, na(r.desc)) + istr('I' + n, 26, na(r.area)) +
-        (r.uni != null && r.uni !== '' ? numc('J' + n, 26, +r.uni) : istr('J' + n, 26, 'N/A')) + istr('K' + n, 26, na(r.veh)) + istr('L' + n, 26, na(coordOf(r))) + '</row>';
+        (r.uni != null && r.uni !== '' ? numc('J' + n, 26, +r.uni) : istr('J' + n, 26, 'N/A')) + istr('K' + n, 26, na(r.veh)) + istr('L' + n, 26, na(coordOf(r))) + istr('M' + n, 26, r.id || '') + '</row>';
       n++;
     });
     const last = n - 1;
@@ -145,6 +147,12 @@
   }
 
   /* ---------- 2. REGISTRO DE ACTIVIDADES ---------- */
+  /* altura de fila según el texto más largo (el texto largo se ajusta dentro de su celda y nunca se corta) */
+  function altoFila(pares) { // pares: [[texto, anchoEnCaracteres]]
+    let lin = 1;
+    pares.forEach(([t, w]) => { const s = String(t == null ? '' : t); let l = 0; s.split(/\n/).forEach(p => { l += Math.max(1, Math.ceil(p.length / Math.max(6, w * 0.95))); }); lin = Math.max(lin, l); });
+    return Math.min(409, Math.max(15.8, Math.round(lin * 14.5 + 3)));
+  }
   async function actividades(JSZip, tpl, { rows, titulo }) {
     rows = sortRows(rows);
     const zip = await load(JSZip, tpl);
@@ -160,12 +168,18 @@
     let body = '';
     rows.forEach((r, i) => {
       const n = i + 3;
-      body += `<row r="${n}" spans="1:10">` + istr('A' + n, 2, r.tipo || 'OTROS') + istr('B' + n, 2, r.cat) + numc('C' + n, dateXf, serial(r.fecha)) + istr('D' + n, 2, durOf(r)) +
+      body += `<row r="${n}" spans="1:11" ht="${altoFila([[r.cat, 21], [na(r.dir), 21], [na(r.bar), 22], [na(r.desc), 23], [na(r.veh), 14]])}" customHeight="1">` + istr('A' + n, 2, r.tipo || 'OTROS') + istr('B' + n, 2, r.cat) + numc('C' + n, dateXf, serial(r.fecha)) + istr('D' + n, 2, durOf(r)) +
         istr('E' + n, 2, na(r.dir)) + istr('F' + n, 2, na(r.bar)) + istr('G' + n, 2, na(r.desc)) + istr('H' + n, 2, na(r.area)) +
-        (r.uni != null && r.uni !== '' ? numc('I' + n, 2, +r.uni) : istr('I' + n, 2, 'N/A')) + istr('J' + n, 2, na(r.veh)) + '</row>';
+        (r.uni != null && r.uni !== '' ? numc('I' + n, 2, +r.uni) : istr('I' + n, 2, 'N/A')) + istr('J' + n, 2, na(r.veh)) + istr('K' + n, 2, r.id || '') + '</row>';
     });
     const last = Math.max(rows.length + 2, 3);
-    const h = head.replace(/<dimension ref="[^"]*"\/>/, `<dimension ref="A1:J${last}"/>`);
+    let h = head.replace(/<dimension ref="[^"]*"\/>/, `<dimension ref="A1:K${last}"/>`);
+    h = h.replace(/(<c r="J2"[^>]*>[\s\S]*?<\/c>)/, '$1' + istr('K2', 4, 'N.° CONSECUTIVO')).replace('<col min="11" max="18" width="18.875" style="6" customWidth="1"/>', '<col min="11" max="11" width="19" style="2" customWidth="1"/><col min="12" max="18" width="18.875" style="6" customWidth="1"/>');
+    h = h.replace(/(<c r="J1" s=")10("\/>)/, '$19$2<c r="K1" s="10"/>')
+      .replace('<outlinePr summaryBelow="0" summaryRight="0"/>', '<outlinePr summaryBelow="0" summaryRight="0"/><pageSetUpPr fitToPage="1"/>');
+    tail = tail.replace('<mergeCell ref="F1:J1"/>', '<mergeCell ref="F1:K1"/>');
+    { const wb = await zip.file('xl/workbook.xml').async('string'); zip.file('xl/workbook.xml', wb.replace(/(Print_Area[^>]*>[^<]*?)\$J\$\d+/, '$1$K$' + Math.max(last, 3))); }
+    tail = tail.replace(/<pageSetup [^>]*?scale="80"/, m => m.replace('scale="80"', 'fitToWidth="1" fitToHeight="0"'));
     zip.file('xl/worksheets/sheet1.xml', h + body + tail);
     return out(zip);
   }
@@ -351,7 +365,6 @@
       zip.file('xl/' + name, f.data);
       rels = rels.replace('</Relationships>', `<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../${name}"/></Relationships>`);
       anchors += picAnchor(id++, rid, c - 1, px - acc, row0, rowOff, W, H, 'Foto ' + n);
-      s = put(s, 'AE' + (27 + i), n + '. ' + (blank(f.desc) ? 'Fotografía del evento' : String(f.desc).slice(0, 90)));
     });
     dr = dr.replace('</xdr:wsDr>', anchors + '</xdr:wsDr>');
     zip.file('xl/drawings/drawing1.xml', dr);
@@ -363,7 +376,7 @@
   /* hoja adicional con el resto de las fotografías (2 por fila, 3 filas por página) */
   async function hojaFotos(zip, ct, fotos, desde, r) {
     let rels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">';
-    const colW = 48, cwE = Math.round(colW * 7 * 9525), rowPhoto = 200, rowCap = 18;   // puntos
+    const colW = 48, cwE = Math.round(colW * 7 * 9525), rowPhoto = 200, rowCap = 3;   // puntos
     let anchors = '', rows = `<row r="1" ht="22" customHeight="1"><c r="A1" t="inlineStr"><is><t>${X('REGISTRO FOTOGRÁFICO DEL INCIDENTE · ' + (r.id || ''))}</t></is></c></row>`;
     const maxW = cwE - 120000, maxH = Math.round(rowPhoto * 12700) - 60000;
     const brks = [];
@@ -375,7 +388,7 @@
       zip.file('xl/' + name, f.data);
       rels += `<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../${name}"/>`;
       anchors += picAnchor(950 + i, rid, col, Math.floor((cwE - W) / 2), rp - 1, 30000, W, H, 'Foto ' + n);
-      const cap = `<c r="${col ? 'B' : 'A'}${rp + 1}" t="inlineStr"><is><t xml:space="preserve">${X(n + '. ' + String(f.desc || '').slice(0, 70))}</t></is></c>`;
+      const cap = '';
       rows = rows.replace('__CAP' + (rp + 1) + '__', cap + (col ? '' : '__CAP' + (rp + 1) + '__'));
     });
     rows = rows.replace(/__CAP\d+__/g, '');
@@ -451,7 +464,7 @@ ${gr ? `<div><b>Función de cada unidad</b></div><div class="row">${gr}</div>` :
 <table><tr><td>${v(rp.obs)}<br>Duración: ${E(durOf(r))}. Unidades que asistieron: ${E(na(r.uni))}. Vehículos: ${E(na(r.veh))}.${r.hsal ? ' Salida de estación: ' + E(h24(r.hsal)) + ' h.' : ''}${r.hfin ? ' Terminación de la emergencia: ' + E(h24(r.hfin)) + ' h.' : ''}${r.hreg ? ' Llegada a la estación: ' + E(h24(r.hreg)) + ' h.' : ''}${r.area ? ' Área afectada: ' + E(r.area) + '.' : ''} ${E(r.extraTxt || '')}</td></tr></table>
 <div class="sec">13. RECEPCIÓN Y APROBACIÓN DEL INFORME</div>
 <table><tr><th>Guardia que recibe el informe</th><th>Grado</th><th>Estado en que recibe</th><th>Firma</th></tr><tr><td class="sign"></td><td></td><td>${chk(false, 'COMPLETO')}${chk(false, 'INCOMPLETO')}</td><td></td></tr></table>
-${fotos.length ? `<div class="sec" style="page-break-before:always">14. REGISTRO FOTOGRÁFICO DEL INCIDENTE</div><div class="ph">${fotos.map((p, i) => `<figure><img src="${p.src}" alt="Fotografía ${i + 1}"><figcaption>${i + 1}. ${E(p.desc || '')}</figcaption></figure>`).join('')}</div>` : '<div class="sec">14. REGISTRO FOTOGRÁFICO DEL INCIDENTE</div><table><tr><td>Sin fotografías.</td></tr></table>'}
+${fotos.length ? `<div class="sec" style="page-break-before:always">14. REGISTRO FOTOGRÁFICO DEL INCIDENTE</div><div class="ph">${fotos.map((p, i) => `<figure><img src="${p.src}" alt="Fotografía ${i + 1}"></figure>`).join('')}</div>` : '<div class="sec">14. REGISTRO FOTOGRÁFICO DEL INCIDENTE</div><table><tr><td>Sin fotografías.</td></tr></table>'}
 <script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></body></html>`;
   }
 
@@ -666,7 +679,7 @@ ${fotos.length ? `<div class="sec" style="page-break-before:always">14. REGISTRO
     return out(zip);
   }
 
-  g.GEN = { reporteHTML, h24, gmsLat, gmsLon, dmsTxt, CATS, MESES, durTxt, dmy, comandancia, actividades, reporteEmergencia, fotografico, estadistica, incendiosSNIF, SNIF_TIPO, SNIF_CAUSA, SNIF_AREA, dms };
+  g.GEN = { altoFila, reporteHTML, h24, gmsLat, gmsLon, dmsTxt, CATS, MESES, durTxt, dmy, comandancia, actividades, reporteEmergencia, fotografico, estadistica, incendiosSNIF, SNIF_TIPO, SNIF_CAUSA, SNIF_AREA, dms };
 })(typeof window !== 'undefined' ? window : globalThis);
 
 /* Vista del Reporte de Emergencias: dibuja el mismo archivo .xlsx (celdas, bordes, colores, figuras e imágenes)
@@ -1090,8 +1103,8 @@ ${fotos.length ? `<div class="sec" style="page-break-before:always">14. REGISTRO
         const idx = fi++, name = 'media/foto' + (idx + 1) + '.jpeg', rid = 'rIdFoto' + (idx + 1);
         zip.file('word/' + name, f.data);
         rels = rels.replace('</Relationships>', '<Relationship Id="' + rid + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="' + name + '"/></Relationships>');
-        const maxW = box[0] - 182880, maxH = box[1] - 91440 - 520000, sc = Math.min(maxW / f.w, maxH / f.h), W = Math.round(f.w * sc), H = Math.round(f.h * sc), cap = X(f.desc || '');
-        return '<w:txbxContent><w:p><w:pPr><w:spacing w:after="0"/><w:jc w:val="center"/></w:pPr>' + imgRun(rid, W, H, docId++, 'Foto ' + (idx + 1)).replace('<wp:docPr ', '<wp:docPr descr="' + cap + '" ') + '</w:p><w:p><w:pPr><w:spacing w:before="40" w:after="0"/><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr>' + RT + cap + '</w:t></w:r></w:p></w:txbxContent>';
+        const maxW = box[0] - 182880, maxH = box[1] - 91440 - 40000, sc = Math.min(maxW / f.w, maxH / f.h), W = Math.round(f.w * sc), H = Math.round(f.h * sc), cap = X(f.desc || '');
+        return '<w:txbxContent><w:p><w:pPr><w:spacing w:after="0"/><w:jc w:val="center"/></w:pPr>' + imgRun(rid, W, H, docId++, 'Foto ' + (idx + 1)).replace('<wp:docPr ', '<wp:docPr descr="' + cap + '" ') + '</w:p></w:txbxContent>';
       }));
       // la rama antigua (Fallback) queda sin fotos para no duplicar contenido
       seg = seg.replace(/<mc:Fallback>[\s\S]*?<\/mc:Fallback>/g, '');
@@ -1232,7 +1245,9 @@ ${fotos.length ? `<div class="sec" style="page-break-before:always">14. REGISTRO
           const cel = [txtCell('A', rn, st('A'), UP(r.tipo)), txtCell('B', rn, st('B'), UP(r.cat)), k === 0 ? vacCell('C', rn, sPrim) : vacCell('C', rn, sResto), numCell('D', rn, st('D'), d.nuevoReg.n),
             txtCell('E', rn, st('E'), UP(r.dur_txt || durTxt(r.durmin))), txtCell('F', rn, st('F'), lugar), txtCell('G', rn, st('G'), bar), txtCell('H', rn, st('H'), UP(r.desc) || '.'), txtCell('I', rn, st('I'), area),
             r.uni !== '' && r.uni != null && isFinite(+r.uni) ? numCell('J', rn, st('J'), +r.uni) : txtCell('J', rn, st('J'), '.'), txtCell('K', rn, st('K'), UP(r.veh) || '.'), txtCell('L', rn, st('L'), coord)];
-          salida.push('<row r="' + rn + '"' + (dn ? dn.attr : ' spans="1:12" ht="15.8" customHeight="1"') + '>' + cel.join('') + '</row>');
+          const hAlto = GEN.altoFila ? GEN.altoFila([[UP(r.cat), 62], [lugar, 38], [bar, 22], [UP(r.desc), 62], [UP(r.veh), 17]]) : 15.8;
+          const attrFila = dn ? dn.attr.replace(/ ht="[^"]*"/, '').replace(/ customHeight="[^"]*"/, '') + ' ht="' + hAlto + '" customHeight="1"' : ' spans="1:12" ht="' + hAlto + '" customHeight="1"';
+          salida.push('<row r="' + rn + '"' + attrFila + '>' + cel.join('') + '</row>');
         } else {
           mapaViejo[d.r] = rn;
           let x = renum(d.xml, rn);

@@ -148,13 +148,13 @@ svg text.val{fill:var(--fg)}
 .chatlist{max-height:16rem;overflow:auto;border:1px solid var(--line,#ccc);border-radius:8px;padding:8px;margin-bottom:8px}
 .chatm{padding:4px 8px;margin:4px 0;border-radius:8px;background:rgba(127,127,127,.12)}.chatm.mio{background:rgba(30,120,60,.18)}
 
-.bell{position:relative;background:var(--card,#fff);border:1px solid var(--line,#ccc);border-radius:10px;font-size:20px;padding:6px 10px;cursor:pointer}
+.bell{position:relative;background:var(--surface,#fff);border:1px solid var(--line,#ccc);border-radius:10px;font-size:20px;padding:6px 10px;cursor:pointer}
 .bell span{position:absolute;top:-6px;right:-6px;background:#d62a1c;color:#fff;border-radius:10px;font-size:11px;min-width:18px;padding:1px 4px;font-weight:700}
 .fab{position:fixed;right:16px;bottom:16px;z-index:60;background:#b4251b;color:#fff;border:0;border-radius:28px;padding:14px 20px;font-size:16px;font-weight:700;box-shadow:0 4px 14px rgba(0,0,0,.35);cursor:pointer}
 #toasts{position:fixed;left:50%;transform:translateX(-50%);bottom:76px;z-index:80;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;max-width:92vw}
 .toast{background:#1d2a33;color:#fff;padding:9px 16px;border-radius:20px;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,.3)}
 .toast.bad{background:#b4251b}
-dialog#dlg{border:1px solid var(--line,#ccc);border-radius:12px;padding:16px;max-width:min(40rem,94vw);width:100%;background:var(--card,#fff);color:var(--fg,#111)}
+dialog#dlg{border:1px solid var(--line,#ccc);border-radius:12px;padding:16px;max-width:min(40rem,94vw);width:100%;background:var(--surface,#fff);color:var(--fg,#111)}
 dialog::backdrop{background:rgba(0,0,0,.45)}
 .pill.warn{background:#fff2cc;color:#7a5b00}.pill.info{background:#dcecff;color:#0b4a8f}
 .ntf{display:flex;gap:8px;justify-content:space-between;align-items:flex-start;border-bottom:1px solid var(--line,#ddd);padding:8px 0}
@@ -167,6 +167,8 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 body.simple .expl,body.simple .card>p.derived:not([id]):not([role]),body.simple .sec>p.derived:not([id]):not([role]){display:none}
 body.simple dialog p.derived{display:block}
 
+.exp2{margin:0 0 8px;color:var(--muted);font-size:14px;line-height:1.45}.exp2 b{color:var(--fg)}.gsvg svg{display:block;width:100%;height:auto}
+
 .mini{display:inline-block;height:10px;background:var(--s25)}
 </style></head><body>
 <div class="wrap">
@@ -176,6 +178,7 @@ body.simple dialog p.derived{display:block}
       <h1 id="h1">Estadística</h1>
     </div>
     <div class="who" id="who"></div>
+    <button type="button" class="bell" id="btnTema" aria-label="Cambiar colores">🎨</button>
     <button type="button" class="bell" id="bell" hidden aria-label="Notificaciones">🔔<span id="bell-n" hidden>0</span></button>
   </div>
   <div id="msg" class="note" hidden></div>
@@ -224,17 +227,18 @@ body.simple dialog p.derived{display:block}
         <button role="tab" aria-selected="false" data-p="aud">Auditoría</button>
         <button role="tab" aria-selected="false" data-p="cfg">Conexión y Drive</button>
         <button role="tab" aria-selected="false" data-p="adm" class="only-master" hidden>Administración</button>
-        <button role="tab" aria-selected="false" data-p="ser">Histórico 2013–2020</button>
+        <button role="tab" aria-selected="false" data-p="ser">Histórico</button>
       </div>
 
       <div id="p-est" class="sec">
         <div class="kpis" id="kpis"></div>
         <div class="card">
           <h3>Informe del periodo</h3>
-          <p class="derived expl" style="margin:0 0 10px">Genera una carpeta comprimida (.zip) con lo que está filtrado arriba, con las fotos que los bomberos tomaron en el lugar: Reporte de Comandancia, Registro de Actividades y el anexo fotográfico de cada emergencia, todo en el formato institucional.</p>
-          <div class="dl"><button class="btn" id="rp-alc">Generar reportes para la Alcaldía</button></div><details id="rp-det" style="margin-top:8px"><summary>Descargar cada documento por separado</summary><div class="dl" style="margin-top:8px"><button class="btn alt" id="rp-com">Reporte de Comandancia (.xlsx)</button><button class="btn alt" id="rp-foto">Registro fotográfico para la alcaldía (.docx)</button><button class="btn alt" id="rp-act">Registro de actividades para la alcaldía (.xlsx)</button><button class="btn alt" id="gen-snif">Incendios forestales / SNIF (.xlsm)</button><button class="btn alt" id="rp-est">Estadística institucional actualizada (.xlsx)</button></div><div class="dl" style="margin-top:8px"><button class="btn alt" id="gen">Todo en una carpeta (.zip)</button></div></details>
+          <p class="derived expl" style="margin:0 0 10px">Cada botón genera el documento con lo que está filtrado arriba, en el formato institucional. «Reportes en general» los reúne todos en una carpeta comprimida (.zip).</p>
+          <div class="dl rp-btns"><button class="btn" id="rp-com">Reporte Comandancia</button><button class="btn" id="rp-fa">Registro fotográfico y Registro de Actividades</button><button class="btn" id="gen-snif">Incendios Forestales</button><button class="btn" id="rp-est">Estadística Global</button><button class="btn" id="gen">Reportes en general</button></div>
           <p class="derived" style="margin-top:8px" id="dlmsg"></p>
         </div>
+        <div id="est-nuevo" class="sec"></div>
         <div class="chart"><h3>Incidentes por mes</h3><div id="cm"></div></div>
         <div>
           <div class="tools" style="margin-bottom:6px"><label style="min-width:0;display:flex;align-items:center;gap:8px;flex-direction:row"><input type="checkbox" id="fcmp" checked style="width:auto"> Comparar con el mismo periodo del año anterior</label></div>
@@ -247,6 +251,7 @@ body.simple dialog p.derived{display:block}
       </div>
 
       <div id="p-reg" class="sec" hidden>
+        <div class="card" id="v-pend-card"><div id="v-pend"></div></div>
         <div class="card"><label>Buscar<input id="q" placeholder="Número, categoría, dirección, barrio o descripción"></label><label class="only-master" style="flex-direction:row;display:flex;gap:8px;align-items:center;margin-top:8px" hidden><input type="checkbox" id="showanul" style="width:auto"> Mostrar también los registros anulados</label></div>
         <div class="scroll"><table id="rtab"></table></div>
         <div class="tools"><button class="btn alt sm" id="prev">Anterior</button><span class="derived" id="pg"></span><button class="btn alt sm" id="next">Siguiente</button></div>
@@ -267,6 +272,8 @@ body.simple dialog p.derived{display:block}
         <div class="scroll"><table id="atab"></table></div></div>
       </div>
       <div id="p-cfg" class="sec" hidden>
+        <div class="card" id="pc-box"></div>
+        <div class="card only-master" id="ses-card" hidden></div>
         <div class="card">
           <h3>Conexión con los teléfonos, Drive y el Formulario de Google</h3>
           <p class="derived" id="c_sum"></p>
@@ -288,13 +295,11 @@ body.simple dialog p.derived{display:block}
           <div class="tools"><label style="flex:2;min-width:14rem">Tipo de emergencia<select id="ll-tipo"></select></label><label>Lugar<input id="ll-lugar" placeholder="Dirección o referencia"></label><label>Teléfono de quien reporta<input id="ll-tel" inputmode="tel" placeholder="300 000 0000"></label><label>Coordenadas<input id="ll-co" placeholder="4°31'50&quot;N 76°06'29&quot;W o 4.5306, -76.1082"></label><button class="btn" id="ll-send">Llamar a las unidades</button></div>
           <div class="derived" id="ll-out" role="status"></div>
         </div>
-        <div class="card" id="op-act"><h3>Emergencias activas</h3><div id="v-llam"></div></div>
-        <div class="card" id="op-alert"><h3>Alertas</h3><div class="dl"><button class="btn alt sm" id="siren-on">Activar alarma sonora y avisos</button><span class="derived" id="siren-msg"></span></div><div id="v-alerts"></div><div id="v-pend"></div></div>
+        <div class="card" id="op-act"><h3>Emergencias activas</h3><div id="v-alerts"></div><div id="v-llam"></div></div>
         <div class="card" id="op-uni"><h3>Unidades y conexión</h3><div class="scroll"><table id="uni-tab"></table></div></div>
         <div class="card"><h3>Chat</h3><div id="chat-box"></div></div>
         <div id="map-vivo" class="map"></div>
         <div class="scroll"><table id="vivo-tab"></table></div>
-        <div class="card" id="pc-box"></div>
       </div>
 
       <div id="p-calor" class="sec" hidden>
@@ -316,22 +321,21 @@ body.simple dialog p.derived{display:block}
         <div class="tabs" id="atabs" role="tablist">
           <button role="tab" aria-selected="true" data-a="usr">Usuarios</button>
           <button role="tab" aria-selected="false" data-a="frm">Formulario del celular</button>
-          <button role="tab" aria-selected="false" data-a="app">Aplicación y alertas</button>
+          <button role="tab" aria-selected="false" data-a="app">Aplicación, avisos y Formulario de Google</button>
           <button role="tab" aria-selected="false" data-a="mar">Marca y licencia</button>
-          <button role="tab" aria-selected="false" data-a="wha">WhatsApp y notificaciones</button>
           <button role="tab" aria-selected="false" data-a="perm">Funciones por rol</button>
           <button role="tab" aria-selected="false" data-a="seg">Seguridad y mantenimiento</button>
-          <button role="tab" aria-selected="false" data-a="gfm">Formulario de Google</button>
           <button role="tab" aria-selected="false" data-a="his">Histórico</button>
           <button role="tab" aria-selected="false" data-a="dgn">Diagnóstico</button>
         </div>
         <div id="a-box" class="sec"></div>
       </div>
       <div id="p-ser" class="sec" hidden>
-        <div class="note">Estos años se guardaron con otro formato: totales por tipo de incidente y por mes, sin registros individuales. Se conservan como histórico estadístico y no entran en los filtros de arriba.</div>
+        <div class="card" id="carga-card"></div>
+        <div class="note">Los años hasta 2020 se guardaron con otro formato (totales por tipo de incidente y por mes) y se conservan como histórico estadístico. Los años siguientes se calculan con los reportes de la aplicación y con la información que se cargue aquí.</div>
         <div class="tools"><label>Año<select id="sanio"></select></label></div>
         <div class="scroll"><table id="stab"></table></div>
-        <div class="chart"><h3>Incendios forestales por año (2013–2023)</h3><div id="sfor"></div></div>
+        <div class="chart"><h3>Incendios forestales reportados por año</h3><div id="sfor"></div></div>
       </div>
     </div>
   </section>
@@ -415,7 +419,7 @@ async function call(a,extra,opt){
   let last;
   for(let i=0;i<3;i++){
     try{
-      const j=await rawCall({u:USER,t:TOKEN,a,...(extra||{})},opt&&opt.ms);
+      const j=await rawCall({u:USER,t:TOKEN,a,canal:'computador',ua:(navigator.userAgent||'').replace(/^Mozilla\/5.0 /,'').slice(0,90),...(extra||{})},opt&&opt.ms);
       if(j&&j.error==='clave'&&a!=='login'){salir('Su sesión ya no es válida (cambió la clave o el usuario). Entre de nuevo.');return j}
       return j;
     }catch(e){last=e;if(e.message==='sin_url')throw e;await new Promise(r=>setTimeout(r,1200*(i+1)))}
@@ -459,7 +463,7 @@ const TABS_ROL={central:['reg','vivo'],estadistica:['est','reg','vivo','calor','
 function showTab(k){
   document.querySelectorAll('#ptabs button').forEach(x=>x.setAttribute('aria-selected',x.dataset.p===k));
   TABS.forEach(t=>{const e=$('p-'+t);if(e)e.hidden=t!==k});
-  if(k==='cfg')renderCfg();if(k==='ser')renderSeries();if(k==='per')renderPers();if(k==='aud')renderAud();
+  if(k==='cfg'){renderCfg();if(typeof renderSesiones==='function')renderSesiones()}if(k==='ser'){renderSeries();if(typeof renderCarga==='function')renderCarga()}if(k==='per')renderPers();if(k==='aud')renderAud();
   if(k!=='calor'&&HEAT&&MC){MC.removeLayer(HEAT);HEAT=null}
   if(k==='vivo')enVivoTab(true);else enVivoTab(false);
   if(k==='calor')initCalor();if(k==='adm')renderAdm();
@@ -495,7 +499,8 @@ function refreshSelectors(first){
   const cur=new Date().getFullYear();if(!yrs.includes(cur))yrs.unshift(cur);
   const keep=$('fanio').value;
   $('fanio').innerHTML=yrs.map(y=>'<option>'+y+'</option>').join('');$('fanio').value=(!first&&yrs.map(String).includes(keep))?keep:String(cur);
-  const ks=Object.keys(SERIES).filter(k=>/^\d{4}$/.test(k)).sort(),ks0=$('sanio').value;
+  const ult=new Date().getFullYear()-1,ks0=$('sanio').value;const ks=[];for(let y=2013;y<=ult;y++)ks.push(String(y));
+  const tb=document.querySelector('#ptabs [data-p="ser"]');if(tb)tb.textContent='Histórico 2013–'+ult;
   $('sanio').innerHTML=ks.map(y=>'<option>'+y+'</option>').join('');if(ks.includes(ks0))$('sanio').value=ks0;
 }
 const toRow=o=>{
@@ -511,11 +516,11 @@ function extraTxtDe(o){
   return out.join(' ');
 }
 async function loadHist(){
-  const r=need(await call('histGet'));const txt=(r.claves||{}).hist;
+  const r=need(await call('histGet'));CARGAS_RAW=r.claves||{};const txt=(r.claves||{}).hist;
   if(!txt){HISTOK=false;return null}
   HISTOK=true;return JSON.parse(txt);
 }
-let HISTROWS=null;
+let HISTROWS=null,CARGAS_RAW={},CARGAS=[];
 async function loadAll(){
   if(HISTROWS===null){
     const h=ROL==='central'?null:await loadHist();HISTROWS=[];
@@ -523,6 +528,8 @@ async function loadAll(){
       (h.hist||[]).forEach(x=>(x.items||[]).forEach((it,i)=>HISTROWS.push({src:'hist',id:'HI-'+x.y+'-'+pad((x.n-1)*1000+i+1,5),cat:CATS[it.c]||GEN.CATS[it.c],tipo:it.t,fecha:it.f,dur_txt:it.d,durmin:it.m,dir:it.a,bar:it.b,desc:it.x,area:it.r,uni:it.u,veh:it.v,coord:it.g})));
       SERIES=h.series||{};OFICIAL=h.oficial||null;SNIF_SEED=h.snif||[];SNIF_CORTE=h.snifCorte||'';
     }
+    CARGAS=[];
+    Object.keys(CARGAS_RAW||{}).filter(k=>/^carga-/.test(k)).forEach(k=>{try{const c=JSON.parse(CARGAS_RAW[k]);(c.rows||[]).forEach((it,i)=>HISTROWS.push(Object.assign({src:'hist',id:'CA-'+k.slice(6).toUpperCase()+'-'+pad(i+1,4),carga:k},it)));CARGAS.push({clave:k,n:(c.rows||[]).length,meta:c.meta||{}})}catch(e){}});
   }
   const l=need(await call('lista',{desde:LAST}));MODIF=l.modif||MODIF;
   l.regs.forEach(o=>{REGS.set(o.tmp,o);LAST=Math.max(LAST,o.actualizado||0)});
@@ -646,7 +653,7 @@ async function metaDe(tmps){
   r.fotos.forEach(f=>(by[f.tmp]=by[f.tmp]||[]).push(f));Object.values(by).forEach(a=>a.sort((x,y)=>x.n-y.n));return by;
 }
 async function bajar(metas,prog){
-  const falta=metas.filter(m=>!FOTOS_CACHE.has(m.archivo)),lotes=[];
+  const falta=metas.filter(m=>!m.video&&!FOTOS_CACHE.has(m.archivo)),lotes=[];
   for(let i=0;i<falta.length;i+=5)lotes.push(falta.slice(i,i+5));
   let hechos=0,idx=0;
   const worker=async()=>{while(idx<lotes.length){const lote=lotes[idx++];
@@ -660,7 +667,7 @@ async function dims(u8){
 }
 async function paraDocx(fs,descDe){
   const out=[];
-  for(const f of fs){if(!f.d)continue;const data=b64(f.d),d=await dims(data);out.push({data,w:d.w,h:d.h,desc:descDe?descDe(f):(f.desc||'')})}
+  for(const f of fs){if(!f.d||f.video)continue;const data=b64(f.d),d=await dims(data);out.push({data,w:d.w,h:d.h,desc:descDe?descDe(f):(f.desc||'')})}
   return out;
 }
 
@@ -740,7 +747,11 @@ function renderSeries(){
   if(s&&s.filas){
     $('stab').innerHTML='<tr><th>Incidente</th>'+['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'].map(m=>'<th class="n">'+m+'</th>').join('')+'<th class="n">Total</th></tr>'+s.filas.map(f=>'<tr><td>'+esc(f.i)+'</td>'+f.m.map(v=>'<td class="n">'+(v||'')+'</td>').join('')+'<td class="n">'+(f.t==null?'':f.t)+'</td></tr>').join('');
   }else if(s&&s.por_clase){$('stab').innerHTML='<tr><th>Clase de emergencia (como se anotó en 2013)</th><th class="n">Eventos</th></tr>'+Object.entries(s.por_clase).map(([k,v])=>'<tr><td>'+esc(k)+'</td><td class="n">'+v+'</td></tr>').join('')}
-  else $('stab').innerHTML='<tr><td>Sin datos para este año.</td></tr>';
+  else{ /* años sin serie anual: se calculan con los reportes de la aplicación y las cargas de emergencias */
+    const rows=ALL.filter(r=>String(r.fecha).slice(0,4)===String(y)&&!r.anulado);
+    if(!rows.length)$('stab').innerHTML='<tr><td>Sin datos para el año '+esc(y)+'. Puede cargar emergencias de ese año con «Cargar información de emergencias».</td></tr>';
+    else{const por={};rows.forEach(r=>{const k=tc(r.cat||'Sin categoría');(por[k]=por[k]||new Array(12).fill(0))[+String(r.fecha).slice(5,7)-1]++});
+      $('stab').innerHTML='<tr><th>Incidente ('+esc(y)+')</th>'+['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'].map(m=>'<th class="n">'+m+'</th>').join('')+'<th class="n">Total</th></tr>'+Object.entries(por).sort((a,b)=>b[1].reduce((x,z)=>x+z,0)-a[1].reduce((x,z)=>x+z,0)).map(([k,m])=>'<tr><td>'+esc(k)+'</td>'+m.map(v=>'<td class="n">'+(v||'')+'</td>').join('')+'<td class="n">'+m.reduce((x,z)=>x+z,0)+'</td></tr>').join('')}}
   const fo=SERIES.forestales;
   if(fo&&fo.anios){const mx=Math.max(...fo.anios.map(a=>a.n)),W=640,H=190,L=30,B=24,T=14,iw=W-L-8,gw=iw/fo.anios.length;
     let sv='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Incendios forestales por año">';
@@ -750,7 +761,7 @@ function renderSeries(){
 
 /* ================= ALARMA, SOS, LLAMADOS, AVISO DE REPORTES NUEVOS Y UNIDADES EN VIVO ================= */
 const siren={ctx:null,osc:null,iv:null,
-  unlock(){try{if(!this.ctx)this.ctx=new (window.AudioContext||window.webkitAudioContext)();if(this.ctx.state==='suspended')this.ctx.resume();const e=$('siren-msg');if(e)e.textContent=this.ctx.state==='running'?'Alarma sonora lista.':''}catch(x){}},
+  unlock(){try{if(!this.ctx)this.ctx=new (window.AudioContext||window.webkitAudioContext)();if(this.ctx.state==='suspended')this.ctx.resume();}catch(x){}},
   beep(n){this.unlock();n=n||2;try{for(let i=0;i<n;i++){const t0=this.ctx.currentTime+i*.45,o=this.ctx.createOscillator(),g=this.ctx.createGain();o.connect(g);g.connect(this.ctx.destination);g.gain.value=.3;o.frequency.value=i%2?660:880;o.start(t0);o.stop(t0+.3)}}catch(x){}},
   start(){this.unlock();if(!this.ctx||this.osc)return;try{const o=this.ctx.createOscillator(),g=this.ctx.createGain();o.type='square';g.gain.value=.5;o.connect(g);g.connect(this.ctx.destination);o.start();this.osc=o;let hi=false;o.frequency.value=620;this.iv=setInterval(()=>{hi=!hi;o.frequency.value=hi?950:620},450)}catch(x){}},
   stop(){try{if(this.osc)this.osc.stop()}catch(x){}this.osc=null;clearInterval(this.iv)}};
@@ -773,7 +784,7 @@ function ubicActs(lat,lon,quien){
   w.append(mp,' ',cp,' ',sh);return w;
 }
 function iniciarAlertas(){
-  $('siren-on').onclick=()=>{siren.beep(3);try{if('Notification' in window&&Notification.permission==='default')Notification.requestPermission()}catch(e){}};
+  try{if('Notification' in window&&Notification.permission==='default')document.addEventListener('pointerdown',()=>Notification.requestPermission(),{once:true})}catch(e){}
   bindLlamado();pollVivo();setInterval(pollVivo,10000);
 }
 function avisoNavegador(t,b,tag){try{if('Notification' in window&&Notification.permission==='granted'&&document.visibilityState!=='visible')new Notification(t,{body:b,tag,requireInteraction:true})}catch(e){}}
@@ -806,7 +817,7 @@ function drawAlertas(){
   });
   const sonar=act.filter(a=>!MUTED.has(a.id)).length>0;
   if(sonar){siren.start();act.filter(a=>!NSOS.has(a.id)).forEach(a=>{NSOS.add(a.id);avisoNavegador('🚨 SOS · BOMBERO CAÍDO',a.por,'sos'+a.id)})}else siren.stop();
-  const va=$('v-alerts');if(va)va.innerHTML=act.length?'':'<p class="derived">Sin alertas SOS activas.</p>';
+  const va=$('v-alerts');if(va)va.innerHTML='';
 }
 const NSOS=new Set();
 /* ----- aviso de reporte nuevo recibido ----- */
@@ -1287,7 +1298,7 @@ function admFrm(){
 
 /* --- formulario de Google --- */
 async function admGfm(){
-  let c;try{c=need(await call('cfgGet')).cfg}catch(e){setBox(card(H('p',{className:'err'},humanErr(e))));return}
+  let c;try{c=need(await call('cfgGet')).cfg}catch(e){setBoxS('gfm',card(H('p',{className:'err'},humanErr(e))));return}
   const url=H('input',{value:c.formUrl||'',placeholder:'https://docs.google.com/forms/d/…/edit'}),msg=H('div',{className:'derived',role:'status'}),box=H('div');
   const sv=H('button',{className:'btn sm',textContent:'Guardar enlace'});sv.onclick=async()=>{try{need(await call('cfgSet',{clave:'formUrl',valor:url.value.trim()}));msg.textContent='Guardado.'}catch(e){msg.textContent=humanErr(e)}};
   const rd=H('button',{className:'btn alt sm',textContent:'Leer las preguntas del formulario'});
@@ -1304,7 +1315,7 @@ async function admGfm(){
       const sm=H('button',{className:'btn',textContent:'Guardar equivalencias'});sm.onclick=async()=>{try{need(await call('cfgSet',{clave:'formMap',valor:map}));msg.textContent='Equivalencias guardadas. Use «Reenviar» en la pestaña Conexión y Drive para los registros pendientes.'}catch(e){msg.textContent=humanErr(e)}};
       box.append(H('div',{className:'scroll'},t),H('div',{className:'dl'},sm));
     }catch(e){msg.textContent=humanErr(e)}};
-  setBox(card(H('h3',{},'Conexión con su Formulario de Google'),
+  setBoxS('gfm',card(H('h3',{},'Conexión con su Formulario de Google'),
     H('ol',{className:'derived'},...['Abra su formulario con la MISMA cuenta de Google con la que creó este script y copie el enlace de EDICIÓN (el que termina en /edit, no el de «responder»).','Péguelo aquí y guárdelo.','Pulse «Leer las preguntas» para comprobar que el programa lo puede abrir y asignar cada pregunta a su dato.','Si dice que no tiene permiso: comparta el formulario, como editor, con la cuenta que aparece en Diagnóstico.'].map(x=>H('li',{},x))),
     lbl('Enlace de edición del formulario',url),H('div',{className:'dl'},sv,rd),msg,box));
 }
@@ -1449,7 +1460,7 @@ async function admUsr(){
 
 /* --- Aplicación y alertas --- */
 async function admApp(){
-  let c;try{c=need(await call('cfgGet')).cfg}catch(e){setBox(card(H('p',{className:'err'},humanErr(e))));return}
+  let c;try{c=need(await call('cfgGet')).cfg}catch(e){setBoxS('app',card(H('p',{className:'err'},humanErr(e))));return}
   const a=Object.assign({titulo:'Registrar emergencia',org:'CBV La Unión',guardiaTel:'3117694047',sosSirena:true,gpsSeg:20,sosGpsSeg:5,recordHoras:3,snifLonNeg:false},c.app||{});
   if(!a.guardiaTel&&a.sosTel)a.guardiaTel=a.sosTel;
   const lk=Object.assign({gre:'https://www.phmsa.dot.gov/sites/phmsa.dot.gov/files/2024-04/GRE2024-Spa-Web-a.pdf',agua:'https://www.google.com/maps/d/viewer?mid=1StvlhQwpDdWVCPY15-h4RBTw17vpGMc',hidrantes:'https://www.google.com/maps/d/viewer?mid=1GwWSjR5XsHPFgZPoR4JHQJFBc0n-eb8'},a.links||{});
@@ -1479,7 +1490,7 @@ async function admApp(){
     }catch(e){msg.textContent='No se pudo guardar: '+humanErr(e)}b.disabled=false};
   const test=H('button',{className:'btn alt',textContent:'Enviar aviso de prueba (correo y WhatsApp)'});
   test.onclick=async()=>{msg.textContent='Enviando prueba…';try{const r=need(await call('avisoPrueba'));const x=r.canales||{};msg.textContent='Correo: '+x.correo+' · WhatsApp: '+x.whatsapp+'. (Guarde antes los cambios si acaba de modificarlos.)'}catch(e){msg.textContent=humanErr(e)}};
-  setBox(
+  setBoxS('app',
     card(H('h3',{},'Textos de la aplicación'),H('div',{className:'tools'},lbl('Título de la aplicación del celular',t),lbl('Nombre de la institución',o))),
     card(H('h3',{},'Guardia y SOS'),H('div',{className:'tools'},lbl('Teléfono de la guardia (botones «Llamar» y WhatsApp, y mensaje de SOS)',gt),lbl('Segundos entre envíos de ubicación (normal)',gp),lbl('Segundos entre envíos con SOS activo',sgp),lbl('Horas que se guarda el recorrido de las unidades',rh)),
       H('label',{style:'display:flex;gap:8px;align-items:center;flex-direction:row'},sir,'Sonar la sirena también en el teléfono de quien activa el SOS')),
@@ -1657,7 +1668,7 @@ async function carpetaPC(r,ask){
   const sub=await h.getDirectoryHandle(limpiaNom(r.id+' '+tc(r.cat)),{create:true});
   const u8=await GEN.reporteEmergencia(JSZip,await tpl('reporte_emergencias.xlsx'),await repData(r));
   await escribirPC(sub,'REPORTE DE EMERGENCIAS '+r.id+'.xlsx',u8);
-  if(typeof constanciaBlob==='function'){try{await escribirPC(sub,'CONSTANCIA DE ATENCION '+r.id+'.docx',await constanciaBlob(r))}catch(e){}}
+  if(esMaster()&&typeof constanciaBlob==='function'){try{await escribirPC(sub,'CONSTANCIA DE ATENCION '+r.id+'.docx',await constanciaBlob(r))}catch(e){}}
   const fs=await fotosBajadas(r);
   for(let i=0;i<fs.length;i++){await escribirPC(sub,'Foto '+String(i+1).padStart(2,'0')+'.jpg',b64(fs[i].d))}
   return true;
@@ -1722,14 +1733,20 @@ async function constanciaDatos(r){
   return {num:String(+seq||0).padStart(3,'0')+'-'+anio,org:ORG_NOM(),orgNombre:ORG_NOM(),info,desc,crono:acc,predio,amen:lista(rp.amen),obj:lista(rp.obj),
     unidades:[(vehs.length?'Vehículos '+vehs.join(', ')+'.':'Vehículos: no aplica.'),(r.uni?r.uni+' unidad(es) operativa(s).':'Unidades: no aplica.')].concat((r.pers||[]).length?['Personal: '+r.pers.join(', ')+'.']:[]),recomend:lista(rp.recom),
     expide:'Se expide en La Unión, Valle del Cauca, a los '+hoy.getDate()+' días del mes de '+MES_L[hoy.getMonth()]+' del '+hoy.getFullYear()+'.',
-    firma:{nombre:M.repLegal||'',cargo:M.repCargo||'Comandante / Representante Legal'},fotos,nit:M.nit||'',orgHeader:(M.nombre&&!/La Unión/i.test(M.nombre))?M.nombre.replace(/^Cuerpo de Bomberos /i,''):'',direccion:(M.direccion&&M.direccion!=='Calle 14 # 6-01 Barrio Las Lajas')?M.direccion:'',telefono:(M.telefono&&M.telefono!=='3117694047')?M.telefono:'',correo:(M.correo&&M.correo!=='cbvlaunionv@gmail.com')?M.correo:'',autor:'Sistema CBV · Cristhian Steven Blandón Henao'};
+    firma:firmaConstancia(M),fotos,nit:M.nit||'',orgHeader:(M.nombre&&!/La Unión/i.test(M.nombre))?M.nombre.replace(/^Cuerpo de Bomberos /i,''):'',direccion:(M.direccion&&M.direccion!=='Calle 14 # 6-01 Barrio Las Lajas')?M.direccion:'',telefono:(M.telefono&&M.telefono!=='3117694047')?M.telefono:'',correo:(M.correo&&M.correo!=='cbvlaunionv@gmail.com')?M.correo:'',autor:'Sistema CBV · Cristhian Steven Blandón Henao'};
+}
+/* firma: la persona que el superadministrador registró como Comandante y Representante Legal */
+function firmaConstancia(M){
+  const rl=(ROSTER||[]).find(p=>p.activo!==false&&/representante\s+legal/i.test(String(p.cargo||'')));
+  if(rl)return {nombre:String(rl.nombre).trim(),cargo:String(rl.cargo).trim()};
+  return {nombre:M.repLegal||'',cargo:M.repCargo||'Comandante y Representante Legal'};
 }
 async function constanciaBlob(r){return new Blob([await GEN.constancia(JSZip,await tpl('constancia.docx'),await constanciaDatos(r))])}
 /* botón «Constancia» en el detalle de cada emergencia */
 const SD1=showDetail;
 showDetail=async function(r){
   await SD1(r);
-  const d=$('detail');if(!d||d.hidden||r.src!=='app'||r.borrador)return;
+  const d=$('detail');if(!d||d.hidden||r.src!=='app'||r.borrador||!esMaster())return; /* solo el superadministrador expide constancias */
   const b=document.createElement('button');b.className='btn alt sm';b.textContent='Constancia de atención (.docx)';
   b.onclick=()=>run($('d-msg'),async()=>{await save('CONSTANCIA DE ATENCION '+r.id+'.docx',await constanciaBlob(r))});
   (d.querySelector('.dl:last-of-type')||d).append(b);
@@ -1777,7 +1794,7 @@ async function repEstadistica(btn){
   btn.disabled=false;
 }
 function bindInformes(){
-  const map={'rp-alc':repAlcaldia,'rp-com':repComandancia,'rp-foto':repFotografico,'rp-act':repActividades,'rp-est':repEstadistica};
+  const map={'rp-fa':async b=>{b.disabled=true;await repFotografico({});await repActividades({});b.disabled=false},'rp-com':repComandancia,'rp-est':repEstadistica};
   Object.keys(map).forEach(id=>{const b=$(id);if(b&&!b._b){b._b=1;b.onclick=()=>map[id](b)}});
 }
 
@@ -1823,7 +1840,7 @@ async function admMar(){
     card(msg));
 }
 async function admWha(){
-  let c;try{c=need(await call('cfgGet')).cfg}catch(e){setBox(card(H('p',{className:'err'},humanErr(e))));return}
+  let c;try{c=need(await call('cfgGet')).cfg}catch(e){setBoxS('wha',card(H('p',{className:'err'},humanErr(e))));return}
   let w=c.whatsapp&&!Array.isArray(c.whatsapp)?Object.assign({},c.whatsapp):{proveedor:'greenapi',apiUrl:'https://api.green-api.com',idInstance:'',token:'',chats:[]};
   if(Array.isArray(c.whatsapp)&&c.whatsapp.length)w={proveedor:'callmebot',lista:c.whatsapp};
   const msg=H('div',{className:'derived',role:'status'});
@@ -1844,7 +1861,7 @@ async function admWha(){
     if(p==='greenapi')gv.append(lbl('Dirección del servicio (apiUrl)',f('apiUrl','https://api.green-api.com')),lbl('idInstance',f('idInstance')),lbl('apiTokenInstance',f('token')),lbl('Destinos',chats));
     if(p==='webhook')gv.append(lbl('Dirección (use {telefono} y {texto})',f('url','https://…/enviar?to={telefono}&msg={texto}')),lbl('Método (GET o POST)',f('metodo','GET')),lbl('Token (opcional)',f('token')),lbl('Destinos',chats))};
   prov.onchange=draw;draw();
-  setBox(card(H('h3',{},'WhatsApp'),H('ol',{className:'derived'},...['Cree una cuenta en green-api.com (hay un plan gratis para desarrollador) y una instancia.','En el teléfono de la institución abra WhatsApp → Dispositivos vinculados y escanee el código QR de la instancia.','Copie aquí el idInstance y el apiTokenInstance.','Escriba los números (o el grupo) que recibirán los avisos y guarde.'].map(t=>H('li',{},t))),lbl('Servicio',prov),gv,H('div',{className:'dl'},sv,probar)),
+  setBoxS('wha',card(H('h3',{},'WhatsApp'),H('ol',{className:'derived'},...['Cree una cuenta en green-api.com (hay un plan gratis para desarrollador) y una instancia.','En el teléfono de la institución abra WhatsApp → Dispositivos vinculados y escanee el código QR de la instancia.','Copie aquí el idInstance y el apiTokenInstance.','Escriba los números (o el grupo) que recibirán los avisos y guarde.'].map(t=>H('li',{},t))),lbl('Servicio',prov),gv,H('div',{className:'dl'},sv,probar)),
     card(H('h3',{},'Notificaciones en el teléfono'),H('p',{className:'derived'},'Cada bombero debe permitir las notificaciones la primera vez que abre la aplicación. Con eso el llamado, el SOS y el chat le suenan aunque tenga la aplicación cerrada (en iPhone, primero «Agregar a pantalla de inicio»).'),H('div',{className:'dl'},push)),card(msg));
 }
 async function admSeg(){
@@ -1935,15 +1952,38 @@ function drawLlamados(){
     d.innerHTML='<h4>🚒 '+esc(a.msg)+(a.rep?' <span class="pill info">repetido '+a.rep+' vez/veces</span>':'')+(a.v?' <span class="pill info">actualizado '+a.v+'×</span>':'')+'</h4>'+
       '<div class="derived">'+(a.lugar?'Lugar: '+esc(a.lugar)+' · ':'<b>Sin lugar todavía</b> · ')+(okNum(a.lat)?esc(gms(a.lat,a.lon))+' · ':'sin coordenadas · ')+(a.tel?'Contacto: <a href="tel:'+esc(a.tel)+'">'+esc(a.tel)+'</a> · ':'')+'enviado '+horaTxt(a.cuando)+' h por '+esc(a.por)+'</div>'+
       '<div><b>'+cf.length+'</b> unidad(es) confirmaron: '+(cf.length?cf.map(c=>esc(c.por)+(c.veh?' ('+esc(c.veh)+')':'')+' '+horaTxt(c.t)).join(' · '):'ninguna todavía')+'</div>'+
-      (ds.length?'<div>'+ds.map(x=>'<span class="pill on">'+esc(x.veh)+' · '+x.pers.length+' persona(s) · '+esc(EST_DESP[x.estado]||x.estado)+'</span>').join(' ')+'</div>':'<div class="derived">Sin vehículos asignados.</div>');
+      (ds.length?'<div>'+ds.map(x=>'<span class="pill on">'+esc(x.veh||'Sin vehículo')+' · '+x.pers.length+' persona(s) · '+esc(EST_DESP[x.estado]||x.estado)+'</span>').join(' ')+'</div>':'<div class="derived">Sin vehículos asignados.</div>');
     const b=document.createElement('div');b.className='dl';
     const mk=(t,f,cl)=>{const x=document.createElement('button');x.className='btn '+(cl||'alt')+' sm';x.textContent=t;x.onclick=()=>f(x);return x};
     b.append(mk('Repetir llamado / Recordar emergencia',x=>repetirLlamado(a,x)),mk('Agregar o actualizar ubicación',()=>editarUbic(a,d)));
+    b.append(mk('Ver toda la información',()=>detalleEmerg(a.id),'')); 
     if(puedeF('despacho'))b.append(mk('Despachar',()=>despachoUI(a)));
     b.append(mk('Cerrar llamado',async x=>{if(!confirm('¿Cerrar este llamado? Las asignaciones de vehículos terminan.'))return;x.disabled=true;try{need(await call('alertAck',{id:a.id,nota:'Llamado cerrado'}));toast('Llamado cerrado.');pollVivo()}catch(e){toast('No se pudo cerrar: '+humanErr(e),1);x.disabled=false}}));
     if(okNum(a.lat))b.append(ubicActs(a.lat,a.lon,'Llamado'));
     d.append(b);box.append(d);
   });
+}
+/* detalle vivo de una emergencia activa: llamado, unidades, vehículos, duración y el reporte del comandante mientras lo llena */
+let DET={id:null,iv:null};
+function minTxt(ms){const m=Math.max(0,Math.round(ms/60000));return m<60?m+' min':Math.floor(m/60)+' h '+(m%60)+' min'}
+async function detalleEmerg(id){
+  DET.id=id;clearInterval(DET.iv);
+  const pintar=async()=>{
+    let r;try{r=need(await call('emergDetalle',{id}))}catch(e){if(DET.id===id)dlg('<h3>Emergencia</h3><p>No se pudo cargar: '+esc(humanErr(e))+'</p><div class="dl"><button class="btn alt" id="de-no">Cerrar</button></div>',()=>{$('de-no').onclick=()=>{clearInterval(DET.iv);dlgCerrar()}});return}
+    if(DET.id!==id)return;
+    const a=r.alerta,ds=r.despachos,rp=r.reportes,pers=ds.flatMap(x=>x.pers.map(p=>p.n+(x.veh?' ('+x.veh+')':'')));
+    let h='<h3>🚒 '+esc(a.msg)+'</h3><p class="derived">'+(a.estado==='activa'?'Activa':'Cerrada')+' · duración '+minTxt(r.ahora-a.cuando)+' · enviado '+horaTxt(a.cuando)+' h por '+esc(a.por)+'</p>'+
+      '<p>'+(a.lugar?'<b>Lugar:</b> '+esc(a.lugar)+'<br>':'')+(okNum(a.lat)?'<b>Coordenadas:</b> '+esc(gms(a.lat,a.lon))+'<br>':'')+(a.tel?'<b>Teléfono:</b> <a href="tel:'+esc(a.tel)+'">'+esc(a.tel)+'</a><br>':'')+'</p>'+
+      '<b>Unidades que confirmaron ('+(a.conf||[]).length+')</b><p>'+((a.conf||[]).map(c=>esc(c.por)+(c.veh?' ('+esc(c.veh)+')':'')+' '+horaTxt(c.t)).join(' · ')||'Ninguna todavía')+'</p>'+
+      '<b>Vehículos y personal asignado ('+pers.length+')</b>'+(ds.length?ds.map(x=>'<p style="margin:2px 0"><span class="pill on">'+esc(x.veh||'Sin vehículo')+'</span> '+esc(EST_DESP[x.estado]||x.estado)+': '+esc(x.pers.map(p=>p.n).join(', '))+'</p>').join(''):'<p class="derived">Nadie asignado todavía.</p>')+
+      '<b>Reporte de esta emergencia</b>';
+    if(!rp.length)h+='<p class="derived">Todavía no hay un reporte vinculado. Cuando el comandante lo empiece, aparecerá aquí mientras lo llena.</p>';
+    rp.forEach(o=>{h+='<div class="ntf" style="display:block"><b>'+esc(o.num||o.tmp)+'</b> · '+esc(tc(o.cat||''))+' · '+(o.estado==='final'?'<span class="pill on">Terminado</span>':'<span class="pill warn">En elaboración</span>')+'<br><span class="derived">'+esc(o.por||'')+' · actualizado '+fechaHora(o.actualizado)+'</span><br>'+
+      [o.dir&&'Dirección: '+esc(o.dir),o.bar&&'Barrio: '+esc(o.bar),o.hsal&&'Salida: '+esc(o.hsal),o.hlle&&'Llegada al sitio: '+esc(o.hlle),o.hfin&&'Terminación: '+esc(o.hfin),o.uni&&'Unidades: '+esc(o.uni),o.nfotos&&o.nfotos+' foto(s)/video(s)',o.cmd&&o.cmd.n&&'Comandante del incidente: '+esc(o.cmd.n)].filter(Boolean).join(' · ')+(o.desc?'<p style="margin:4px 0">'+esc(o.desc)+'</p>':'')+'</div>'});
+    h+='<div class="dl"><button class="btn alt" id="de-no">Cerrar</button></div>';
+    const d=$('dlg');const y=d.open?d.scrollTop:0;dlg(h,()=>{$('de-no').onclick=()=>{clearInterval(DET.iv);dlgCerrar()}});d.scrollTop=y;
+  };
+  await pintar();DET.iv=setInterval(()=>{const d=$('dlg');if(!d||!d.open){clearInterval(DET.iv);return}pintar()},6000);
 }
 async function repetirLlamado(a,btn){
   if(!confirm('¿Repetir el llamado «'+a.msg+'»? Se vuelve a avisar a las unidades y al grupo, sin crear otra emergencia.'))return;
@@ -1994,7 +2034,11 @@ async function despachoUI(a){
         $('ds-ok').disabled=true;$('ds-out').textContent='Asignando…';
         try{const r=need(await call('despAsignar',{emerg:a.id,veh:$('ds-veh').value,pers,nota:$('ds-nota').value}));
           toast('Asignado y confirmado por el servidor: '+r.personal+' persona(s) en '+r.despacho.veh+'.'+(r.push&&r.push.enviados?' Avisados '+r.push.enviados+' teléfono(s).':' Sin push: lo verán al abrir la aplicación.'));ROSTERD=null;dlgCerrar();pollVivo()}
-        catch(e){$('ds-out').textContent='No se asignó: '+humanErr(e);$('ds-ok').disabled=false}};
+        catch(e){
+          if(/duplicada/i.test(String(e.message))&&confirm(String(e.message).replace(/^Asignación duplicada: /,'')+'\n\n¿Reasignarlos a esta emergencia? Saldrán de la otra.')){
+            try{const r=need(await call('despAsignar',{emerg:a.id,veh:$('ds-veh').value,pers,nota:$('ds-nota').value,mover:true}));toast('Reasignado: '+r.personal+' persona(s) en '+(r.despacho.veh||'sin vehículo')+'.');ROSTERD=null;dlgCerrar();pollVivo();return}catch(e2){e=e2}
+          }
+          $('ds-out').textContent='No se asignó: '+humanErr(e);$('ds-ok').disabled=false}};
     });
 }
 
@@ -2003,13 +2047,15 @@ const ESTADO_U={compartiendo:['on','Compartiendo ubicación'],'ubic-antigua':['w
 function drawUnidades(){
   const t=$('uni-tab');if(!t)return;const us=(VIVO.usuarios||[]).slice().sort((a,b)=>(b.tp||b.tc||0)-(a.tp||a.tc||0)),ahora=VIVO.ahora||Date.now();
   if(!us.length){t.innerHTML='<tr><td>Ninguna unidad ha abierto la aplicación hoy.</td></tr>';return}
-  t.innerHTML='<tr><th>Persona</th><th>Estado</th><th>Ubicación</th><th>Pendientes en su teléfono</th><th></th></tr>';
+  t.innerHTML='<tr><th>Persona</th><th>Estado</th><th>Ubicación</th><th>Emergencia asignada</th><th>Pendientes en su teléfono</th><th></th></tr>';
   us.forEach(u=>{
     const e=ESTADO_U[u.estado]||['off',u.estado];const tr=document.createElement('tr');
     const vivo=u.pos,ult=u.ult;
     const ub=vivo?'<b>En vivo</b> · hace '+Math.max(0,Math.round((ahora-u.tp)/1000))+' s<br><span class="m">'+esc(gms(vivo.lat,vivo.lon))+'</span>':ult?'<b>Última conocida</b> · '+fechaHora(ult.t)+'<br><span class="m">'+esc(gms(ult.lat,ult.lon))+'</span>':'—';
     const c=u.cola||{},pend=[c.borr?c.borr+' borrador(es)':'',c.pend?c.pend+' por enviar':'',c.err?'<span class="pill bad">'+c.err+' con error</span>':''].filter(Boolean).join(' · ')||'—';
-    tr.innerHTML='<td>'+esc(u.n)+'</td><td><span class="pill '+e[0]+'">'+e[1]+'</span></td><td>'+ub+'</td><td>'+pend+'</td>';
+    const dsp=(VIVO.despachos||[]).find(x=>x.pers.some(p=>p.u===u.u||p.n===u.n)),al=dsp&&llamList().find(a=>a.id===dsp.emerg);
+    const emer=dsp?'<b>'+esc(al?al.msg:'Emergencia')+'</b>'+(al&&al.lugar?'<br><span class="m">'+esc(al.lugar)+'</span>':'')+(dsp.veh?'<br><span class="m">'+esc(dsp.veh)+'</span>':''):'<span class="derived">Sin asignar</span>';
+    tr.innerHTML='<td>'+esc(u.n)+'</td><td><span class="pill '+e[0]+'">'+e[1]+'</span></td><td>'+ub+'</td><td>'+emer+'</td><td>'+pend+'</td>';
     const td=document.createElement('td');
     const la=vivo?vivo.lat:ult?ult.lat:null,lo=vivo?vivo.lon:ult?ult.lon:null;
     if(la!=null){const z=document.createElement('button');z.className='btn alt sm';z.textContent='Ver en mapa';z.onclick=()=>{if(MV)MV.setView([la,lo],17);$('map-vivo').scrollIntoView({behavior:'smooth',block:'center'})};td.append(z,' ')}
@@ -2044,6 +2090,7 @@ function drawPend(){
   const f=PEND,fila=(x,tag)=>'<div class="ntf"><div>'+tag+' <b>'+esc(x.num||x.tmp)+'</b> · '+esc(tc(x.cat||''))+'<br><span class="derived">Responsable: '+esc(x.por||x.usuario||'—')+' · '+fechaHora(x.t)+'</span></div></div>';
   const b=[];
   f.borradores.forEach(x=>b.push(fila(x,x.completo?'<span class="pill warn">Completo, no enviado</span>':'<span class="pill off">Borrador incompleto</span>')));
+  (f.llamSinReporte||[]).forEach(x=>b.push('<div class="ntf"><div><span class="pill warn">Llamado sin reporte</span> <b>'+esc(x.msg)+'</b>'+(x.lugar?' · '+esc(x.lugar):'')+'<br><span class="derived">'+fechaHora(x.t)+' · '+(x.estado==='activa'?'emergencia activa':'cerrado')+'. Toda emergencia con llamado debe tener su reporte.</span></div></div>'));
   f.sinDrive.forEach(x=>b.push(fila(x,'<span class="pill info">Esperando carga a Drive</span>')));
   (f.sinUbic||[]).forEach(x=>b.push('<div class="ntf"><div><span class="pill bad">Falta registrar la ubicación del evento</span> <b>'+esc(x.num||x.tmp)+'</b> · '+esc(tc(x.cat||''))+'<br><span class="derived">Responsable: '+esc(x.por||x.usuario||'—')+' · '+fechaHora(x.t)+'</span><div class="dl">'+(puedeF('ubicacion')?'<button class="btn alt sm ub-add" data-t="'+esc(x.tmp)+'">Agregar ubicación en el mapa</button>':'')+(ROL==='master'?'<button class="btn alt sm ub-his" data-t="'+esc(x.tmp)+'">Recuperar ubicación histórica</button>':'')+'</div></div></div>'));
   f.colas.forEach(x=>b.push('<div class="ntf"><div><span class="pill '+(x.cola.err?'bad':'info')+'">'+(x.cola.err?'Error de sincronización':'Esperando sincronizar')+'</span> <b>'+esc(x.n)+'</b>'+(x.enLinea?'':' <span class="derived">(sin conexión)</span>')+'<br><span class="derived">'+[x.cola.borr&&x.cola.borr+' borrador(es)',x.cola.pend&&x.cola.pend+' por enviar',x.cola.err&&x.cola.err+' con error'].filter(Boolean).join(' · ')+' · '+fechaHora(x.t)+'</span></div></div>'));
@@ -2095,14 +2142,14 @@ function capasBase(map){
 
 /* ---------- centro de notificaciones ---------- */
 let NT=lsGet('cbv_nt2',{items:[],seen:{},ult:0}),NT_PRIMERA=true;
-const ntGuardar=()=>{NT.items=NT.items.slice(0,200);const s={};NT.items.forEach(i=>{if(NT.seen[i.id])s[i.id]=1});NT.seen=s;lsSet('cbv_nt2',NT)};
+const ntGuardar=()=>{NT.items=NT.items.slice(0,200);const dl=Object.keys(NT.del||{}).slice(-400),dd={};dl.forEach(k=>dd[k]=1);NT.del=dd;const s={};NT.items.forEach(i=>{if(NT.seen[i.id])s[i.id]=1});NT.seen=s;lsSet('cbv_nt2',NT)};
 function ntBadge(){const n=NT.items.filter(i=>!NT.seen[i.id]).length,b=$('bell-n');if(!b)return;b.hidden=!n;b.textContent=n>99?'99+':n}
 async function pollNotif(){
   if(!puedeF('notificaciones')||!USER)return;
   try{
     const r=await call('notifGet',{desde:NT.ult});
     if(!r||!r.ok)return;
-    const nuevos=(r.items||[]).filter(i=>!NT.items.some(x=>x.id===i.id));
+    const nuevos=(r.items||[]).filter(i=>!NT.items.some(x=>x.id===i.id)&&!(NT.del||{})[i.id]);
     if(nuevos.length){
       NT.items=nuevos.concat(NT.items);NT.ult=Math.max(NT.ult,...nuevos.map(i=>i.t));
       if(!NT_PRIMERA){nuevos.slice(0,3).forEach(i=>toast(i.titulo+(i.texto?' · '+i.texto:'')));if(nuevos.some(i=>i.accion))siren.beep(2)}
@@ -2117,11 +2164,26 @@ function ntAbrir(i){
   else if(i.refTipo==='registro'){loadAll().then(()=>{renderPanel();showTab('reg');const o=REGS.get(i.ref);if(o)showDetail(toRow(o))})}
   else if(i.refTipo==='usuario'||i.refTipo==='despacho'){showTab('vivo');if(i.refTipo==='usuario'&&puedeF('perfiles'))perfilUI(i.ref,i.por)}
 }
+/* deslizar hacia la izquierda para eliminar (también con el ratón) */
+function swipeDel(row,onDel){
+  let x0=null,dx=0;
+  const ini=x=>{x0=x;dx=0;row.style.transition='none'},mov=x=>{if(x0==null)return;dx=x-x0;if(dx<0)row.style.transform='translateX('+dx+'px)';row.style.opacity=String(Math.max(.3,1+dx/300))},
+    fin=()=>{if(x0==null)return;const d=dx;x0=null;row.style.transition='transform .18s,opacity .18s';if(d<-90){row.style.transform='translateX(-110%)';row.style.opacity='0';setTimeout(onDel,160)}else{row.style.transform='';row.style.opacity=''}row._swiped=d<-10;setTimeout(()=>row._swiped=false,50)};
+  row.addEventListener('touchstart',e=>ini(e.touches[0].clientX),{passive:true});row.addEventListener('touchmove',e=>mov(e.touches[0].clientX),{passive:true});row.addEventListener('touchend',fin);
+  row.addEventListener('mousedown',e=>{if(e.target.closest('button,a'))return;ini(e.clientX);const m=ev=>mov(ev.clientX),u=()=>{fin();document.removeEventListener('mousemove',m);document.removeEventListener('mouseup',u)};document.addEventListener('mousemove',m);document.addEventListener('mouseup',u)});
+}
+function ntBorrar(ids){NT.del=NT.del||{};ids.forEach(id=>NT.del[id]=1);NT.items=NT.items.filter(i=>!NT.del[i.id]);ntGuardar();ntBadge()}
+function ntDetalle(i){
+  NT.seen[i.id]=1;ntGuardar();ntBadge();
+  dlg('<h3>'+esc(i.titulo)+'</h3><p>'+esc(i.texto||'Sin más detalle.')+'</p><p class="derived">'+fechaHora(i.t)+(i.por?' · de '+esc(i.por):'')+'</p><div class="dl">'+(i.ref?'<button class="btn" id="nd-ab">Ir a la emergencia o al registro</button>':'')+'<button class="btn alt" id="nd-del">Eliminar</button><button class="btn alt" id="nd-back">Volver</button></div>',()=>{
+    if($('nd-ab'))$('nd-ab').onclick=()=>ntAbrir(i);$('nd-del').onclick=()=>{ntBorrar([i.id]);toast('Notificación eliminada.');centroNotif()};$('nd-back').onclick=centroNotif});
+}
 function centroNotif(){
-  const html=()=>'<h3>Notificaciones</h3><div class="dl"><button class="btn alt sm" id="nt-todo">Marcar todas como revisadas</button><button class="btn alt sm" id="nt-no">Cerrar</button></div><div id="nt-l">'+(NT.items.length?NT.items.map(i=>'<div class="ntf'+(NT.seen[i.id]?'':' new')+'" data-id="'+esc(i.id)+'"><div><b>'+esc(i.titulo)+'</b>'+(i.accion&&!NT.seen[i.id]?' <span class="pill warn">requiere atención</span>':'')+'<br><span class="derived">'+esc(i.texto||'')+' · '+fechaHora(i.t)+(NT.seen[i.id]?' · revisada':'')+'</span></div><div class="dl">'+(i.ref?'<button class="btn alt sm" data-a="ab">Abrir</button>':'')+(NT.seen[i.id]?'':'<button class="btn sm" data-a="ok">'+(i.accion?'Enterado':'Revisada')+'</button>')+'</div></div>').join(''):'<p class="derived">No hay notificaciones.</p>')+'</div>';
+  const html=()=>'<h3>Notificaciones</h3><p class="derived" style="margin:0 0 6px">Toque una para ver su información. Deslícela hacia la izquierda para eliminarla.</p><div class="dl"><button class="btn alt sm" id="nt-todo">Marcar todas como revisadas</button><button class="btn alt sm" id="nt-del">Eliminar todas</button><button class="btn alt sm" id="nt-no">Cerrar</button></div><div id="nt-l">'+(NT.items.length?NT.items.map(i=>'<div class="ntf'+(NT.seen[i.id]?'':' new')+'" data-id="'+esc(i.id)+'" style="cursor:pointer"><div><b>'+esc(i.titulo)+'</b>'+(i.accion&&!NT.seen[i.id]?' <span class="pill warn">requiere atención</span>':'')+'<br><span class="derived">'+esc(i.texto||'')+' · '+fechaHora(i.t)+(NT.seen[i.id]?' · revisada':'')+'</span></div></div>').join(''):'<p class="derived">No hay notificaciones.</p>')+'</div>';
   const bind=d=>{
-    $('nt-no').onclick=dlgCerrar;$('nt-todo').onclick=()=>{NT.items.forEach(i=>NT.seen[i.id]=1);ntGuardar();ntBadge();dlg(html(),bind)};
-    d.querySelectorAll('.ntf [data-a]').forEach(b=>b.onclick=()=>{const id=b.closest('.ntf').dataset.id,i=NT.items.find(x=>x.id===id);NT.seen[id]=1;ntGuardar();ntBadge();if(b.dataset.a==='ab')ntAbrir(i);else dlg(html(),bind)});
+    $('nt-no').onclick=dlgCerrar;$('nt-todo').onclick=()=>{NT.items.forEach(i=>NT.seen[i.id]=1);ntGuardar();ntBadge();toast('Todas marcadas como revisadas.');dlg(html(),bind)};
+    $('nt-del').onclick=()=>{if(!NT.items.length)return;if(!confirm('¿Eliminar todas las notificaciones de este equipo?'))return;ntBorrar(NT.items.map(i=>i.id));toast('Notificaciones eliminadas.');dlg(html(),bind)};
+    d.querySelectorAll('.ntf').forEach(r=>{const id=r.dataset.id;swipeDel(r,()=>{ntBorrar([id]);toast('Notificación eliminada.');dlg(html(),bind)});r.onclick=()=>{if(r._swiped)return;const i=NT.items.find(x=>x.id===id);if(i)ntDetalle(i)}});
   };
   dlg(html(),bind);
 }
@@ -2139,10 +2201,18 @@ async function admPerm(){
     $('pm-def').onclick=()=>{t.querySelectorAll('input').forEach(i=>i.checked=(r.defecto[i.dataset.r]||[]).includes(i.dataset.f))};
   }catch(e){box.innerHTML='<div class="card"><p>No se pudo cargar: '+esc(humanErr(e))+'</p></div>'}
 }
+/* «Aplicación, avisos y Formulario de Google»: tres paneles en un solo lugar */
+function setBoxS(slot,...cards){const d=document.getElementById('as-'+slot);if(d){d.innerHTML='';cards.forEach(c=>d.append(c));return}setBox(...cards)}
+async function admComunic(){
+  const b=$('a-box');b.innerHTML='';
+  [['app','Aplicación y alertas'],['wha','Avisos por WhatsApp y notificaciones del teléfono'],['gfm','Formulario de Google']].forEach(([k,t])=>{
+    const d=document.createElement('details');d.open=k==='app';d.className='card';d.innerHTML='<summary style="font-weight:700;cursor:pointer">'+t+'</summary><div id="as-'+k+'" class="sec"><p class="derived">Cargando…</p></div>';b.append(d)});
+  await Promise.all([admApp(),admWha(),admGfm()]);
+}
 function renderAdm(sub){
   if(sub)ADMSUB=sub;
   document.querySelectorAll('#atabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.a===ADMSUB));
-  const f={usr:admUsr,frm:admFrm,app:admApp,mar:admMar,wha:admWha,seg:admSeg,gfm:admGfm,his:admHis,dgn:admDgn,perm:admPerm}[ADMSUB]||admUsr;
+  const f={usr:admUsr,frm:admFrm,app:admComunic,mar:admMar,wha:admComunic,seg:admSeg,gfm:admComunic,his:admHis,dgn:admDgn,perm:admPerm}[ADMSUB]||admUsr;
   $('a-box').innerHTML='<div class="card"><p class="derived">Cargando…</p></div>';f();
 }
 
@@ -2218,6 +2288,200 @@ async function repAlcaldia(btn){
   }
   m.textContent='Reportes para la Alcaldía listos. '+res.join(' ');btn.disabled=false;
 }
+
+/* ---------- colores: automático (del teléfono), claro u oscuro ---------- */
+const TEMA_ROT=[['auto','Automático'],['claro','Claro'],['oscuro','Oscuro']];
+function temaGet(){try{return localStorage.getItem('cbv_tema')||'auto'}catch(e){return 'auto'}}
+function temaAplicar(t){const r=document.documentElement;if(t==='claro')r.setAttribute('data-theme','light');else if(t==='oscuro')r.setAttribute('data-theme','dark');else r.removeAttribute('data-theme');
+  const oscuro=t==='oscuro'||(t==='auto'&&window.matchMedia&&matchMedia('(prefers-color-scheme:dark)').matches);
+  try{const m=document.querySelector('meta[name=theme-color]');if(m)m.setAttribute('content',oscuro?'#14181c':'#f6f7f8')}catch(e){}
+  const b=document.getElementById('btnTema');if(b){b.textContent=t==='claro'?'☀️':t==='oscuro'?'🌙':'🎨';b.title='Colores: '+(TEMA_ROT.find(x=>x[0]===t)||TEMA_ROT[0])[1]+'. Toque para cambiar.';b.setAttribute('aria-label',b.title)}}
+function temaCiclo(){const t=temaGet(),n=TEMA_ROT[(TEMA_ROT.findIndex(x=>x[0]===t)+1)%3][0];try{localStorage.setItem('cbv_tema',n)}catch(e){}temaAplicar(n);
+  if(typeof toast==='function')toast('Colores: '+TEMA_ROT.find(x=>x[0]===n)[1]+'.')}
+(function(){temaAplicar(temaGet());const b=document.getElementById('btnTema');if(b)b.onclick=temaCiclo})();
+
+/* aviso rápido de éxito para toda acción que guarda algo en el servidor */
+const OK_MSG={llamado:'Llamado enviado',llamadoEdit:'Llamado actualizado',llamadoRepetir:'Recordatorio enviado',alertAck:'Cerrado correctamente',punto:'Punto de la emergencia cargado',despAsignar:'Asignación guardada',despQuitar:'Asignación cancelada',despEstado:'Asignación confirmada',confirmar:'Confirmado',ubicSet:'Ubicación guardada',cfgSet:'Configuración guardada',personalSet:'Personal guardado',userSet:'Cuenta guardada',userReset:'Clave restablecida',userDel:'Cuenta eliminada',edit:'Cambio guardado',anular:'Reporte anulado',eliminar:'Reporte eliminado',consecutivo:'Consecutivo cambiado',renumerar:'Consecutivos renumerados',licSet:'Licencia guardada',respaldoAhora:'Copia de seguridad realizada',archivarAnio:'Año archivado',histPut:'Información cargada',reenviarForm:'Formulario reenviado',doc:'Documento guardado',avisoPrueba:'Aviso de prueba enviado',pushTest:'Prueba enviada',cambiarClave:'Clave cambiada',borradorDel:'Borrador eliminado',consent:'Autorización registrada',chatBorrar:'Chat borrado',reparar:'Reparación realizada',sos:'SOS enviado',sosFin:'SOS desactivado'};
+{const c0=call;call=async function(a,...r){const t0=Date.now(),res=await c0.apply(this,[a,...r]);
+  if(res&&res.ok&&OK_MSG[a]){const m=OK_MSG[a];setTimeout(()=>{if((toast.last||0)<t0)toast(m+'.')},500)}return res}}
+{const t0=toast;toast=function(...x){toast.last=Date.now();return t0.apply(this,x)};toast.last=0}
+
+/* ---------- Cargar información de emergencias (estadística que no se registró por la aplicación) ---------- */
+const CARGA_COLS=['fecha','hora','categoria','direccion','barrio_vereda','descripcion','unidades','vehiculos','duracion_min','area_ha','lesionados'];
+const sinAcento=t=>String(t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/\s+/g,' ').trim();
+function csvParse(txt){
+  txt=txt.replace(/^﻿/,'');const sep=(txt.split('\n')[0].match(/;/g)||[]).length>=(txt.split('\n')[0].match(/,/g)||[]).length?';':',';
+  const rows=[];let cur=[],f='',q=false;
+  for(let i=0;i<txt.length;i++){const c=txt[i];
+    if(q){if(c==='"'){if(txt[i+1]==='"'){f+='"';i++}else q=false}else f+=c}
+    else if(c==='"')q=true;else if(c===sep){cur.push(f);f=''}else if(c==='\n'||c==='\r'){if(c==='\r'&&txt[i+1]==='\n')i++;cur.push(f);f='';if(cur.some(x=>x.trim()!==''))rows.push(cur);cur=[]}else f+=c}
+  cur.push(f);if(cur.some(x=>x.trim()!==''))rows.push(cur);return rows;
+}
+function cargaPlantilla(){
+  const ej=['2026-03-15','14:30','INCENDIO ESTRUCTURAL','Calle 10 # 5-20','Centro','Se atendió incendio en vivienda','1','B-2','45','','0'];
+  const csv='﻿'+CARGA_COLS.join(';')+'\n'+ej.join(';')+'\n';
+  const b=new Blob([csv],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='FORMATO CARGA DE EMERGENCIAS.csv';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+  toast('Formato descargado.');
+}
+function cargaValidar(txt){
+  const R=csvParse(txt);if(R.length<2)return {error:'El archivo está vacío o no tiene filas debajo del encabezado.'};
+  const head=R[0].map(x=>sinAcento(x).toLowerCase().replace(/[^a-z_]/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,''));
+  const falt=['fecha','categoria'].filter(c=>!head.includes(c));if(falt.length)return {error:'Falta la columna «'+falt.join('», «')+'». Use el formato que se descarga con el botón «Descargar el formato».'};
+  const ix=c=>head.indexOf(c),cats={};CATS.forEach(c=>cats[sinAcento(c)]=c);
+  const hoy=new Date().toISOString().slice(0,10),ok=[],err=[],dup=[];
+  const ya=new Set(ALL.map(r=>[r.fecha,sinAcento(r.cat),sinAcento(r.dir||'')].join('|')));const vistos=new Set();
+  R.slice(1).forEach((r,i)=>{
+    const n=i+2,g=c=>ix(c)<0?'':String(r[ix(c)]||'').trim();
+    let f=g('fecha');const m=/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/.exec(f);if(m)f=m[3]+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0');
+    const e=[];
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(f)||new Date(f+'T12:00:00Z').toISOString().slice(0,10)!==f)e.push('fecha no válida («'+g('fecha')+'»; use AAAA-MM-DD o DD/MM/AAAA)');else if(f>hoy)e.push('la fecha es futura');else if(f<'2000-01-01')e.push('fecha demasiado antigua');
+    const cat=cats[sinAcento(g('categoria'))];if(!cat)e.push('categoría no reconocida («'+g('categoria')+'»)');
+    let hora=g('hora');if(hora){const h=/^(\d{1,2}):(\d{2})$/.exec(hora);if(!h||+h[1]>23||+h[2]>59)e.push('hora no válida («'+hora+'»; use HH:MM)');else hora=h[1].padStart(2,'0')+':'+h[2]}
+    const num=c=>{const v=g(c).replace(',','.');return v===''?null:(isFinite(+v)&&+v>=0?+v:NaN)};
+    const un=num('unidades'),du=num('duracion_min'),ar=num('area_ha'),le=num('lesionados');
+    [['unidades',un],['duracion_min',du],['area_ha',ar],['lesionados',le]].forEach(([c,v])=>{if(Number.isNaN(v))e.push('«'+c+'» debe ser un número')});
+    if(e.length){err.push({n,e:e.join('; ')});return}
+    const clave=[f,sinAcento(cat),sinAcento(g('direccion'))].join('|');
+    if(ya.has(clave)||vistos.has(clave)){dup.push({n,e:'ya existe una emergencia igual ese día, de esa categoría y dirección'});return}
+    vistos.add(clave);
+    ok.push({cat,tipo:TIPO_CAT[cat]||'OTROS',fecha:f,hora:hora||'',dir:g('direccion')||null,bar:g('barrio_vereda')||null,desc:g('descripcion')||null,uni:un,veh:g('vehiculos')||null,durmin:du,area:ar,lesionados:le});
+  });
+  return {ok,err,dup,total:R.length-1};
+}
+function renderCarga(){
+  const c=$('carga-card');if(!c)return;
+  if(!puedeF('historico')&&!esMaster()){c.hidden=true;return}c.hidden=false;
+  c.innerHTML='<h3>Cargar información de emergencias</h3><p class="derived expl">Para sumar a la estadística emergencias que no se registraron por la aplicación (años anteriores o reportes en papel). Se hace en 3 pasos: descargue el formato, llénelo en Excel (Guardar como «CSV») y cárguelo. El sistema revisa fila por fila y le muestra lo que va a cargar antes de guardar. Puede cargar las veces que necesite; cada carga se puede quitar.</p>'+
+   '<div class="dl"><button class="btn alt" id="cg-fmt">1. Descargar el formato</button><label class="btn" style="cursor:pointer">2. Elegir el archivo llenado<input type="file" id="cg-f" accept=".csv,text/csv" hidden></label></div>'+
+   '<details style="margin-top:6px"><summary>Categorías reconocidas</summary><p class="derived">'+CATS.map(x=>esc(x)).join(' · ')+'</p></details><div id="cg-out" role="status"></div>'+
+   '<h4 style="margin:12px 0 4px">Cargas hechas</h4><div id="cg-lst">'+(CARGAS.length?CARGAS.map(x=>'<div class="ntf"><div><b>'+x.n+' emergencia(s)</b> · '+esc((x.meta.archivo||'archivo'))+'<br><span class="derived">'+(x.meta.t?fechaHora(x.meta.t):'')+(x.meta.por?' · '+esc(x.meta.por):'')+'</span></div><div class="dl"><button class="btn alt sm" data-q="'+esc(x.clave)+'">Quitar esta carga</button></div></div>').join(''):'<p class="derived">Todavía no se ha hecho ninguna carga.</p>')+'</div>';
+  $('cg-fmt').onclick=cargaPlantilla;
+  c.querySelectorAll('[data-q]').forEach(b=>b.onclick=async()=>{if(!confirm('¿Quitar esta carga? Las emergencias que trajo salen de la estadística.'))return;b.disabled=true;try{need(await call('cargaDel',{clave:b.dataset.q}));toast('Carga quitada.');CARGAS_RAW={};HISTROWS=null;await loadAll();refreshSelectors();renderPanel();renderCarga();renderSeries()}catch(e){toast('No se pudo quitar: '+humanErr(e),1);b.disabled=false}});
+  $('cg-f').onchange=async()=>{
+    const fl=$('cg-f').files[0];$('cg-f').value='';if(!fl)return;const out=$('cg-out');
+    let v;try{v=cargaValidar(await fl.text())}catch(e){out.innerHTML='<p class="err">No se pudo leer el archivo.</p>';return}
+    if(v.error){out.innerHTML='<p class="err">'+esc(v.error)+'</p>';return}
+    const prob=v.err.concat(v.dup);
+    out.innerHTML='<p><b>'+v.ok.length+'</b> fila(s) listas para cargar · <b>'+v.err.length+'</b> con errores · <b>'+v.dup.length+'</b> repetidas (no se cargan).</p>'+
+      (prob.length?'<div class="scroll"><table><tr><th>Fila</th><th>Problema</th></tr>'+prob.slice(0,40).map(x=>'<tr><td>'+x.n+'</td><td>'+esc(x.e)+'</td></tr>').join('')+'</table></div>'+(prob.length>40?'<p class="derived">…y '+(prob.length-40)+' más.</p>':''):'')+
+      (v.ok.length?'<div class="scroll"><table><tr><th>Fecha</th><th>Categoría</th><th>Dirección</th><th>Barrio</th></tr>'+v.ok.slice(0,8).map(x=>'<tr><td>'+x.fecha+'</td><td>'+esc(tc(x.cat))+'</td><td>'+esc(x.dir||'')+'</td><td>'+esc(x.bar||'')+'</td></tr>').join('')+'</table></div><div class="dl"><button class="btn" id="cg-ok">Cargar '+v.ok.length+' emergencia(s)</button></div><div class="derived" id="cg-m"></div>':'<p class="err">No hay filas válidas para cargar. Corrija el archivo y vuelva a elegirlo.</p>');
+    if($('cg-ok'))$('cg-ok').onclick=async()=>{
+      const b=$('cg-ok'),m=$('cg-m');b.disabled=true;
+      const clave='carga-'+Date.now().toString(36),txt=JSON.stringify({meta:{archivo:fl.name,t:Date.now(),por:USER_NOMBRE()},rows:v.ok}),CH=30000,n=Math.ceil(txt.length/CH);
+      try{for(let i=0;i<n;i++){m.textContent='Subiendo… '+(i+1)+' de '+n;need(await call('cargaPut',{clave,idx:i,datos:txt.slice(i*CH,(i+1)*CH),ultimo:i===n-1,filas:v.ok.length,archivo:fl.name}))}
+        CARGAS_RAW={};HISTROWS=null;await loadAll();refreshSelectors();renderPanel();renderCarga();renderSeries();toast('Se cargaron '+v.ok.length+' emergencias y ya cuentan en la estadística.')}
+      catch(e){m.textContent='No se pudo cargar: '+humanErr(e)+'. Puede volver a intentarlo; no se duplica.';b.disabled=false}};
+  };
+}
+const USER_NOMBRE=()=>{try{return (window.WHO&&WHO.nombre)||$('who').textContent||USER||''}catch(e){return USER||''}};
+
+/* ---------- sesiones abiertas de la central y del superadministrador (solo superadministrador) ---------- */
+async function renderSesiones(){
+  const c=$('ses-card');if(!c)return;if(!esMaster()){c.hidden=true;return}c.hidden=false;
+  c.innerHTML='<h3>Sesiones de la central abiertas</h3><p class="derived expl">Dónde hay sesiones de Central operativa, Central con estadística y superadministrador (no incluye a los bomberos). Una sesión figura como abierta si tuvo actividad en los últimos 2 minutos.</p><div id="ses-l" class="scroll"><p class="derived">Cargando…</p></div>';
+  try{
+    const r=need(await call('sesiones')),n=ROLNOM2;
+    $('ses-l').innerHTML=r.sesiones.length?'<table><tr><th>Persona</th><th>Rol</th><th>Dónde</th><th>Desde</th><th>Última actividad</th><th>Estado</th></tr>'+r.sesiones.map(s=>'<tr><td>'+esc(s.n||s.u)+'</td><td>'+esc(n(s.rol))+'</td><td>'+(s.canal==='celular'?'📱 Aplicación del celular':'💻 Página en computador')+'<br><span class="m">'+esc(s.ua||'')+'</span></td><td>'+fechaHora(s.desde)+'</td><td>'+fechaHora(s.ult)+'</td><td><span class="pill '+(s.abierta?'on':'off')+'">'+(s.abierta?'Abierta':'Sin actividad')+'</span></td></tr>').join('')+'</table>':'<p class="derived">No hay sesiones registradas todavía.</p>';
+  }catch(e){$('ses-l').innerHTML='<p class="err">No se pudo cargar: '+esc(humanErr(e))+'</p>'}
+}
+
+/* ================= Estadística V2.1: gráficos explicados, comparaciones con años rotulados y descarga ================= */
+const COLS_G=['var(--s25)','var(--s26)','#7a8b99'];
+function svgBarras(o){ /* o: {labels, series:[{n,c,v:[]}], W,H, etiquetas:true} barras agrupadas verticales */
+  const W=o.W||720,H=o.H||240,L=40,R=8,T=18,B=34,iw=W-L-R,ih=H-T-B,n=o.labels.length,S=o.series.length;
+  const max=Math.max(1,...o.series.flatMap(s=>s.v)),nice=max<=10?10:max<=50?Math.ceil(max/10)*10:max<=100?Math.ceil(max/20)*20:Math.ceil(max/100)*100;
+  const gw=iw/n,bw=Math.max(3,Math.min(30,(gw-4)/S));let s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(o.alt||'Gráfico')+'">';
+  for(let i=0;i<=4;i++){const v=nice*i/4,y=T+ih-ih*i/4;s+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y+'" y2="'+y+'" stroke="var(--grid)"/><text x="'+(L-6)+'" y="'+(y+4)+'" text-anchor="end">'+Math.round(v)+'</text>'}
+  const every=Math.ceil(n/(o.maxEt||16));
+  o.labels.forEach((lb,i)=>{o.series.forEach((se,j)=>{const v=se.v[i]||0,h=ih*v/nice,x=L+gw*i+(gw-bw*S)/2+bw*j,y=T+ih-h;
+      s+='<rect x="'+x+'" y="'+y+'" width="'+(bw-1)+'" height="'+Math.max(h,v?1:0)+'" rx="2" fill="'+(se.c||COLS_G[j%3])+'"><title>'+esc(lb)+(se.n?' · '+esc(se.n):'')+': '+v+'</title></rect>';
+      if(v&&(n<=14||v===max))s+='<text class="val" x="'+(x+(bw-1)/2)+'" y="'+(y-4)+'" text-anchor="middle">'+v+'</text>'});
+    if(i%every===0)s+='<text x="'+(L+gw*i+gw/2)+'" y="'+(H-12)+'" text-anchor="middle">'+esc(lb)+'</text>'});
+  return s+'</svg>';
+}
+function svgHoriz(items,fmt){ /* items: [[etiqueta, valor, texto]] */
+  const mx=Math.max(1,...items.map(x=>x[1])),W=720,rh=26,H=items.length*rh+8,L=230;let s='<svg viewBox="0 0 '+W+' '+H+'" role="img">';
+  items.forEach(([l,v,t],i)=>{const y=4+i*rh,w=(W-L-90)*v/mx;s+='<text x="'+(L-8)+'" y="'+(y+17)+'" text-anchor="end">'+esc(String(l).slice(0,34))+'</text><rect x="'+L+'" y="'+(y+3)+'" width="'+Math.max(w,v?2:0)+'" height="'+(rh-8)+'" rx="2" fill="var(--s25)"><title>'+esc(l)+': '+v+'</title></rect><text class="val" x="'+(L+w+6)+'" y="'+(y+17)+'">'+esc(t||v)+'</text>'});
+  return s+'</svg>';
+}
+function descargarGrafico(svgEl,nombre,titulo){
+  try{
+    const cs=getComputedStyle(document.documentElement),r=svgEl.cloneNode(true),vb=svgEl.viewBox.baseVal;
+    r.setAttribute('xmlns','http://www.w3.org/2000/svg');
+    const res=v=>String(v).replace(/var\((--[\w-]+)\)/g,(m,k)=>(cs.getPropertyValue(k)||'#444').trim());
+    r.querySelectorAll('*').forEach(e=>{['fill','stroke'].forEach(a=>{const v=e.getAttribute(a);if(v&&v.includes('var('))e.setAttribute(a,res(v))})});
+    const st=document.createElementNS('http://www.w3.org/2000/svg','style');st.textContent='text{font:12px Arial,sans-serif;fill:#222}.val{font-weight:700}';r.insertBefore(st,r.firstChild);
+    const bg=document.createElementNS('http://www.w3.org/2000/svg','rect');bg.setAttribute('width',vb.width);bg.setAttribute('height',vb.height);bg.setAttribute('fill','#fff');r.insertBefore(bg,st);
+    const sc=2,TH=44,cv=document.createElement('canvas');cv.width=vb.width*sc;cv.height=(vb.height+TH)*sc;
+    const img=new Image();img.onload=()=>{const c=cv.getContext('2d');c.fillStyle='#fff';c.fillRect(0,0,cv.width,cv.height);c.fillStyle='#111';c.font='bold '+(16*sc)+'px Arial';c.fillText(titulo,12*sc,26*sc);c.drawImage(img,0,TH*sc,vb.width*sc,vb.height*sc);
+      cv.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=nombre+'.png';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000);toast('Gráfico descargado.')},'image/png')};
+    img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(new XMLSerializer().serializeToString(r));
+  }catch(e){toast('No se pudo descargar el gráfico.',1)}
+}
+function tarjetaGrafico(id,titulo,explica,svgHtml,extraHtml){
+  return '<div class="chart" id="'+id+'"><h3>'+esc(titulo)+'</h3><p class="exp2">'+explica+'</p>'+(extraHtml||'')+'<div class="gsvg">'+svgHtml+'</div><div class="dl" style="margin-top:6px"><button class="btn alt sm" data-dg="'+id+'" data-t="'+esc(titulo)+'">Descargar este gráfico (imagen PNG)</button></div></div>';
+}
+const filtroAll=()=>{const tp=$('ftipo').value,ct=$('fcat').value;return ALL.filter(r=>!r.anulado&&(!tp||r.tipo===tp)&&(!ct||r.cat===ct))};
+let CMPA=null,CMPB=null;
+function renderEstNuevo(){
+  const box=$('est-nuevo');if(!box)return;
+  const per=period(),base=filtroAll(),porAnio={};
+  base.forEach(r=>{const y=String(r.fecha).slice(0,4);if(/^\d{4}$/.test(y))porAnio[y]=(porAnio[y]||0)+1});
+  const anios=Object.keys(porAnio).sort(),hoy=String(new Date().getFullYear());
+  let h='';
+  /* 1. años */
+  if(anios.length){
+    const a0=anios[0],a1=anios[anios.length-1];
+    h+=tarjetaGrafico('g-anios','Emergencias y actividades por año ('+(a0===a1?a0:a0+' a '+a1)+')','<b>Qué muestra:</b> cuántos registros tuvo la estación en cada año, '+(a0===a1?'':'desde '+a0+' hasta '+a1+'. ')+'<b>Cómo leerlo:</b> cada barra es un año completo'+(anios.includes(hoy)?'; el año '+hoy+' está en curso, por eso su barra puede ser más baja':'')+'. Sirve para ver si la demanda sube o baja con el tiempo.',svgBarras({labels:anios,series:[{n:'Registros',v:anios.map(y=>porAnio[y])}],alt:'Registros por año',maxEt:30}));
+  }
+  /* 2. dos años mes a mes */
+  const ys=anios.slice().reverse();
+  if(ys.length>=2){
+    if(!ys.includes(CMPA))CMPA=ys[0];if(!ys.includes(CMPB)||CMPB===CMPA)CMPB=ys.find(y=>y!==CMPA);
+    const mes=y=>{const m=new Array(12).fill(0);base.forEach(r=>{if(String(r.fecha).slice(0,4)===y)m[+String(r.fecha).slice(5,7)-1]++});return m};
+    const sel=(id,v)=>'<select id="'+id+'" aria-label="Año">'+ys.map(y=>'<option'+(y===v?' selected':'')+'>'+y+'</option>').join('')+'</select>';
+    const ma=mes(CMPA),mb=mes(CMPB);
+    h+=tarjetaGrafico('g-mes2','Mes a mes: '+CMPA+' contra '+CMPB,'<b>Qué muestra:</b> los registros de cada mes en el año <b>'+CMPA+'</b> (azul) y en el año <b>'+CMPB+'</b> (rojo). Total '+CMPA+': <b>'+ma.reduce((a,b)=>a+b,0)+'</b>; total '+CMPB+': <b>'+mb.reduce((a,b)=>a+b,0)+'</b>. <b>Cómo leerlo:</b> si una barra roja y una azul del mismo mes son muy distintas, ese mes cambió entre los dos años.',
+      svgBarras({labels:MES.map(m=>m.slice(0,3).toLowerCase()),series:[{n:String(CMPA),c:'var(--s25)',v:ma},{n:String(CMPB),c:'var(--s26)',v:mb}],alt:'Comparación mensual '+CMPA+' y '+CMPB}),
+      '<div class="tools" style="margin-bottom:4px"><label>Año 1 (azul)'+sel('cmpa',CMPA)+'</label><label>Año 2 (rojo)'+sel('cmpb',CMPB)+'</label></div>');
+  }
+  /* 3. categorías del periodo */
+  const cur=CUR.filter(r=>!r.anulado),tot=cur.length;
+  if(tot){
+    const pc={};cur.forEach(r=>{const k=r.cat||'Sin categoría';pc[k]=(pc[k]||0)+1});
+    const top=Object.entries(pc).sort((a,b)=>b[1]-a[1]).slice(0,10);
+    h+=tarjetaGrafico('g-cat','Qué atiende más la estación ('+per.label+')','<b>Qué muestra:</b> las 10 categorías con más registros en el periodo elegido arriba ('+esc(per.label)+'), con su porcentaje del total ('+nf.format(tot)+' registros). <b>Cómo leerlo:</b> la barra más larga es lo que más se atiende; sirve para decidir en qué capacitar y qué equipos priorizar.',svgHoriz(top.map(([k,v])=>[tc(k),v,v+' · '+pf(v/tot)])));
+    /* 4. hora del día */
+    const hr=new Array(24).fill(0);let nh=0;cur.forEach(r=>{const m=/^(\d{1,2})/.exec(String(r.hora||''));if(m&&+m[1]<24){hr[+m[1]]++;nh++}});
+    if(nh){const pico=hr.indexOf(Math.max(...hr));
+      h+=tarjetaGrafico('g-hora','A qué hora ocurren ('+per.label+')','<b>Qué muestra:</b> cuántas alertas llegaron en cada hora del día (0 = medianoche, 12 = mediodía, 18 = 6 de la tarde), con '+nf.format(nh)+' registros que tienen hora. <b>Cómo leerlo:</b> la hora con más alertas es las <b>'+pico+':00</b>; sirve para organizar los turnos de guardia.',svgBarras({labels:hr.map((_,i)=>String(i)),series:[{n:'Alertas',v:hr}],alt:'Alertas por hora',maxEt:24}))}
+    /* 5. por tipo */
+    const pt={};cur.forEach(r=>{const k=r.tipo||'OTROS';pt[k]=(pt[k]||0)+1});
+    h+=tarjetaGrafico('g-tipo','Por tipo de incidente ('+per.label+')','<b>Qué muestra:</b> los registros agrupados por tipo general (incendios, rescates, materiales peligrosos, otros). <b>Cómo leerlo:</b> cada barra suma varias categorías del cuadro de arriba; da la visión global de la operación.',svgHoriz(Object.entries(pt).sort((a,b)=>b[1]-a[1]).map(([k,v])=>[tc(k),v,v+' · '+pf(v/tot)])));
+    /* 6. operación en cifras */
+    const du=cur.map(r=>+r.durmin).filter(x=>x>0&&x<1440),uni=cur.map(r=>+r.uni).filter(x=>x>0),les=cur.reduce((a,r)=>a+(+r.lesionados||0),0),fo=cur.reduce((a,r)=>a+(r.src==='app'?+r.nfotos||0:0),0);
+    const sum=a=>a.reduce((x,y)=>x+y,0);
+    h+='<div class="chart" id="g-cifras"><h3>La operación en cifras ('+esc(per.label)+')</h3><p class="exp2"><b>Qué muestra:</b> un resumen de cómo trabajó la estación en el periodo. Los promedios solo cuentan los registros que tienen el dato.</p><div class="kpis">'+
+      [['Registros',nf.format(tot)],['Duración promedio',du.length?fmm(sum(du)/du.length):'—'],['Horas totales en servicio',du.length?(sum(du)/60).toLocaleString('es-CO',{maximumFractionDigits:0})+' h':'—'],['Unidades por emergencia',uni.length?(sum(uni)/uni.length).toLocaleString('es-CO',{maximumFractionDigits:1}):'—'],['Personas lesionadas atendidas',nf.format(les)],['Fotos y videos',nf.format(fo)]].map(k=>'<div class="kpi"><div class="v s">'+esc(k[1])+'</div><div class="k">'+esc(k[0])+'</div></div>').join('')+'</div></div>';
+  }
+  box.innerHTML=h||'<p class="derived">No hay datos para graficar con estos filtros.</p>';
+  box.querySelectorAll('[data-dg]').forEach(b=>b.onclick=()=>{const c=$(b.dataset.dg);descargarGrafico(c.querySelector('svg'),'GRAFICO '+b.dataset.dg.slice(2).toUpperCase()+' - '+per.file,b.dataset.t)});
+  if($('cmpa'))$('cmpa').onchange=()=>{CMPA=$('cmpa').value;renderEstNuevo()};if($('cmpb'))$('cmpb').onchange=()=>{CMPB=$('cmpb').value;renderEstNuevo()};
+  /* gráfico existente por mes: explicación y descarga */
+  const cm=$('cm');if(cm&&cm.querySelector('svg')&&!cm.parentNode.querySelector('.exp2')){
+    const t=cm.previousElementSibling;t.textContent='Incidentes por mes ('+per.label+')';
+    const p=document.createElement('p');p.className='exp2';p.innerHTML='<b>Qué muestra:</b> los registros de cada mes dentro del periodo elegido arriba ('+esc(per.label)+'). <b>Cómo leerlo:</b> las barras más altas son los meses con más trabajo.';t.after(p);
+    const d=document.createElement('div');d.className='dl';d.innerHTML='<button class="btn alt sm" id="dg-cm">Descargar este gráfico (imagen PNG)</button>';cm.after(d);d.firstChild.onclick=()=>descargarGrafico(cm.querySelector('svg'),'GRAFICO POR MES - '+per.file,'Incidentes por mes ('+per.label+')');
+  }else if(cm&&$('dg-cm')){cm.previousElementSibling.previousElementSibling.textContent='Incidentes por mes ('+per.label+')'}
+  /* cuadro comparativo: se dice exactamente qué años se comparan */
+  const prevLbl=per.p==='anio'?'Año '+(+$('fanio').value-1):per.p==='mes'?MES[+per.from.slice(5,7)-1]+' '+(+per.from.slice(0,4)-1):per.p==='rango'?GEN.dmy(shiftYear(per.from,-1))+' al '+GEN.dmy(shiftYear(per.to,-1)):'';
+  if(prevLbl){
+    const ct=$('ctab');if(ct){const ths=ct.querySelectorAll('tr:first-child th');ths.forEach(t=>{if(t.textContent==='Cantidad')t.textContent='Cantidad ('+per.label+')';if(t.textContent==='Año anterior')t.textContent='Cantidad ('+prevLbl+')';if(t.textContent==='Variación')t.textContent='Variación frente a '+prevLbl})}
+    document.querySelectorAll('#kpis .k').forEach(k=>{if(/^Contra el año anterior/.test(k.textContent))k.textContent='Contra '+prevLbl+' · '+nf.format(filtered(per,true).length)+' registros'});
+    const lb=$('fcmp')&&$('fcmp').parentNode;if(lb&&lb.lastChild&&lb.lastChild.nodeType===3)lb.lastChild.textContent=' Comparar '+per.label+' con '+prevLbl;
+  }
+}
+{const rp0=renderPanel;renderPanel=function(){rp0();try{renderEstNuevo()}catch(e){console.error(e)}}}
 
 $('flogin').onsubmit=login;$('docs-bulk').onclick=docsBulk;
 $('atabs').onclick=e=>{const b=e.target.closest('button');if(b)renderAdm(b.dataset.a)};
