@@ -850,7 +850,10 @@ ${fotos.length ? `<div class="sec" style="page-break-before:always">14. REGISTRO
           const h = xf.h === 'centerContinuous' ? 'center' : xf.h || (ce && ce.num && txt !== '' ? 'right' : 'left');
           st += 'text-align:' + (h === 'fill' || h === 'justify' || h === 'distributed' ? 'left' : h) + ';';
           st += 'vertical-align:' + (xf.v === 'center' ? 'middle' : xf.v === 'top' ? 'top' : 'bottom') + ';';
-          const bd = xf.border || {};
+          const bd0 = xf.border || {}, ec = c + (m ? m.c2 - c : cs - 1), er = r + rs - 1;
+          const nb = { left: bd0.left || (xfOf(r, c - 1).border || {}).right, right: bd0.right || (xfOf(r, ec + 1).border || {}).left,
+            top: bd0.top || (xfOf(r - 1, c).border || {}).bottom, bottom: bd0.bottom || (xfOf(er + 1, c).border || {}).top };
+          const bd = nb;
           ['left', 'right', 'top', 'bottom'].forEach(k => { if (bd[k]) st += 'border-' + k + ':' + bd[k] + ';'; });
           if (xf.ind) st += 'padding-left:' + (xf.ind * 9) + 'px;';
           st += xf.wrap ? 'white-space:pre-wrap;word-break:break-word;' : 'white-space:nowrap;overflow:hidden;';
@@ -881,7 +884,8 @@ ${fotos.length ? `<div class="sec" style="page-break-before:always">14. REGISTRO
           sh += '<div style="' + s + '">' + ps + '</div>';
         }
       });
-      html += '<section class="pg" data-n="' + ESC(nombre) + '"><svg class="fit" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMin meet"><foreignObject x="0" y="0" width="' + W + '" height="' + H + '"><div xmlns="http://www.w3.org/1999/xhtml" class="band" style="width:' + W + 'px;height:' + H + 'px">' + t + '<svg class="ln" width="' + W + '" height="' + H + '">' + lines + '</svg>' + sh + '</div></foreignObject></svg></section>';
+      const SC = Math.min(756 / W, 986 / H);
+      html += '<section class="pg" data-n="' + ESC(nombre) + '" style="position:relative;width:' + (W * SC + 4).toFixed(1) + 'px;height:' + (H * SC + 4).toFixed(1) + 'px;overflow:hidden"><div class="band" style="position:absolute;left:2px;top:2px;width:' + W + 'px;height:' + H + 'px;transform:scale(' + SC.toFixed(5) + ');transform-origin:0 0"><div style="position:relative;width:' + W + 'px;height:' + H + 'px">' + t + '<svg class="ln" width="' + W + '" height="' + H + '">' + lines + '</svg>' + sh + '</div></div></section>';
     });
     return html;
   }
@@ -916,7 +920,7 @@ ${fotos.length ? `<div class="sec" style="page-break-before:always">14. REGISTRO
       const tg = wrels[rid]; const path = 'xl/' + tg.replace(/^\/?(xl\/)?/, '');
       html += await hojaHtml(zip, path, nm, th, xfs, ss, defs[i], opt);
     }
-    const css = 'html,body{margin:0;background:#e9ecef;font-family:Calibri,Carlito,Arial,sans-serif}.pg{background:#fff;max-width:8.5in;margin:8px auto;padding:.2in .3in;box-sizing:border-box;box-shadow:0 1px 4px rgba(0,0,0,.25)}svg.fit{width:100%;height:auto;display:block}.band{position:relative;font-family:Calibri,Carlito,Arial,sans-serif;color:#000}table.x{border-collapse:collapse;table-layout:fixed;font-size:14px}table.x td{padding:0 2px;line-height:1.15;overflow:hidden}svg.ln{position:absolute;left:0;top:0;pointer-events:none}.rot{display:inline-block;writing-mode:vertical-rl;transform:rotate(180deg)}.rot.up{transform:none}.mk{font-size:8px;color:#999;text-align:center;padding:2px;font-family:Arial}' + (opt.sinImpresion ? '@media print{body{display:none}}' : '@page{size:letter portrait;margin:.25in}@media print{html,body{background:#fff}.pg{box-shadow:none;margin:0;padding:0;max-width:none;page-break-after:always;break-after:page}.pg:last-child{page-break-after:auto}.nop{display:none}}');
+    const css = 'html,body{margin:0;background:#e9ecef;font-family:Calibri,Carlito,Arial,sans-serif}.pg{background:#fff;margin:8px auto;box-shadow:0 1px 4px rgba(0,0,0,.25)}svg.fit{width:100%;height:auto;display:block}.band{position:relative;font-family:Calibri,Carlito,Arial,sans-serif;color:#000}table.x{border-collapse:collapse;table-layout:fixed;font-size:14px}table.x td{padding:0 2px;line-height:1.15;overflow:hidden}svg.ln{position:absolute;left:0;top:0;pointer-events:none}.rot{display:inline-block;writing-mode:vertical-rl;transform:rotate(180deg)}.rot.up{transform:none}.mk{font-size:8px;color:#999;text-align:center;padding:2px;font-family:Arial}' + (opt.sinImpresion ? '@media print{body{display:none}}' : '@page{size:letter portrait;margin:.25in}@media print{html,body{background:#fff}.pg{box-shadow:none;margin:0 auto;page-break-after:always;break-after:page}.pg:last-child{page-break-after:auto}.nop{display:none}}');
     return '<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="author" content="Cristhian Steven Blandón Henao"><title>' + ESC(opt.titulo || 'Reporte de Emergencias') + '</title><style>' + css + '</style></head><body>' + (opt.sinImpresion ? '' : '<button class="nop" style="position:fixed;right:12px;top:12px;z-index:9;padding:10px 16px;font:600 15px Arial;background:#b4251b;color:#fff;border:0;cursor:pointer" onclick="window.print()">Imprimir</button>') + html + '<div class="mk nop">Sistema desarrollado por Cristhian Steven Blandón Henao</div></body></html>';
   }
   g.GEN = g.GEN || {};

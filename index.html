@@ -249,6 +249,13 @@ html,body{overflow-x:hidden}
 .nav .in{grid-template-columns:auto minmax(0,1fr) minmax(0,1fr) minmax(0,1.2fr);gap:6px}.nav .btn{min-width:0;padding-left:8px;padding-right:8px;font-size:14px}
 
 #ov_llam.calmo{background:#16324f}#ov_llam.calmo .sa-big{color:#fff;font-size:22px}
+.faseb{display:inline-block;padding:2px 8px;border-radius:999px;font-weight:700;font-size:.85em;border:2px solid currentColor}
+.faseb.f-rojo{color:#b91c1c}.faseb.f-amarillo{color:#92400e}.faseb.f-verde{color:#166534}
+.emgc.f-rojo{border-left:8px solid #dc2626}.emgc.f-amarillo{border-left:8px solid #d97706}.emgc.f-verde{border-left:8px solid #16a34a}
+.emgnums{display:flex;gap:10px;justify-content:space-around;text-align:center}.emgnums b{display:block;font-size:2em;line-height:1.1}.emgnums span{font-size:.85em}
+.emggrp{padding:6px 10px;margin:6px 0;background:var(--surface);border-radius:8px;display:grid;gap:2px}
+.fasebtns .fb.on{outline:3px solid currentColor}.fasebtns .fb.f-rojo{color:#b91c1c}.fasebtns .fb.f-amarillo{color:#92400e}.fasebtns .fb.f-verde{color:#166534}
+.t-emg svg .fillacc{fill:#dc2626;stroke:#dc2626}
 
 </style>
 </head>
@@ -330,6 +337,8 @@ html,body{overflow-x:hidden}
       <div id="recs"></div>
     </div>
   </section>
+
+  <section id="v-emerg" hidden><div id="emergbox" style="display:grid;gap:12px"></div></section>
 
   <section id="v-tools" hidden><div id="toolsbox" style="display:grid;gap:12px"></div></section>
 
@@ -473,7 +482,7 @@ function stepsEff0(){
   ordenados.forEach(s=>{s.f=ord(s.f,(fo.fieldOrder||{})[s.id],f=>f.p)});
   return ordenados.filter(s=>s.f.length);
 }
-function applyCfg(c){if(!c)return;CF=c;lsSet('cbv_cfg',c);const a=APP();const org=(c.marca&&c.marca.corto)||a.org;if(typeof VISTA!=='undefined'&&VISTA==='form')$('h1').textContent=a.titulo;$('eyebrow').textContent=org;document.title=org+' · '+a.titulo;if(typeof pintarMarca==='function')pintarMarca()}
+function applyCfg(c){if(!c)return;CF=c;lsSet('cbv_cfg',c);const a=APP();const org=(c.marca&&c.marca.corto)||a.org;if(typeof VISTA!=='undefined'&&VISTA==='form')$('h1').textContent=a.titulo;$('eyebrow').textContent=org;document.title=org+' · '+a.titulo;if(typeof pintarMarca==='function')pintarMarca();if(typeof aplicarTextos==='function')aplicarTextos(c.textos)}
 
 /* ---------- errores comprensibles ---------- */
 function humanErr(e){
@@ -529,8 +538,8 @@ let FOTOS=[];
 let stepIdx=0,showBad=false;
 let regInit=false,online=navigator.onLine,syncing=false,lastErr='';
 let gpsTouched=false;
-const VISTAS=['setup','menu','set','form','list','tools','map','chat'];
-const TITULOS={menu:'Menú principal',list:'Mis registros',tools:'Apoyos para emergencias',set:'Configuración',setup:'Bienvenido',map:'Mapa',chat:'Chat en vivo'};
+const VISTAS=['setup','menu','set','form','list','tools','map','chat','emerg'];
+const TITULOS={menu:'Menú principal',list:'Mis registros',tools:'Apoyos para emergencias',set:'Configuración',setup:'Bienvenido',map:'Mapa',chat:'Chat en vivo',emerg:'Emergencias activas'};
 let VISTA='';
 function show(v){
   VISTA=v;
@@ -542,6 +551,7 @@ function show(v){
   if(v==='list')renderList();
   if(v==='tools')renderTools($('toolsbox'));
   if(v==='menu')pintarMenu();
+  if(v==='emerg')abrirEmerg();else cerrarEmerg();
   if(v==='map')abrirMapaVista();
   if(v==='chat')abrirChat();
   if(v!=='map')cerrarMapaVista();
@@ -1287,7 +1297,7 @@ function renderDone(){
     '<p class="big-ok" style="color:var(--warn)">Guardado en este teléfono</p><p>'+(online?'Enviando a la central…':'No hay internet. Se enviará solo cuando vuelva la señal (puede cerrar la aplicación).')+' · '+n+' foto(s).</p>')+
     (sent&&REG.docVer>=REG.ver?'<p class="derived">El Reporte de Emergencias ya quedó guardado en la carpeta de Drive de esta emergencia.</p>':(sent?'<p class="derived">Falta guardar el Reporte de Emergencias en Drive; se hará solo.</p>':''))+
     (REG.form&&REG.form.indexOf('enviado')===0?'<p class="derived">También se respondió el Formulario de Google.</p>':'')+
-    (coordValida((REG.datos||{}).lat,(REG.datos||{}).lon)?'<p class="derived">Ubicación: '+esc((+REG.datos.lat).toFixed(6))+', '+esc((+REG.datos.lon).toFixed(6))+(ubicPendiente(REG.tmp)?' · por enviar a la central':'')+'</p>':'<p class="derived sin-ubic">⚠ Falta registrar la ubicación del evento</p>')+
+    (coordValida((REG.datos||{}).lat,(REG.datos||{}).lon)?'<p class="derived">Ubicación: '+esc(gms(REG.datos.lat,REG.datos.lon))+(ubicPendiente(REG.tmp)?' · por enviar a la central':'')+'</p>':'<p class="derived sin-ubic">⚠ Falta registrar la ubicación del evento</p>')+
     '<div class="chips" style="margin-top:8px">'+(coordValida((REG.datos||{}).lat,(REG.datos||{}).lon)?'':'<button type="button" class="btn alt" id="d-ubic">Agregar ubicación</button>')+(left>0?'<button type="button" class="btn alt" id="d-edit">Corregir (quedan '+leftTxt(left)+')</button>':'')+'<button type="button" class="btn" id="d-new">Nueva emergencia</button></div>';
   $('d-new').onclick=()=>nuevaEmergencia();
   if($('d-ubic'))$('d-ubic').onclick=()=>ubicReg(REG.tmp);
@@ -1373,7 +1383,8 @@ async function sendPos(force){
   TR.sentAt=Date.now();
   try{
     const r=await call('pos',{lat:TR.last.lat,lon:TR.last.lon,acc:TR.last.acc,v:TR.last.v,veh:D.veh||'',tmp:REG?REG.tmp:'',num:REG&&REG.num||'',sosId:s&&s.id||''});
-    if(r&&r.ok){TR.okAt=Date.now();handleAlerts(r.alertas)}
+    if(r&&r.ok&&r.detener){if(TR.on&&!sosOn()){stopTrack();toast('La central apagó su ubicación.')}}
+    else if(r&&r.ok){TR.okAt=Date.now();handleAlerts(r.alertas)}
     else if(r&&r.error==='clave')sesionInvalida();
   }catch(e){TR.err=e.message==='html'?'la central no responde bien':'';}
 }
@@ -1632,7 +1643,7 @@ function cerrarAlarma(porFin){
   if(!sosOn())siren.stop();
   if(porFin)toast('El SOS fue atendido o cancelado.');
 }
-const esInst=a=>/CAPACITACI|REUNI[ÓO]N|SERVICIO SOCIAL|SUMINISTRO|VISITA|ACTIVIDAD|INSTITUCIONAL|LOG[ÍI]STIC/i.test(String(a.msg||''));
+const esInst=a=>a.clase?a.clase==='institucional':/CAPACITACI|REUNI[ÓO]N|SERVICIO SOCIAL|SUMINISTRO|VISITA|ACTIVIDAD|INSTITUCIONAL|LOG[ÍI]STIC/i.test(String(a.msg||''));
 function abrirLlamado(a,titulo,calmo){
   LL.id=a.id;const box=$('ll_body');box.innerHTML='';
   box.append(el('p','sa-big',titulo?titulo.replace(/^\S+\s/,''):'LLAMADO DE EMERGENCIA'));
@@ -1642,7 +1653,7 @@ function abrirLlamado(a,titulo,calmo){
   if(a.lat!==''&&a.lat!=null&&isFinite(+a.lat))box.append(el('p','sa-co',gms(a.lat,a.lon)));
   box.append(el('p','derived','Enviado por '+a.por+' a las '+new Date(a.cuando).toLocaleTimeString('es-CO',{hour:'numeric',minute:'2-digit'})));
   $('ll_ok').onclick=()=>aceptarLlamado(a);
-  $('ll_skip').onclick=()=>{cerrarLlamado();toast('Llamado omitido.')};
+  $('ll_skip').onclick=()=>{cerrarLlamado();omitirLlamado(a)};
   $('ov_llam').hidden=false;$('ov_llam').classList.toggle('calmo',!!calmo);$('ll_ok').textContent=calmo?'Confirmar asistencia':'UNIDAD ACTIVA';if(!sosOn()&&!calmo&&!esInst(a))siren.start('llamado');
 }
 function cerrarLlamado(){LL.id=null;$('ov_llam').hidden=true;if(!sosOn()&&!ALM.id)siren.stop();else if(!sosOn()&&ALM.id)siren.start('sos')}
@@ -1671,6 +1682,7 @@ const ICONOS={
   apo:'<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="24"/><circle cx="32" cy="32" r="10"/><path d="M15 15l11 11M49 15L38 26M15 49l11-11M49 49L38 38" class="thick"/></svg>',
   map:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M6 14l16-6 20 6 16-6v42l-16 6-20-6-16 6z"/><path d="M22 8v42M42 14v42"/><path d="M32 18c-5 0-8 4-8 8 0 6 8 14 8 14s8-8 8-14c0-4-3-8-8-8z" class="fillacc"/><circle cx="32" cy="26" r="3" class="wht"/></svg>',
   cfg:'<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="9"/><path d="M32 6v8M32 50v8M6 32h8M50 32h8M13.6 13.6l5.7 5.7M44.7 44.7l5.7 5.7M13.6 50.4l5.7-5.7M44.7 19.3l5.7-5.7" class="thick"/><circle cx="32" cy="32" r="20"/></svg>',
+  emg:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M14 46V34a18 18 0 0 1 36 0v12z"/><path d="M10 46h44v8H10z" class="fillacc"/><path d="M32 6v6M8 16l5 4M56 16l-5 4M32 24v10" class="thick"/></svg>',
   pin:'<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.500a2.5 2.5 0 0 1 0 5z" fill="currentColor"/></svg>',
   life:'<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 4a6 6 0 1 1 0 12 6 6 0 0 1 0-12zM4.9 7.800l2.800 2.800M16.300 13.400l2.800 2.800" /><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>'
 };
@@ -1682,6 +1694,7 @@ function pintarMenu(){
   const puntos=(ACT||[]).filter(a=>a.tipo==='punto'&&!esMia(a)).length;
   const tiles=[
     ['reg','Realizar registro','Reporte de emergencia o actividad',abrirRegistro,''],
+    ['emg','Emergencias activas','Fase, grupos, mando y vehículos',()=>show('emerg'),nEmgBadge()],
     ['mis','Mis registros','Borradores y enviados',()=>show('list'),$('nlist')&&$('nlist').textContent||''],
     ['apo','Apoyos para emergencias','Guardia, mapas, GRE, SCI y chat',()=>show('tools'),CHAT.nuevos?CHAT.nuevos+' mensaje(s)':''],
     ['map','Mapa','Mi ubicación y punto de la emergencia',()=>show('map'),puntos?'punto nuevo':''],
@@ -1950,7 +1963,7 @@ async function colaInfo(){
 }
 async function latido(){
   if(!online||!loggedIn())return;
-  try{const r=await call('latido',{veh:D.veh||'',sharing:!!(TR.on||sosOn()),cola:await colaInfo()});if(r&&r.ok&&r.alertas)handleAlerts(r.alertas)}catch(e){}
+  try{const r=await call('latido',{veh:D.veh||'',sharing:!!(TR.on||sosOn()),cola:await colaInfo()});if(r&&r.ok&&r.detener&&TR.on&&!sosOn()){stopTrack();toast('La central apagó su ubicación.')}if(r&&r.ok&&r.alertas)handleAlerts(r.alertas)}catch(e){}
 }
 window.addEventListener('pagehide',()=>{
   try{if(loggedIn()&&CFG.SCRIPT_URL&&navigator.sendBeacon)navigator.sendBeacon(CFG.SCRIPT_URL,new Blob([JSON.stringify({...authBody(),a:'latido',salida:true})],{type:'text/plain;charset=utf-8'}))}catch(e){}
@@ -2009,28 +2022,40 @@ const ESTADOS_SIG={asignado:['confirmado','Confirmar asignación']};
 async function asigPoll(){
   if(!loggedIn())return;
   if(!online){pintarAsig();return}
-  try{const r=await call('despMias');if(r&&r.ok){ASIG={lista:r.despachos,t:Date.now()};lsSet('cbv_asig',ASIG);pintarAsig()}}catch(e){pintarAsig()}
+  try{const r=await call('despMias');if(r&&r.ok){ASIG={lista:r.despachos||[],t:Date.now()};lsSet('cbv_asig',ASIG);pintarAsig()}}catch(e){pintarAsig()}
 }
+const esCmd=x=>/comandante/i.test(String(x.mi_rol||''));
+/* solo el comandante de incidentes hace el reporte; si la emergencia no tiene comandante asignado, queda para quien esté asignado */
+const debeReportar=x=>esCmd(x)||!(x.grupo&&x.grupo.cmdU);
 function pintarAsig(){
   let box=$('asigbox');
   if(!box){const g=$('menugrid');if(!g)return;box=document.createElement('div');box.id='asigbox';g.parentNode.insertBefore(box,g)}
   box.innerHTML='';
   if(!ASIG.lista.length)return;
   ASIG.lista.forEach(x=>{
-    const c=el('section','card');
-    c.append(el('h3','','🚒 Asignado'+(x.veh?': vehículo '+x.veh:'')));
-    const e=x.emergencia||{};
-    c.append(el('p','',(e.msg||'Emergencia')+(e.lugar?' · '+e.lugar:'')));
+    const e=x.emergencia||{},g=x.grupo;
+    const c=el('section','card asigc');
+    if(g&&g.color)c.style.borderLeft='8px solid '+g.color;
+    const h=el('h3','','🚒 Asignado'+(x.veh?': vehículo '+x.veh:'')+(g?' · '+g.nombre:''));c.append(h);
+    if(e.msg){const f=e.fase||'rojo';const p=el('p','');p.append(el('span','faseb f-'+f,FASE_TXT[f]),document.createTextNode(' '+(e.num?e.num+' · ':'')+e.msg+(e.lugar?' · '+e.lugar:'')));c.append(p)}
+    if(x.mi_rol)c.append(el('p','','Su función: '+x.mi_rol));
+    if(g)c.append(el('p','derived','Comandante de incidentes: '+(g.cmd||'sin asignar')+(g.maq?' · Maquinista: '+g.maq:'')));
+    if(e.obs)c.append(el('p','','Observaciones: '+e.obs));
     if(e.lat!==''&&e.lat!=null&&isFinite(+e.lat))c.append(el('p','sa-co',gms(e.lat,e.lon)));
     c.append(el('p','derived','Coordina: '+x.coordina+' · Equipo: '+x.companeros.join(', ')+(x.nota?' · '+x.nota:'')));
+    if(g&&g.cola&&g.cola.length&&!x.emerg)c.append(el('p','','Siguiente en cola: '+g.cola.map(k=>(k.num?k.num+' ':'')+k.msg).join(' → ')));
+    else if(g&&g.cola&&g.cola.length)c.append(el('p','derived','En cola después de esta: '+g.cola.map(k=>(k.num?k.num+' ':'')+k.msg).join(' → ')));
+    if(!x.emerg)c.append(el('p','',g?'Su grupo está disponible. Espere un nuevo llamado.':'Sin emergencia asignada.'));
     c.append(el('p','',x.estado==='asignado'?'Pendiente de su confirmación.':'✅ Asignación confirmada.'));
     if(!online)c.append(el('p','derived','Sin internet: información recibida el '+fhTxt(ASIG.t)+'. Los cambios de estado necesitan conexión.'));
     const row=el('div','chips'),sig=ESTADOS_SIG[x.estado];
     if(sig){const b=el('button','btn',sig[1]);b.type='button';b.disabled=!online;b.onclick=async()=>{b.disabled=true;try{const r=await call('despEstado',{id:x.id,estado:sig[0]});if(!r.ok)throw new Error(r.error||'servidor');toast('Registrado en la central: '+r.estado+'.');asigPoll()}catch(er){toast('No se pudo registrar: '+humanErr(er));b.disabled=false}};row.append(b)}
     if(e.lat!==''&&e.lat!=null&&isFinite(+e.lat)){const a=el('a','btn alt','Cómo llegar');a.href=dirUrl(e.lat,e.lon);a.target='_blank';a.rel='noopener';row.append(a)}
     if(e.tel){const a=el('a','btn alt','Llamar a quien reporta');a.href='tel:'+e.tel;row.append(a)}
-    if(x.estado!=='asignado'&&x.emerg){const rb=el('button','btn',''+(x.reporte?'Continuar el reporte de esta emergencia':'Hacer el reporte de esta emergencia'));rb.type='button';rb.onclick=()=>reporteDeLlamado(x);row.append(rb)}
-    c.append(row);box.append(c);
+    if(x.estado!=='asignado'&&x.emerg&&debeReportar(x)){const rb=el('button','btn',''+(x.reporte?'Continuar el reporte de esta emergencia':'Hacer el reporte de esta emergencia'));rb.type='button';rb.onclick=()=>reporteDeLlamado(x);row.append(rb)}
+    c.append(row);
+    if(x.emerg&&x.estado!=='asignado')c.append(faseBotones(x.emerg,e.fase||'rojo'));
+    box.append(c);
   });
 }
 /* un reporte hecho desde una emergencia queda vinculado a ella (extra._llam); un reporte puede existir sin llamado */
@@ -2044,7 +2069,7 @@ async function reporteDeLlamado(x){
   renderStep();toast('Este reporte quedó vinculado a la emergencia.');
 }
 async function preguntarVinculo(){
-  const l=(ASIG.lista||[]).filter(x=>x.estado!=='asignado'&&x.emerg);
+  const l=(ASIG.lista||[]).filter(x=>x.estado!=='asignado'&&x.emerg&&debeReportar(x));
   if(!l.length)return false;
   const x=l[0],e=x.emergencia||{};
   return new Promise(res=>{
@@ -2183,7 +2208,7 @@ function mapaUbicacion(opts){
   acts.append(bMi,bOk,bNo);box.append(acts);
   const est=el('div','derived');est.setAttribute('role','status');box.append(est);
   ov.append(box);document.body.append(ov);
-  const pintarInfo=()=>{info.textContent=UB.lat==null?'Todavía no ha marcado el punto.':'Latitud '+UB.lat.toFixed(6)+' · Longitud '+UB.lon.toFixed(6)+' — '+gms(UB.lat,UB.lon);bOk.disabled=UB.lat==null};
+  const pintarInfo=()=>{info.textContent=UB.lat==null?'Todavía no ha marcado el punto.':'Coordenadas: '+gms(UB.lat,UB.lon);bOk.disabled=UB.lat==null};
   const poner=(la,lo,centrar)=>{UB.lat=+la;UB.lon=+lo;pintarInfo();
     if(UB.map){if(!UB.mk){UB.mk=L.marker([UB.lat,UB.lon],{draggable:true}).addTo(UB.map);UB.mk.on('dragend',()=>{const p=UB.mk.getLatLng();UB.lat=p.lat;UB.lon=p.lng;pintarInfo()})}else UB.mk.setLatLng([UB.lat,UB.lon]);
       if(centrar)UB.map.setView([UB.lat,UB.lon],Math.max(UB.map.getZoom(),16))}};
@@ -2214,7 +2239,7 @@ function mapaUbicacion(opts){
 function ubicDesdeForm(){
   mapaUbicacion({titulo:'Marcar la ubicación del evento',lat:D.lat,lon:D.lon,guardar:async(la,lo)=>{
     gpsTouched=true;setV('lat',la.toFixed(6));setV('lon',lo.toFixed(6));if(D.na)delete D.na.lat;fillGps();mapLink();gmsLine();fieldMark('lat');
-    return 'Ubicación marcada: '+la.toFixed(6)+', '+lo.toFixed(6)}});
+    return 'Ubicación marcada: '+gms(la,lo)}});
 }
 /* --- sobre un reporte ya guardado o enviado --- */
 const UBQ_K='cbv_ubq';
@@ -2314,12 +2339,140 @@ const OK_MSG={llamado:'Llamado enviado',llamadoEdit:'Llamado actualizado',llamad
 {const t0=toast;toast=function(...x){toast.last=Date.now();return t0.apply(this,x)};toast.last=0}
 
 
+/* ================= V2.2 · emergencias activas, fases, ubicación según el llamado, eliminados por la central ================= */
+const FASE_TXT={rojo:'🔴 Requiere atención',amarillo:'🟡 Atendiendo',verde:'🟢 Atendida'};
+const nEmgBadge=()=>{const n=(ACT||[]).filter(a=>a.tipo==='llamado').length;return n?n+' activa'+(n>1?'s':''):''};
+let EMG={lista:[],t:0,tm:null};
+/* omitir: la ubicación se apaga y se enciende sola si la central lo asigna o al volver a abrir la aplicación */
+function omitirLlamado(a){
+  seeNow(a.id);
+  const asig=(ASIG.lista||[]).some(x=>x.emerg===a.id);
+  if(asig||sosOn()){toast('Llamado omitido.');return}
+  if(TR.on){stopTrack();toast('Llamado omitido: su ubicación quedó apagada. Se activa si la central lo asigna o al abrir de nuevo la aplicación.')}
+  else toast('Llamado omitido.');
+}
+/* cuando la central lo asigna, la ubicación se enciende sola */
+{const ap0=asigPoll;asigPoll=async function(){
+  const antes=new Set((ASIG.lista||[]).map(x=>x.id+'|'+x.emerg));
+  await ap0();
+  if((ASIG.lista||[]).some(x=>x.emerg&&!antes.has(x.id+'|'+x.emerg))&&!TR.on&&loggedIn())startTrack();
+}}
+/* botones de fase */
+function faseBotones(id,fase){
+  const w=el('div','chips fasebtns');
+  [['rojo','🔴 Requiere atención'],['amarillo','🟡 Atendiendo'],['verde','🟢 Atendida']].forEach(([k,t])=>{
+    const b=el('button','btn alt fb f-'+k+(fase===k?' on':''),t);b.type='button';b.disabled=!online||fase===k;
+    b.onclick=async()=>{
+      if(k==='verde'&&!confirm('¿Marcar la emergencia como ATENDIDA? Termina la emergencia para todos y los grupos quedan disponibles.'))return;
+      b.disabled=true;
+      try{const r=await call('faseSet',{id,fase:k});if(!r.ok)throw new Error(r.error||'servidor');toast(k==='verde'?'Emergencia atendida: terminó.':'Fase: '+FASE_TXT[k]);pollAlerts();asigPoll();if(VISTA==='emerg')pintarEmerg()}
+      catch(e){toast('No se pudo cambiar la fase: '+humanErr(e),1);b.disabled=false}};
+    w.append(b)});
+  return w;
+}
+function abrirEmerg(){cerrarEmerg();pintarEmerg();EMG.tm=setInterval(()=>{if(VISTA==='emerg')pintarEmerg(true)},15000)}
+function cerrarEmerg(){if(EMG.tm){clearInterval(EMG.tm);EMG.tm=null}}
+const unTxt=u=>(u.veh?'🚒 '+u.veh:'Sin vehículo')+' — '+((u.pers||[]).map(p=>p.n+(p.rol?' ('+p.rol+')':'')).join(', ')||'sin personal');
+async function pintarEmerg(silencio){
+  const box=$('emergbox');if(!box)return;
+  if(!silencio){box.innerHTML='';box.append(el('p','derived','Cargando…'))}
+  let r=null;
+  if(online){try{r=await call('emergActivas');if(r&&r.ok){EMG.lista=r.emergencias;EMG.t=Date.now();lsSet('cbv_emg',EMG.lista)}}catch(e){}}
+  if(!r||!r.ok)EMG.lista=lsGet('cbv_emg',EMG.lista||[]);
+  box.innerHTML='';
+  const l=EMG.lista;
+  if(!r||!r.ok)box.append(el('p','derived','Sin conexión: se muestra lo último recibido'+(EMG.t?' a las '+new Date(EMG.t).toLocaleTimeString('es-CO',{hour:'numeric',minute:'2-digit'}):'')+'.'));
+  const per=new Set(),veh=new Set();
+  l.forEach(e=>{[].concat(e.grupos.flatMap(g=>g.unidades),e.sueltas).forEach(u=>{if(u.veh)veh.add(u.veh);(u.pers||[]).forEach(p=>per.add(p.n))})});
+  const res=el('section','card emgres');
+  res.innerHTML='<div class="emgnums"><div><b>'+l.length+'</b><span>emergencia'+(l.length===1?'':'s')+'</span></div><div><b>'+per.size+'</b><span>persona'+(per.size===1?'':'s')+' activada'+(per.size===1?'':'s')+'</span></div><div><b>'+veh.size+'</b><span>vehículo'+(veh.size===1?'':'s')+'</span></div></div>';
+  box.append(res);
+  if(!l.length){box.append(el('section','card')).append(el('p','','No hay emergencias activas en este momento.'));return}
+  l.forEach(e=>{
+    const c=el('section','card emgc f-'+e.fase);
+    const h=el('h3','');h.append(el('span','faseb f-'+e.fase,FASE_TXT[e.fase]||''),document.createTextNode(' '+(e.num?e.num+' · ':'')+e.msg));c.append(h);
+    if(e.mia)c.append(el('p','derived','✅ Usted está asignado a esta emergencia.'));
+    if(e.lugar)c.append(el('p','','📍 Dirección: '+e.lugar));
+    if(e.lat!==''&&e.lat!=null&&isFinite(+e.lat))c.append(el('p','sa-co',gms(e.lat,e.lon)));
+    if(e.tel){const p=el('p','','📞 Contacto: ');const a=el('a','',e.tel);a.href='tel:'+e.tel;p.append(a);c.append(p)}
+    if(e.obs)c.append(el('p','','📝 '+e.obs));
+    c.append(el('p','derived','Llamado a las '+new Date(e.cuando).toLocaleTimeString('es-CO',{hour:'numeric',minute:'2-digit'})));
+    e.grupos.forEach(g=>{
+      const d=el('div','emggrp');d.style.borderLeft='6px solid '+(g.color||'#888');
+      d.append(el('b','','Grupo '+g.nombre),el('div','derived','Comandante de incidentes: '+(g.cmd||'sin asignar')+(g.maq?' · Maquinista: '+g.maq:'')));
+      g.unidades.forEach(u=>d.append(el('div','',unTxt(u))));
+      if(!g.unidades.length)d.append(el('div','derived','Sin unidades todavía.'));
+      c.append(d)});
+    if(e.sueltas.length){const d=el('div','emggrp');d.append(el('b','','Unidades sin grupo'));e.sueltas.forEach(u=>d.append(el('div','',unTxt(u))));c.append(d)}
+    if(!e.grupos.length&&!e.sueltas.length)c.append(el('p','derived','Todavía no hay unidades asignadas.'));
+    const row=el('div','chips');
+    if(e.lat!==''&&e.lat!=null&&isFinite(+e.lat)){const a=el('a','btn alt','Cómo llegar');a.href=dirUrl(e.lat,e.lon);a.target='_blank';a.rel='noopener';row.append(a);const m=el('a','btn alt','Ver en el mapa');m.href=mapsUrl(e.lat,e.lon);m.target='_blank';m.rel='noopener';row.append(m)}
+    c.append(row);
+    if(e.mia)c.append(faseBotones(e.id,e.fase));
+    box.append(c);
+  });
+}
+/* aviso de reportes eliminados por la central: se conserva marcado o se quita de la lista */
+async function revisarEliminados(){
+  if(!online||!loggedIn()||document.visibilityState!=='visible')return;
+  try{
+    const r=await call('misEliminados');if(!r||!r.ok||!r.eliminados.length)return;
+    const x=r.eliminados[0];
+    dlgA('<h3>La central eliminó un reporte suyo</h3><p><b>'+esc(x.num||'')+'</b> · '+esc(x.cat||'')+'</p><p>Motivo: '+esc(x.motivo||'sin motivo escrito')+(x.por?' · por '+esc(x.por):'')+'</p><p class="derived">Su consecutivo quedó libre. Puede conservar el reporte en su teléfono marcado como «eliminado» o quitarlo.</p><div class="chips"><button class="btn" type="button" id="el-k">Conservarlo marcado «eliminado»</button><button class="btn alt" type="button" id="el-q">Quitarlo de mi teléfono</button></div>',()=>{
+      const fin=async(quita)=>{
+        try{
+          if(quita){const regs=await DB.all('regs');const g=regs.find(y=>y.tmp===x.tmp);if(g){await DB.del('regs',g.tmp)}}
+          else{const regs=await DB.all('regs');const g=regs.find(y=>y.tmp===x.tmp);if(g){g.eliminado=true;g.elimMotivo=x.motivo;await DB.put('regs',g)}}
+        }catch(e){}
+        try{await call('elimAck',{tmp:x.tmp})}catch(e){}
+        dlgC();toast(quita?'Quitado de su teléfono.':'Conservado como «eliminado».');if(VISTA==='list')renderList();pintarBorradores&&pintarBorradores()};
+      $('el-k').onclick=()=>fin(false);$('el-q').onclick=()=>fin(true)});
+  }catch(e){}
+}
+setInterval(revisarEliminados,60000);setTimeout(revisarEliminados,8000);
+
+/* textos editables: el superadministrador cambia rótulos; se aplican sobre el texto original, siempre reversibles */
+let TXTMAP={},TXTOBS=null;const TXTORIG=new WeakMap();
+function aplicarTextos(m){
+  TXTMAP=m&&typeof m==='object'&&!Array.isArray(m)?m:{};
+  const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,{acceptNode:n=>/^(SCRIPT|STYLE|TEXTAREA)$/.test(n.parentNode.nodeName)?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT});
+  const ns=[];while(w.nextNode())ns.push(w.currentNode);
+  ns.forEach(n=>{
+    let s=TXTORIG.get(n);const cur=n.nodeValue;
+    if(!s||cur!==s.a){s={o:cur,a:cur};TXTORIG.set(n,s)}
+    const o=s.o,k=o.trim(),r=TXTMAP[k];
+    const nuevo=(r!=null&&r!=='')?o.replace(k,r):o;
+    if(cur!==nuevo)n.nodeValue=nuevo;s.a=nuevo;
+  });
+  document.querySelectorAll('[placeholder],[title],[aria-label]').forEach(e=>['placeholder','title','aria-label'].forEach(at=>{
+    if(!e.hasAttribute(at))return;const key='_s_'+at,cur=e.getAttribute(at);let s=e[key];
+    if(!s||cur!==s.a){s={o:cur,a:cur};e[key]=s}
+    const r=TXTMAP[s.o.trim()],nuevo=(r!=null&&r!=='')?r:s.o;if(cur!==nuevo)e.setAttribute(at,nuevo);s.a=nuevo}));
+  if(!TXTOBS&&Object.keys(TXTMAP).length){let t=null;TXTOBS=new MutationObserver(()=>{clearTimeout(t);t=setTimeout(()=>{TXTOBS.disconnect();try{aplicarTextos(TXTMAP)}finally{TXTOBS.observe(document.body,{childList:true,subtree:true,characterData:true})}},120)});TXTOBS.observe(document.body,{childList:true,subtree:true,characterData:true})}
+}
+
+/* cronología: tiempos calculados solos a partir de las horas que se escriben */
+const durTxt=m=>m==null?'—':(m<60?m+' min':Math.floor(m/60)+' h '+(m%60)+' min');
+function cronoCalc(){
+  const ref=document.querySelector('[data-p="hreg"]')||document.querySelector('[data-p="hsal"]');if(!ref||typeof D==='undefined'||!D)return;
+  let p=document.getElementById('crono-calc');if(!p){p=document.createElement('p');p.id='crono-calc';p.className='derived';p.style.cssText='margin:6px 0;padding:8px;border:1px dashed var(--line);border-radius:8px';ref.insertAdjacentElement('afterend',p)}
+  const ok=x=>{const d=x;return d!=null&&d>=0&&d<1440?Math.round(d):null};
+  const resp=ok(lapse(D.hsal||D.hora,D.hlle)),sitio=ok(lapse(D.hlle,D.hfin)),total=ok(lapse(D.hora,D.hreg||D.hfin)),ev=ok(lapse(D.hora,D.hfin));
+  p.innerHTML='<b>Tiempos calculados solos:</b><br>Salida → llegada al sitio: <b>'+durTxt(resp)+'</b><br>Atención en el sitio (llegada → terminación): <b>'+durTxt(sitio)+'</b><br>Duración del evento (alerta → terminación): <b>'+durTxt(ev)+'</b><br>Alerta → regreso a la estación: <b>'+durTxt(total)+'</b>';
+}
+{const rs0=renderStep;renderStep=function(){rs0.apply(this,arguments);try{cronoCalc()}catch(e){}}}
+{const oc0=onChanged;onChanged=function(pp){oc0.apply(this,arguments);if(/^(hora|hsal|hlle|hfin|hreg)$/.test(pp)){
+  /* en reporte simplificado la duración también se calcula con salida y regreso */
+  if(modoSimple()&&D.hsal&&D.hreg&&!(D.na&&D.na.durmin)){const d=lapse(D.hsal,D.hreg);if(d!=null&&d>0&&d<1440){D.durmin=d;const i=document.querySelector('[data-p="durmin"] input');if(i)i.value=d}}
+  try{cronoCalc()}catch(e){}}}}
+
+
 /* ================= MIS REGISTROS ================= */
 async function elimBorrador(r){
   if(!confirm('¿Está seguro de eliminar este borrador?'+(r.num?' ('+r.num+')':'')+' No se puede recuperar.'))return;
   for(const f of await DB.byTmp(r.tmp))await DB.del('fotos',f.key);
   await DB.del('regs',r.tmp);
-  if(r.num||r.subida){
+  { /* siempre se avisa a la central: aunque el teléfono no sepa si ya se subió, ella lo quita si existe */
     let ok=false;
     try{const x=await call('borradorDel',{tmp:r.tmp});ok=!!(x&&x.ok)}catch(e){}
     if(!ok)lsSet('cbv_delq',[...new Set([...lsGet('cbv_delq',[]),r.tmp])]);
@@ -2355,7 +2508,8 @@ async function renderList(){
     c.append(el('span','',tc(d.cat||'Sin categoría')+' · '+(d.fecha||'')+' '+hmTxt(d.hora)));
     c.append(el('span','derived',(d.dir||'')+' · '+(d.uni||'?')+' unid. · '+(d.veh||'')+' · '+n+' fotos'));
     const tieneU=coordValida(d.lat,d.lon);
-    c.append(el('span',tieneU?'derived':'derived sin-ubic',tieneU?'Ubicación: '+(+d.lat).toFixed(6)+', '+(+d.lon).toFixed(6):'⚠ Falta registrar la ubicación del evento'));
+    c.append(el('span',tieneU?'derived':'derived sin-ubic',tieneU?'Ubicación: '+gms(d.lat,d.lon):'⚠ Falta registrar la ubicación del evento'));
+    if(r.eliminado)c.append(el('p','derived sin-ubic','🗑 Eliminado por la central'+(r.elimMotivo?': '+r.elimMotivo:'')+'. Se conserva aquí marcado; puede quitarlo con «Eliminar».'));
     const pills=el('div','pills');
     const pill=(t,k)=>pills.append(el('span','pill '+k,t));
     if(draft)pill('BORRADOR PENDIENTE POR DILIGENCIAR','bad');
@@ -2566,7 +2720,7 @@ function irA(x){if(!loggedIn())return;if(x==='mapa')show('map');else if(x==='cha
 async function atenderDesdeAviso(id,accion){
   try{const r=await call('alertas');if(!(r&&r.ok))return;handleAlerts(r.alertas);
     const a=(r.alertas||[]).find(x=>x.id===id);
-    if(a&&accion==='activa')aceptarLlamado(a);else if(a&&accion==='omitir'){seeNow(a.id);toast('Llamado omitido.')}else if(a&&accion!=='omitir'){seeNow(a.id);abrirLlamado(a)}}catch(e){}
+    if(a&&accion==='activa')aceptarLlamado(a);else if(a&&accion==='omitir'){seeNow(a.id);omitirLlamado(a)}else if(a&&accion!=='omitir'){seeNow(a.id);abrirLlamado(a)}}catch(e){}
 }
 async function finishSetup(){
   startApp();if(!REG&&!(await restoreCurrent()))await nuevaEmergencia(true);

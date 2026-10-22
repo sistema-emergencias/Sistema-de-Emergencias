@@ -47,7 +47,7 @@ p{margin:0 0 8px}
 .lrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;align-items:end;border:1px solid var(--line);padding:8px;background:var(--bg)}
 .ig{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:end}
 .ok{color:var(--ok)}
-.tabs{display:flex;gap:2px;border-bottom:2px solid var(--line);overflow-x:auto}
+.tabs{display:flex;flex-wrap:wrap;gap:2px;border-bottom:2px solid var(--line);overflow:visible}
 .tabs button{font:inherit;font-weight:500;background:none;border:0;border-bottom:3px solid transparent;margin-bottom:-2px;padding:10px 14px;color:var(--muted);cursor:pointer;white-space:nowrap}
 .tabs button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -169,6 +169,31 @@ body.simple dialog p.derived{display:block}
 
 .exp2{margin:0 0 8px;color:var(--muted);font-size:14px;line-height:1.45}.exp2 b{color:var(--fg)}.gsvg svg{display:block;width:100%;height:auto}
 
+/* V2.2 · fases, grupos y paneles */
+.fase-bar{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.fase-bar button{border:2px solid transparent;border-radius:999px;padding:4px 12px;font-weight:700;cursor:pointer;color:#fff;opacity:.45}
+.fase-bar button.on{opacity:1;box-shadow:0 0 0 2px var(--surface,#fff),0 0 0 4px currentColor}
+.fase-rojo{background:#dc2626}.fase-amarillo{background:#d97706}.fase-verde{background:#16a34a}
+.emg.f-rojo{border-left:8px solid #dc2626}.emg.f-amarillo{border-left:8px solid #d97706}.emg.f-verde{border-left:8px solid #16a34a}
+.gi{border:1px solid var(--line,#ccc);border-left-width:10px;border-radius:10px;padding:10px;margin:10px 0}
+.gi h4{margin:0 0 4px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.gi .dot{display:inline-block;width:14px;height:14px;border-radius:50%}
+.gi .un{border-top:1px dashed var(--line,#ccc);padding:6px 0}
+.gi .rol{font-size:.78rem;font-weight:700;border-radius:6px;padding:1px 6px;background:#e0e7ff;color:#3730a3}
+.chipg{display:inline-block;border-radius:999px;padding:2px 10px;color:#fff;font-weight:700;font-size:.8rem;margin:2px 4px 2px 0}
+.scroll{scrollbar-width:thin}
+
+#p-per table th:nth-child(2),#p-per table td:nth-child(2){position:sticky;left:0;z-index:2;background:var(--surface,#fff);box-shadow:2px 0 0 var(--line,#ccc)}
+#p-per table th:nth-child(2){z-index:3}
+
+fieldset.aud{border:1px solid var(--line,#ccc);border-radius:8px;margin:8px 0;padding:6px 10px;display:flex;gap:16px;flex-wrap:wrap}
+fieldset.aud legend{font-weight:700;padding:0 6px}
+fieldset.aud label{display:flex;align-items:center;gap:6px;font-weight:600}
+.ruta-llamado{font-weight:600;background:var(--surface-2,#f3f4f6);border-radius:6px;padding:6px 10px}
+.aud-chip{font-weight:700}
+
+.emgnums{display:flex;gap:10px;justify-content:space-around;text-align:center;margin:6px 0}.emgnums b{display:block;font-size:1.8em;line-height:1.1}.emgnums span{font-size:.85em}
+
 .mini{display:inline-block;height:10px;background:var(--s25)}
 </style></head><body>
 <div class="wrap">
@@ -196,7 +221,7 @@ body.simple dialog p.derived{display:block}
 <div id="toasts" aria-live="polite"></div>
 <dialog id="dlg"></dialog>
   <section id="v-pan" hidden>
-    <div class="note" id="histbanner" hidden>Falta cargar el histórico (estadística 2013–2026). Vaya a <b>Administración → Histórico</b> y elija el archivo historico.json.</div>
+    <div class="note" id="histbanner" hidden>Falta cargar el histórico (estadística 2013–2026). Vaya a la pestaña <b>Histórico</b> y elija el archivo historico.json.</div>
     <div class="sec">
       <div class="card" id="fcard">
         <div class="tools">
@@ -239,6 +264,7 @@ body.simple dialog p.derived{display:block}
           <p class="derived" style="margin-top:8px" id="dlmsg"></p>
         </div>
         <div id="est-nuevo" class="sec"></div>
+        <div id="est-anios" class="sec"></div>
         <div class="chart"><h3>Incidentes por mes</h3><div id="cm"></div></div>
         <div>
           <div class="tools" style="margin-bottom:6px"><label style="min-width:0;display:flex;align-items:center;gap:8px;flex-direction:row"><input type="checkbox" id="fcmp" checked style="width:auto"> Comparar con el mismo periodo del año anterior</label></div>
@@ -293,9 +319,11 @@ body.simple dialog p.derived{display:block}
         <div class="card" id="op-ll">
           <h3>Llamado rápido</h3>
           <div class="tools"><label style="flex:2;min-width:14rem">Tipo de emergencia<select id="ll-tipo"></select></label><label>Lugar<input id="ll-lugar" placeholder="Dirección o referencia"></label><label>Teléfono de quien reporta<input id="ll-tel" inputmode="tel" placeholder="300 000 0000"></label><label>Coordenadas<input id="ll-co" placeholder="4°31'50&quot;N 76°06'29&quot;W o 4.5306, -76.1082"></label><button class="btn" id="ll-send">Llamar a las unidades</button></div>
+          <div id="ll-extra"></div>
           <div class="derived" id="ll-out" role="status"></div>
         </div>
         <div class="card" id="op-act"><h3>Emergencias activas</h3><div id="v-alerts"></div><div id="v-llam"></div></div>
+        <div class="card" id="op-gi"><h3>Grupos de intervención</h3><p class="derived" id="gi-ayuda">Cada grupo reúne las unidades que atienden una emergencia. Muévalo completo a otra emergencia, relevé al comandante de incidentes o al maquinista, y pre-asigne las emergencias que le siguen.</p><div id="gi-box"></div></div>
         <div class="card" id="op-uni"><h3>Unidades y conexión</h3><div class="scroll"><table id="uni-tab"></table></div></div>
         <div class="card"><h3>Chat</h3><div id="chat-box"></div></div>
         <div id="map-vivo" class="map"></div>
@@ -325,12 +353,13 @@ body.simple dialog p.derived{display:block}
           <button role="tab" aria-selected="false" data-a="mar">Marca y licencia</button>
           <button role="tab" aria-selected="false" data-a="perm">Funciones por rol</button>
           <button role="tab" aria-selected="false" data-a="seg">Seguridad y mantenimiento</button>
-          <button role="tab" aria-selected="false" data-a="his">Histórico</button>
+          <button role="tab" aria-selected="false" data-a="txt" data-solo="master">Textos</button>
           <button role="tab" aria-selected="false" data-a="dgn">Diagnóstico</button>
         </div>
         <div id="a-box" class="sec"></div>
       </div>
       <div id="p-ser" class="sec" hidden>
+        <div class="card only-master" id="his-card" hidden></div>
         <div class="card" id="carga-card"></div>
         <div class="note">Los años hasta 2020 se guardaron con otro formato (totales por tipo de incidente y por mes) y se conservan como histórico estadístico. Los años siguientes se calculan con los reportes de la aplicación y con la información que se cargue aquí.</div>
         <div class="tools"><label>Año<select id="sanio"></select></label></div>
@@ -419,7 +448,7 @@ async function call(a,extra,opt){
   let last;
   for(let i=0;i<3;i++){
     try{
-      const j=await rawCall({u:USER,t:TOKEN,a,canal:'computador',ua:(navigator.userAgent||'').replace(/^Mozilla\/5.0 /,'').slice(0,90),...(extra||{})},opt&&opt.ms);
+      const j=await rawCall({u:USER,t:TOKEN,a,canal:'computador',ua:(navigator.userAgent||'').replace(/^Mozilla\/5.0 /,'').slice(0,90),...(a==='llamado'||a==='llamadoRepetir'?{appUrl:location.origin+location.pathname.replace(/[^\/]*$/,'')+'index.html'}:{}),...(extra||{})},opt&&opt.ms);
       if(j&&j.error==='clave'&&a!=='login'){salir('Su sesión ya no es válida (cambió la clave o el usuario). Entre de nuevo.');return j}
       return j;
     }catch(e){last=e;if(e.message==='sin_url')throw e;await new Promise(r=>setTimeout(r,1200*(i+1)))}
@@ -736,7 +765,7 @@ async function backup(){
 async function renderCfg(){
   const fin=[...REGS.values()].filter(o=>o.estado==='final');
   const ok=fin.filter(o=>String(o.form).indexOf('enviado')===0).length,mal=fin.filter(o=>String(o.form).indexOf('enviado')!==0);
-  $('c_sum').textContent=(HISTOK?'Histórico cargado. ':'Histórico sin cargar (Administración → Histórico). ')+nf.format(REGS.size)+' registros recibidos de los teléfonos, '+nf.format(fin.length)+' terminados. Respondidos en el Formulario de Google: '+nf.format(ok)+(mal.length?'. Pendientes: '+mal.length+'.':'.');
+  $('c_sum').textContent=(HISTOK?'Histórico cargado. ':'Histórico sin cargar (pestaña Histórico). ')+nf.format(REGS.size)+' registros recibidos de los teléfonos, '+nf.format(fin.length)+' terminados. Respondidos en el Formulario de Google: '+nf.format(ok)+(mal.length?'. Pendientes: '+mal.length+'.':'.');
   $('c_tab').innerHTML=mal.length?'<tr><th>Registro</th><th>Categoría</th><th>Estado del formulario</th><th></th></tr>'+mal.slice(0,60).map(o=>'<tr><td class="m">'+esc(o.num)+'</td><td>'+esc(tc(o.cat))+'</td><td>'+esc(o.form||'sin enviar')+'</td><td><button class="btn alt sm" data-rf="'+esc(o.tmp)+'">Reenviar</button></td></tr>').join(''):'';
   $('c_tab').querySelectorAll('[data-rf]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{const r=need(await call('reenviarForm',{tmp:b.dataset.rf}));const o=REGS.get(b.dataset.rf);if(o)o.form=r.form;$('c_msg').textContent='Resultado: '+r.form}catch(e){$('c_msg').textContent='No se pudo: '+e.message}renderCfg()});
 }
@@ -810,7 +839,7 @@ function drawAlertas(){
     t.innerHTML='<b>🚨 SOS · BOMBERO CAÍDO · '+esc(a.por)+'</b>'+(a.veh?' · Unidad '+esc(a.veh):'')+' · activado '+new Date(a.cuando).toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false})+' h'+(ub?'<br><span class="m">'+esc(gms(a.lat,a.lon))+'</span>':'<br>sin ubicación GPS todavía')+(a.msg?'<br>'+esc(a.msg):'');
     const b=document.createElement('div');b.className='dl';
     b.append(ubicActs(a.lat,a.lon,'SOS '+a.por));
-    const ver=document.createElement('button');ver.className='btn alt sm';ver.textContent='Ver en el mapa';ver.onclick=()=>{showTab('vivo');setTimeout(()=>{if(MV&&ub)MV.setView([a.lat,a.lon],17)},300)};
+    const ver=document.createElement('button');ver.className='btn alt sm';ver.textContent='Ver en el mapa';ver.onclick=()=>{if(ub)verEnMapa(a.lat,a.lon,17,'SOS '+a.por);else showTab('vivo')};
     const si=document.createElement('button');si.className='btn alt sm';si.textContent=MUTED.has(a.id)?'Sonido apagado':'Silenciar sonido';si.onclick=()=>{MUTED.add(a.id);drawAlertas()};
     const ok=document.createElement('button');ok.className='btn sm';ok.textContent='Ya se atendió';ok.onclick=()=>atender(a);
     b.append(ver,si,ok);d.append(t,b);box.append(d);
@@ -946,7 +975,7 @@ const coordDe=r=>{
   if((isNaN(la)||isNaN(lo))&&r.coord){const p=parseCoord(r.coord);if(p){la=+p.lat;lo=+p.lon}}
   return (isNaN(la)||isNaN(lo)||Math.abs(la)>90||Math.abs(lo)>180||(la===0&&lo===0))?null:[la,lo];
 };
-let calorTok=0;
+let calorTok=0,CALOR_LAST=null;
 async function drawCalor(){
   if(!MC)return;
   const tok=++calorTok,capa=$('calor-capa').value,rg=calorRango(),s=$('calor-sum');let pts=[];CPTS.clearLayers();
@@ -955,6 +984,7 @@ async function drawCalor(){
       const cat=$('calor-cat').value;
       const rows=ALL.filter(r=>r.fecha>=rg.from&&r.fecha<=rg.to&&(!cat||r.cat===cat));
       const con=[];rows.forEach(r=>{const c=coordDe(r);if(c){pts.push([c[0],c[1],1]);con.push({r,c})}});
+      CALOR_LAST={capa,label:rg.label,filas:con.map(({r,c})=>({id:r.id,fecha:r.fecha,hora:r.hora||'',categoria:r.cat,direccion:r.dir||'',lat:c[0],lon:c[1]}))};
       s.textContent=nf.format(con.length)+' de '+nf.format(rows.length)+' emergencias ('+rg.label+(cat?' · '+tc(cat):'')+') tienen ubicación. Las del Excel antiguo casi nunca traen coordenadas; el mapa se va llenando con cada emergencia nueva.';
       if($('calor-pts').checked)con.slice(0,1500).forEach(({r,c})=>{
         const m=L.circleMarker(c,{radius:5,color:'#7a0f08',weight:1,fillColor:'#d62a1c',fillOpacity:.8});
@@ -963,7 +993,7 @@ async function drawCalor(){
       s.textContent='Consultando recorridos…';
       const d=rg.from.startsWith('0000')?0:new Date(rg.from+'T00:00:00').getTime(),h=rg.to.startsWith('9999')?Date.now()+1:new Date(rg.to+'T23:59:59').getTime();
       const r=need(await call('calor',{desde:d,hasta:h,veh:$('calor-veh').value}));if(tok!==calorTok)return;
-      pts=r.pts;s.textContent=nf.format(pts.length)+' zonas con movimiento de unidades ('+rg.label+($('calor-veh').value?' · '+$('calor-veh').value:'')+'; '+nf.format(r.total)+' posiciones guardadas).';
+      pts=r.pts;CALOR_LAST={capa,label:rg.label,filas:pts.map(p=>({lat:p[0],lon:p[1],peso:p[2]}))};s.textContent=nf.format(pts.length)+' zonas con movimiento de unidades ('+rg.label+($('calor-veh').value?' · '+$('calor-veh').value:'')+'; '+nf.format(r.total)+' posiciones guardadas).';
     }
   }catch(e){s.textContent='No se pudo consultar: '+humanErr(e)}
   if(tok!==calorTok)return;
@@ -1340,14 +1370,15 @@ async function renderPers(){
   try{const r=need(await call('personalGet'));PLIST=r.personal||[];PRANGOS=r.rangos||[]}catch(e){c.innerHTML='<p class="err">No se pudo leer el personal: '+esc(humanErr(e))+'</p>';return}
   drawPers();
 }
-function partDe(nombre){const n=String(nombre||'').trim().toLowerCase();let c=0,h=0;(CUR||[]).forEach(r=>{if((r.pers||[]).some(x=>String(x).trim().toLowerCase()===n)){c++;h+=Number(r.durmin)||0}});return [c,h]}
+let PYEAR=String(new Date().getFullYear());
+function partDe(nombre){const n=String(nombre||'').trim().toLowerCase();let c=0,h=0;(ALL||[]).forEach(r=>{if(String(r.fecha||'').slice(0,4)!==PYEAR)return;if((r.pers||[]).some(x=>String(x).trim().toLowerCase()===n)){c++;h+=Number(r.durmin)||0}});return [c,h]}
 function drawPers(){
   const box=$('p-per');box.innerHTML='';
   const msg=H('div',{className:'derived',role:'status'},PMSG);PMSG='';
   const q=H('input',{placeholder:'Buscar por nombre, grado o cédula',value:PFILT});
   const info=H('p',{className:'derived'},'Cada persona entra a la aplicación con su cédula como usuario y como clave inicial; después puede cambiarla desde «Ajustes» del celular. Si alguien la olvida, use «Restablecer clave»: queda otra vez igual a su cédula (o la que usted escriba) y la persona puede cambiarla. Solo desde el grado de bombero hacia arriba atienden emergencias (columna «Atiende»). Las participaciones y horas se cuentan con el periodo y los filtros de arriba.');
   const t=H('table');
-  const head='<tr><th>#</th>'+PCOLS.map(c=>'<th>'+esc(c[1])+'</th>').join('')+'<th>Atiende emergencias</th><th>Activo</th>'+(esMaster()?'<th>Acceso a Estadística</th><th>Clave</th>':'')+'<th class="n">Participaciones</th><th class="n">Horas</th><th></th></tr>';
+  const head='<tr><th>#</th>'+PCOLS.map(c=>'<th>'+esc(c[1])+'</th>').join('')+'<th>Atiende emergencias</th><th>Activo</th><th title="Reciben los llamados «solo empleados»">Empleado</th>'+(esMaster()?'<th>Acceso a Estadística</th><th>Clave</th>':'')+'<th class="n">Participaciones '+PYEAR+'</th><th class="n">Horas '+PYEAR+'</th><th></th></tr>';
   const body=H('tbody');
   const draw=()=>{
     PFILT=q.value;const f=PFILT.trim().toLowerCase();
@@ -1358,7 +1389,9 @@ function drawPers(){
       PCOLS.forEach(c=>{const inp=H('input',{value:p[c[0]]||'',size:c[2]});inp.setAttribute('aria-label',c[1]+' de '+(p.nombre||'persona nueva'));inp.oninput=()=>{p[c[0]]=inp.value;marcar()};const td=H('td');td.append(inp);tr.append(td)});
       const op=H('select');[['auto','Automático por grado'],['si','Sí'],['no','No']].forEach(x=>op.append(new Option(x[1],x[0])));op.value=p.operativo==='si'||p.operativo==='no'?p.operativo:'auto';op.onchange=()=>{p.operativo=op.value;marcar()};
       const act=H('input',{type:'checkbox',checked:String(p.activo).toLowerCase()!=='no'});act.onchange=()=>{p.activo=act.checked?'si':'no';marcar()};
-      tr.append(H('td',{},op),H('td',{},act));
+      const emp=H('input',{type:'checkbox',checked:String(p.empleado).toLowerCase()==='si'});emp.setAttribute('aria-label','Empleado: '+(p.nombre||'persona'));
+      emp.onchange=async()=>{p.empleado=emp.checked?'si':'no';const ced=String(p.cedula||'').replace(/\D/g,'');if(!ced){marcar();return}try{need(await call('personalEmpleado',{cedula:ced,empleado:emp.checked}));toast((emp.checked?'Ahora es empleado: ':'Ya no es empleado: ')+(p.nombre||ced))}catch(e){emp.checked=!emp.checked;p.empleado=emp.checked?'si':'no';toast('No se pudo cambiar: '+humanErr(e),1)}};
+      tr.append(H('td',{},op),H('td',{},act),H('td',{},emp));
       if(esMaster()){
         const ac=H('select');[['','Solo la aplicación del celular'],['central','Central (estadística)'],['master','Superadministrador']].forEach(x=>ac.append(new Option(x[1],x[0])));ac.value=p.acceso||'';ac.onchange=()=>{p.acceso=ac.value;marcar()};
         const rs=H('button',{className:'btn alt sm',textContent:'Restablecer clave'});
@@ -1367,8 +1400,9 @@ function drawPers(){
       }
       const [n,h]=partDe(p.nombre);
       tr.append(H('td',{className:'n'},String(n)),H('td',{className:'n'},(h/60).toLocaleString('es-CO',{maximumFractionDigits:1})));
+      const pf=H('button',{className:'btn alt sm',textContent:'Perfil'});pf.onclick=()=>perfilUI(String(p.cedula||'').replace(/\D/g,'')||p.nombre,p.nombre);pf.hidden=!(esMaster()||puedeF('perfiles'));
       const del=H('button',{className:'btn alt sm',textContent:'Quitar'});del.onclick=()=>{if(!confirm('¿Quitar a '+(p.nombre||'esta persona')+' de la lista? (Si solo salió de la institución es mejor desmarcar «Activo».)'))return;PLIST.splice(i,1);marcar();draw()};
-      tr.append(H('td',{},del));body.append(tr);
+      tr.append(H('td',{},pf,' ',del));body.append(tr);
     });
   };
   let sucio=false;const sv=H('button',{className:'btn',textContent:'Guardar cambios del personal'});
@@ -1380,7 +1414,7 @@ function drawPers(){
       await renderPers()}catch(e){msg.textContent='No se pudo guardar: '+humanErr(e)}sv.disabled=false};
   const add=H('button',{className:'btn alt',textContent:'Agregar persona'});add.onclick=()=>{PLIST.push({nombre:'',grado:'',cedula:'',activo:'si',operativo:'auto'});marcar();q.value='';draw();body.lastChild&&body.lastChild.querySelector('input').focus()};
   const csv=H('button',{className:'btn alt',textContent:'Descargar lista (CSV)'});
-  csv.onclick=()=>{const cols=PCOLS.map(c=>c[0]).concat(['operativo','activo']);const q_=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+  csv.onclick=()=>{const cols=PCOLS.map(c=>c[0]).concat(['operativo','activo','empleado']);const q_=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
     const s='﻿'+cols.join(';')+'\n'+PLIST.map(p=>cols.map(c=>q_(p[c])).join(';')).join('\n');
     save('PERSONAL CBV LA UNION.csv',new Blob([s],{type:'text/csv;charset=utf-8'}))};
   const ini=H('button',{className:'btn alt',textContent:'Cargar listado inicial (64 personas)'});
@@ -1391,8 +1425,11 @@ function drawPers(){
       L.forEach(p=>{const c=String(p.cedula||'').replace(/\D/g,'');if(c&&ya.has(c))return;PLIST.push(Object.assign({activo:'si',operativo:'auto',acceso:''},p));n++});
       marcar();draw();msg.textContent=n+' personas agregadas a la lista. Pulse «Guardar cambios del personal» para guardarlas y crear sus usuarios.'}
     catch(e){msg.textContent=humanErr(e)}};
+  const anios=[...new Set((ALL||[]).map(r=>String(r.fecha||'').slice(0,4)).filter(x=>/^\d{4}$/.test(x)).concat([String(new Date().getFullYear())]))].sort().reverse();
+  const ysel=H('select');anios.forEach(y=>ysel.append(new Option(y,y)));ysel.value=PYEAR;ysel.onchange=()=>{PYEAR=ysel.value;drawPers()};
+  const ynota=H('p',{className:'derived'},'Participaciones y horas del año '+PYEAR+'. Cada año empieza en cero; los años anteriores quedan archivados y se consultan eligiendo el año.');
   const tw=H('div',{className:'scroll'});t.innerHTML=head;t.append(body);tw.append(t);
-  box.append(card(H('h3',{},'Personal de la estación'),info,H('div',{className:'tools'},lbl('Buscar',q)),H('div',{className:'dl'},add,ini,csv,sv),msg,tw));
+  box.append(card(H('h3',{},'Personal de la estación'),info,H('div',{className:'tools'},lbl('Buscar',q),lbl('Año de participaciones',ysel)),ynota,H('div',{className:'dl'},add,ini,csv,sv),msg,tw));
   draw();
   window.onbeforeunload=()=>sucio?'Hay cambios sin guardar en el personal.':undefined;
 }
@@ -1887,12 +1924,13 @@ async function admSeg(){
 }
 
 /* ================= V2: operación de la central, permisos por función, notificaciones, despacho y perfiles ================= */
-const puedeF=f=>ROL==='master'||(PERM||[]).includes(f);
+let PREVIEW=null;
+const puedeF=f=>PREVIEW?PREVIEW.includes(f):(ROL==='master'||(PERM||[]).includes(f));
 const TAB_F={est:'estadistica',reg:'registros',vivo:'operacion',calor:'calor',per:'personal',aud:'auditoria',cfg:'conexion',ser:'historico'};
 const horaTxt=t=>new Date(t).toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit',hour12:false});
 const fechaHora=t=>new Date(t).toLocaleString('es-CO',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});
 function tabsPorRol(){
-  document.querySelectorAll('#ptabs button').forEach(b=>{const p=b.dataset.p;b.hidden=p==='adm'?ROL!=='master':!puedeF(TAB_F[p])});
+  document.querySelectorAll('#ptabs button').forEach(b=>{const p=b.dataset.p;b.hidden=p==='adm'?(ROL!=='master'||!!PREVIEW):!puedeF(TAB_F[p])});
   const fc=$('fcard');
   if(ROL==='central'&&fc){fc.querySelector('.tools').hidden=true;$('fsum').hidden=true;$('backup').hidden=true}
   if(ROL!=='master'&&$('backup'))$('backup').hidden=true;
@@ -2024,19 +2062,23 @@ async function despachoUI(a){
   const ocup=new Set((VIVO.despachos||[]).flatMap(x=>x.pers.map(p=>p.u)));
   dlg('<h3>Despachar · '+esc(a.msg)+'</h3><div id="ds-lst">'+(ds.length?ds.map(x=>'<div class="ntf"><div><b>'+esc(x.veh)+'</b> · '+esc(EST_DESP[x.estado]||x.estado)+' · '+x.pers.length+' persona(s)<br><span class="derived">'+x.pers.map(p=>esc(p.n)+(p.rol?' ('+esc(p.rol)+')':'')).join(', ')+' · confirmaron '+(x.conf||[]).length+'</span></div><button class="btn alt sm" data-q="'+esc(x.id)+'">Quitar</button></div>').join(''):'<p class="derived">Aún no hay vehículos asignados.</p>')+'</div>'+
     '<label>Vehículo<select id="ds-veh">'+veh.map(v=>'<option>'+esc(v)+'</option>').join('')+'</select></label>'+
+    '<label>Grupo de intervención<select id="ds-grp">'+(()=>{const gs=(VIVO.grupos||[]).filter(g=>g.estado==='activo'&&(g.emerg===a.id||!g.emerg));return (gs.some(g=>g.emerg===a.id)?'':'<option value="">Crear el primer grupo de esta emergencia</option>')+gs.map(g=>'<option value="'+esc(g.id)+'"'+(g.emerg===a.id?' selected':'')+'>'+esc(g.nombre)+(g.emerg===a.id?' (ya atiende esta emergencia)':' (disponible)')+'</option>').join('')+'<option value="_nuevo">+ Crear otro grupo nuevo</option>'})()+'</select></label>'+
     '<p class="derived" style="margin:6px 0 2px">Personal que va en el vehículo (los ya asignados a una emergencia aparecen marcados):</p><div class="chk" id="ds-per">'+ROSTERD.personal.map(p=>'<label><input type="checkbox" value="'+esc(p.usuario)+'" data-n="'+esc(p.nombre)+'" '+(ocup.has(p.usuario)?'disabled':'')+'>'+esc(p.nombre)+(ocup.has(p.usuario)?' · ocupado':'')+'</label>').join('')+'</div>'+
-    '<label>Nota (opcional)<input id="ds-nota"></label><div class="derived" id="ds-out" role="status"></div><div class="dl"><button class="btn" id="ds-ok">Asignar</button><button class="btn alt" id="ds-no">Cerrar</button></div>',d=>{
+    '<div class="tools"><label>Comandante de incidentes<select id="ds-cmd"><option value="">— sin asignar —</option></select></label><label>Maquinista (conductor del vehículo)<select id="ds-maq"><option value="">— sin asignar —</option></select></label></div>'+'<label>Nota (opcional)<input id="ds-nota"></label><div class="derived" id="ds-out" role="status"></div><div class="dl"><button class="btn" id="ds-ok">Asignar</button><button class="btn alt" id="ds-no">Cerrar</button></div>',d=>{
       $('ds-no').onclick=dlgCerrar;
+      const roles=()=>{const ps=[...d.querySelectorAll('#ds-per input:checked')],c0=$('ds-cmd').value,m0=$('ds-maq').value;
+        ['ds-cmd','ds-maq'].forEach(id=>{const sel=$(id),v=id==='ds-cmd'?c0:m0;sel.innerHTML='<option value="">— sin asignar —</option>'+ps.map(i=>'<option value="'+esc(i.value)+'"'+(i.value===v?' selected':'')+'>'+esc(i.dataset.n)+'</option>').join('')})};
+      d.querySelectorAll('#ds-per input').forEach(i=>i.addEventListener('change',roles));
       d.querySelectorAll('[data-q]').forEach(b=>b.onclick=async()=>{try{need(await call('despQuitar',{id:b.dataset.q}));toast('Asignación cancelada.');ROSTERD=null;dlgCerrar();pollVivo()}catch(e){$('ds-out').textContent='No se pudo quitar: '+humanErr(e)}});
       $('ds-ok').onclick=async()=>{
         const pers=[...d.querySelectorAll('#ds-per input:checked')].map(i=>({u:i.value,n:i.dataset.n}));
         if(!pers.length){$('ds-out').textContent='Marque al menos una persona.';return}
         $('ds-ok').disabled=true;$('ds-out').textContent='Asignando…';
-        try{const r=need(await call('despAsignar',{emerg:a.id,veh:$('ds-veh').value,pers,nota:$('ds-nota').value}));
-          toast('Asignado y confirmado por el servidor: '+r.personal+' persona(s) en '+r.despacho.veh+'.'+(r.push&&r.push.enviados?' Avisados '+r.push.enviados+' teléfono(s).':' Sin push: lo verán al abrir la aplicación.'));ROSTERD=null;dlgCerrar();pollVivo()}
+        try{const r=need(await call('despAsignar',{emerg:a.id,veh:$('ds-veh').value,pers,nota:$('ds-nota').value,...grpArg()}));
+          await aplicarRoles(r);toast('Asignado y confirmado por el servidor: '+r.personal+' persona(s) en '+r.despacho.veh+'.'+(r.push&&r.push.enviados?' Avisados '+r.push.enviados+' teléfono(s).':' Sin push: lo verán al abrir la aplicación.'));ROSTERD=null;dlgCerrar();pollVivo()}
         catch(e){
           if(/duplicada/i.test(String(e.message))&&confirm(String(e.message).replace(/^Asignación duplicada: /,'')+'\n\n¿Reasignarlos a esta emergencia? Saldrán de la otra.')){
-            try{const r=need(await call('despAsignar',{emerg:a.id,veh:$('ds-veh').value,pers,nota:$('ds-nota').value,mover:true}));toast('Reasignado: '+r.personal+' persona(s) en '+(r.despacho.veh||'sin vehículo')+'.');ROSTERD=null;dlgCerrar();pollVivo();return}catch(e2){e=e2}
+            try{const r=need(await call('despAsignar',{emerg:a.id,veh:$('ds-veh').value,pers,nota:$('ds-nota').value,...grpArg(),mover:true}));await aplicarRoles(r);toast('Reasignado: '+r.personal+' persona(s) en '+(r.despacho.veh||'sin vehículo')+'.');ROSTERD=null;dlgCerrar();pollVivo();return}catch(e2){e=e2}
           }
           $('ds-out').textContent='No se asignó: '+humanErr(e);$('ds-ok').disabled=false}};
     });
@@ -2060,6 +2102,7 @@ function drawUnidades(){
     const la=vivo?vivo.lat:ult?ult.lat:null,lo=vivo?vivo.lon:ult?ult.lon:null;
     if(la!=null){const z=document.createElement('button');z.className='btn alt sm';z.textContent='Ver en mapa';z.onclick=()=>{if(MV)MV.setView([la,lo],17);$('map-vivo').scrollIntoView({behavior:'smooth',block:'center'})};td.append(z,' ')}
     if(puedeF('perfiles')){const p=document.createElement('button');p.className='btn alt sm';p.textContent='Perfil';p.onclick=()=>perfilUI(u.u,u.n);td.append(p)}
+    if(esMaster()&&!PREVIEW&&(u.estado==='compartiendo'||u.estado==='ubic-antigua')){const ap=document.createElement('button');ap.className='btn alt sm danger';ap.textContent='Apagar ubicación';ap.onclick=async()=>{if(!confirm('¿Apagar la ubicación de '+u.n+'? Su teléfono dejará de compartirla.'))return;ap.disabled=true;try{need(await call('ubicApagar',{usuario:u.u}));toast('Orden enviada: su teléfono apagará la ubicación al conectarse.');pollVivo()}catch(e){toast('No se pudo: '+humanErr(e),1);ap.disabled=false}};td.append(' ',ap)}
     tr.append(td);t.append(tr);
   });
 }
@@ -2071,7 +2114,7 @@ async function perfilUI(u,n){
     const reg=x=>'<li>'+esc(x.num||x.tmp)+' · '+esc(tc(x.cat||''))+' · '+esc(x.fecha||'')+(x.estado!=='final'?' <span class="pill warn">'+(x.completo?'completo, falta enviar':'borrador incompleto')+'</span>':'')+'</li>';
     dlg('<h3>'+esc(p.nombre)+'</h3><p class="derived">'+esc([p.grado,p.cargo,p.rol&&ROLNOM2(p.rol)].filter(Boolean).join(' · '))+(p.telefono?' · Tel. '+esc(p.telefono):'')+'</p>'+
       '<p>'+(e?'<span class="pill '+(ESTADO_U[e.estado]||['off'])[0]+'">'+esc((ESTADO_U[e.estado]||[0,e.estado])[1])+'</span>':'<span class="pill off">Sin actividad reciente</span>')+(e&&e.pos?' · en vivo · '+esc(gms(e.pos.lat,e.pos.lon)):e&&e.ult?' · última ubicación conocida ('+fechaHora(e.ult.t)+'): '+esc(gms(e.ult.lat,e.ult.lon)):'')+'</p>'+
-      '<b>Borradores y pendientes</b>'+lista(r.borradores,reg)+'<b>Reportes que registró</b>'+lista(r.registros,reg)+'<b>Emergencias donde participó</b>'+lista(r.participaciones,reg)+
+      '<b>Autorización de datos personales</b><p>'+(r.consentimiento&&r.consentimiento.t?'✅ Aceptó el '+fechaHora(r.consentimiento.t)+' (versión '+esc(r.consentimiento.v||'1')+(r.consentimiento.disp?' · '+esc(r.consentimiento.disp):'')+')':'<span class="pill warn">Todavía no ha aceptado</span>')+'</p>'+(r.empleado?'<p><span class="pill info">🏷 Empleado</span></p>':'')+'<b>Llamados que confirmó</b>'+lista(r.llamados||[],x=>'<li>'+esc(x.num||'')+' · '+esc(x.msg)+' · '+fechaHora(x.t)+(x.veh?' · '+esc(x.veh):'')+'</li>')+'<b>Borradores y pendientes</b>'+lista(r.borradores,reg)+'<b>Reportes que registró</b>'+lista(r.registros,reg)+'<b>Emergencias donde participó</b>'+lista(r.participaciones,reg)+
       '<b>Asignaciones</b>'+lista(r.despachos,x=>'<li>'+esc(x.veh)+' · '+esc(EST_DESP[x.estado]||x.estado)+' · '+fechaHora(x.cuando)+'</li>')+'<b>Correcciones</b>'+lista(r.correcciones,x=>'<li>'+esc(x.num||'')+' · '+esc(x.tipo)+' · '+fechaHora(x.t)+'</li>')+
       '<b>Acciones recientes</b>'+lista(r.acciones,x=>'<li>'+esc(x.accion)+' '+esc(x.registro||'')+' · '+(isNaN(+x.t)?'':fechaHora(+x.t))+'</li>')+'<div class="dl"><button class="btn alt" id="pf-no">Cerrar</button></div>',()=>{$('pf-no').onclick=dlgCerrar});
   }catch(e){dlg('<h3>'+esc(n||u)+'</h3><p>No se pudo cargar el perfil: '+esc(humanErr(e))+'</p><div class="dl"><button class="btn alt" id="pf-no">Cerrar</button></div>',()=>{$('pf-no').onclick=dlgCerrar})}
@@ -2087,14 +2130,24 @@ async function pollPend(){
 function drawPend(){
   const box=$('v-pend');if(!box)return;
   if(!PEND){box.innerHTML='';return}
-  const f=PEND,fila=(x,tag)=>'<div class="ntf"><div>'+tag+' <b>'+esc(x.num||x.tmp)+'</b> · '+esc(tc(x.cat||''))+'<br><span class="derived">Responsable: '+esc(x.por||x.usuario||'—')+' · '+fechaHora(x.t)+'</span></div></div>';
+  const f=PEND,fila=(x,tag,acc)=>'<div class="ntf"><div>'+tag+' <b>'+esc(x.num||x.tmp)+'</b> · '+esc(tc(x.cat||''))+'<br><span class="derived">Responsable: '+esc(x.por||x.usuario||'—')+' · '+fechaHora(x.t)+'</span>'+(acc&&puedeF('pendientes')?'<div class="dl"><button class="btn alt sm pa" data-k="rec" data-t="'+esc(x.tmp)+'">Avisar al responsable</button>'+(acc==='bor'?'<button class="btn alt sm pa" data-k="del" data-t="'+esc(x.tmp)+'">Eliminar borrador</button>':'')+'</div>':'')+'</div></div>';
   const b=[];
-  f.borradores.forEach(x=>b.push(fila(x,x.completo?'<span class="pill warn">Completo, no enviado</span>':'<span class="pill off">Borrador incompleto</span>')));
-  (f.llamSinReporte||[]).forEach(x=>b.push('<div class="ntf"><div><span class="pill warn">Llamado sin reporte</span> <b>'+esc(x.msg)+'</b>'+(x.lugar?' · '+esc(x.lugar):'')+'<br><span class="derived">'+fechaHora(x.t)+' · '+(x.estado==='activa'?'emergencia activa':'cerrado')+'. Toda emergencia con llamado debe tener su reporte.</span></div></div>'));
+  f.borradores.forEach(x=>b.push(fila(x,x.completo?'<span class="pill warn">Completo, no enviado</span>':'<span class="pill off">Borrador incompleto</span>','bor')));
+  (f.llamSinReporte||[]).forEach(x=>b.push('<div class="ntf"><div><span class="pill warn">Llamado sin reporte</span> <b>'+esc(x.msg)+'</b>'+(x.lugar?' · '+esc(x.lugar):'')+'<br><span class="derived">'+fechaHora(x.t)+' · '+(x.estado==='activa'?'emergencia activa':'cerrado')+'. Toda emergencia con llamado debe tener su reporte.</span>'+(x.num?'<br><span class="derived">Consecutivo reservado: <b>'+esc(x.num)+'</b> · Comandante de incidentes: <b>'+esc(x.resp||'sin asignar')+'</b></span>':'')+(puedeF('pendientes')?'<div class="dl"><button class="btn alt sm pa" data-k="recll" data-t="'+esc(x.id)+'">Avisar al comandante de incidentes</button><button class="btn alt sm pa" data-k="comp" data-t="'+esc(x.id)+'">Marcar como completado</button></div>':'')+'</div></div>'));
   f.sinDrive.forEach(x=>b.push(fila(x,'<span class="pill info">Esperando carga a Drive</span>')));
   (f.sinUbic||[]).forEach(x=>b.push('<div class="ntf"><div><span class="pill bad">Falta registrar la ubicación del evento</span> <b>'+esc(x.num||x.tmp)+'</b> · '+esc(tc(x.cat||''))+'<br><span class="derived">Responsable: '+esc(x.por||x.usuario||'—')+' · '+fechaHora(x.t)+'</span><div class="dl">'+(puedeF('ubicacion')?'<button class="btn alt sm ub-add" data-t="'+esc(x.tmp)+'">Agregar ubicación en el mapa</button>':'')+(ROL==='master'?'<button class="btn alt sm ub-his" data-t="'+esc(x.tmp)+'">Recuperar ubicación histórica</button>':'')+'</div></div></div>'));
   f.colas.forEach(x=>b.push('<div class="ntf"><div><span class="pill '+(x.cola.err?'bad':'info')+'">'+(x.cola.err?'Error de sincronización':'Esperando sincronizar')+'</span> <b>'+esc(x.n)+'</b>'+(x.enLinea?'':' <span class="derived">(sin conexión)</span>')+'<br><span class="derived">'+[x.cola.borr&&x.cola.borr+' borrador(es)',x.cola.pend&&x.cola.pend+' por enviar',x.cola.err&&x.cola.err+' con error'].filter(Boolean).join(' · ')+' · '+fechaHora(x.t)+'</span></div></div>'));
   box.innerHTML='<h4 style="margin:12px 0 4px">Pendientes ('+b.length+')</h4>'+(b.length?b.slice(0,40).join(''):'<p class="derived">Nada pendiente.</p>')+(f.sinDrive.length&&puedeF('conexion')?'<div class="dl"><button class="btn alt sm" id="pd-drive">Cargar a Drive los '+f.sinDrive.length+' pendientes</button><span class="derived" id="pd-msg"></span></div>':'');
+  box.querySelectorAll('.pa').forEach(x=>x.onclick=async()=>{
+    const k=x.dataset.k,t=x.dataset.t;x.disabled=true;
+    try{
+      if(k==='rec'){const r=need(await call('pendRecordar',{tipo:'reg',tmp:t}));toast(r.aviso)}
+      else if(k==='recll'){const r=need(await call('pendRecordar',{tipo:'llamado',id:t}));toast(r.aviso)}
+      else if(k==='comp'){const m=prompt('¿Por qué se completa sin reporte? (queda anotado)','Sin reporte necesario');if(m===null){x.disabled=false;return}need(await call('pendCompletar',{tipo:'llamado',id:t,motivo:m}));toast('Marcado como completado.');pollPend()}
+      else if(k==='del'){if(!confirm('¿Eliminar este borrador? Desaparece también del teléfono de quien lo hizo cuando se conecte.')){x.disabled=false;return}need(await call('pendEliminar',{tmp:t}));toast('Borrador eliminado.');pollPend()}
+    }catch(e){toast('No se pudo: '+humanErr(e),1)}
+    x.disabled=false;
+  });
   box.querySelectorAll('.ub-add').forEach(x=>x.onclick=()=>ubicCentral(x.dataset.t));
   box.querySelectorAll('.ub-his').forEach(x=>x.onclick=()=>ubicHistorica(x.dataset.t));
   const bd=$('pd-drive');if(bd)bd.onclick=async()=>{bd.disabled=true;$('docs-msg')||0;await docsBulkOp($('pd-msg'));bd.disabled=false;pollPend()};
@@ -2212,7 +2265,7 @@ async function admComunic(){
 function renderAdm(sub){
   if(sub)ADMSUB=sub;
   document.querySelectorAll('#atabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.a===ADMSUB));
-  const f={usr:admUsr,frm:admFrm,app:admComunic,mar:admMar,wha:admComunic,seg:admSeg,gfm:admComunic,his:admHis,dgn:admDgn,perm:admPerm}[ADMSUB]||admUsr;
+  const f={usr:admUsr,frm:admFrm,app:admComunic,mar:admMar,wha:admComunic,seg:admSeg,gfm:admComunic,dgn:admDgn,perm:admPerm,txt:admTxt}[ADMSUB]||admUsr;
   $('a-box').innerHTML='<div class="card"><p class="derived">Cargando…</p></div>';f();
 }
 
@@ -2482,6 +2535,403 @@ function renderEstNuevo(){
   }
 }
 {const rp0=renderPanel;renderPanel=function(){rp0();try{renderEstNuevo()}catch(e){console.error(e)}}}
+
+/* ---------- permisos por rol: se aplican en vivo y el superadministrador puede probarlos ---------- */
+function permAplicar(){
+  try{tabsPorRol()}catch(e){}
+  const vis=[...document.querySelectorAll('#ptabs button')].filter(b=>!b.hidden);
+  const act=document.querySelector('#ptabs button[aria-selected=true]');
+  if((!act||act.hidden)&&vis.length)showTab(vis[0].dataset.p);
+  try{renderPanel()}catch(e){}
+  try{document.querySelectorAll('.only-master').forEach(x=>x.hidden=!esMaster()||!!PREVIEW)}catch(e){}
+}
+let PERM_SIG=null;
+async function refrescarPerm(){
+  if(!USER||ROL==='master'||ROL==='campo'||PREVIEW)return;
+  try{
+    const r=await call('yo');if(!r||!r.ok||!Array.isArray(r.perm))return;
+    const sig=JSON.stringify(r.perm.slice().sort());
+    if(PERM_SIG===null){PERM_SIG=sig;return}
+    if(sig!==PERM_SIG){PERM_SIG=sig;PERM=r.perm;permAplicar();toast('Sus permisos fueron actualizados por el superadministrador.')}
+  }catch(e){}
+}
+setInterval(refrescarPerm,40000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refrescarPerm()});setTimeout(refrescarPerm,3000);
+function permBanner(){
+  let b=$('prev-ban');
+  if(!PREVIEW){if(b)b.remove();return}
+  if(!b){b=document.createElement('div');b.id='prev-ban';b.style.cssText='position:sticky;top:0;z-index:50;background:#fef3c7;color:#78350f;border-bottom:2px solid #f59e0b;padding:8px 12px;font-weight:600;display:flex;gap:12px;align-items:center;flex-wrap:wrap';$('v-pan').prepend(b)}
+  b.innerHTML='<span>👁 Vista de prueba: está viendo el panel como «'+esc(PREVIEW_NOM)+'». Lo que usted marcó se aplica así a ese rol.</span><button class="btn sm" id="prev-out">Volver a mi vista</button>';
+  $('prev-out').onclick=()=>{PREVIEW=null;permBanner();permAplicar();showTab('adm');renderAdm('perm')};
+}
+let PREVIEW_NOM='';
+{const ap0=admPerm;admPerm=async function(){
+  await ap0();
+  const box=$('a-box');if(!box||!$('pm-t'))return;
+  const c=document.createElement('div');c.className='card';
+  c.innerHTML='<h3>Probar lo que ve cada rol</h3><p class="derived">Marque las funciones, pulse «Guardar» y luego pruebe aquí: el panel se muestra como lo vería ese rol (sin cerrar su sesión). Los demás usuarios reciben el cambio solos en menos de un minuto.</p><div class="dl"><button class="btn alt sm" data-pv="central">Ver como Central operativa</button><button class="btn alt sm" data-pv="estadistica">Ver como Central con estadística</button></div>';
+  box.append(c);
+  c.querySelectorAll('[data-pv]').forEach(bt=>bt.onclick=async()=>{
+    try{const r=need(await call('permGet'));PREVIEW=r.actual[bt.dataset.pv]||[];PREVIEW_NOM=bt.textContent.replace('Ver como ','');permBanner();permAplicar()}catch(e){toast('No se pudo probar: '+humanErr(e))}
+  });
+}}
+
+/* ir al mapa en vivo y centrarlo en un punto (el SOS, un llamado, una unidad) */
+let MV_PIN=null;
+function verEnMapa(lat,lon,z,rotulo){
+  lat=Number(lat);lon=Number(lon);
+  const ov=document.querySelector('.ovtop');
+  showTab('vivo');
+  let n=0;
+  const t=setInterval(()=>{
+    n++;
+    const el=$('map-vivo');
+    if(MV&&el&&el.offsetWidth>0){
+      clearInterval(t);
+      try{MV.invalidateSize();MV.setView([lat,lon],z||16);
+        if(MV_PIN)MV.removeLayer(MV_PIN);
+        MV_PIN=L.circleMarker([lat,lon],{radius:14,color:'#b91c1c',weight:3,fillColor:'#ef4444',fillOpacity:.35}).addTo(MV);
+        if(rotulo)MV_PIN.bindPopup('<b>'+esc(rotulo)+'</b>').openPopup();
+      }catch(e){}
+      el.scrollIntoView({behavior:'smooth',block:'center'});
+    }else if(n>25){clearInterval(t);toast('No se pudo abrir el mapa en vivo.')}
+  },150);
+}
+
+/* ================= V2.2 · llamado con observaciones/silencioso, fases por colores, grupos de intervención, atención de la emergencia ================= */
+const FASE_TXT={rojo:'Requiere atención',amarillo:'Atendiendo',verde:'Atendida'};
+function grpArg(){const v=($('ds-grp')||{}).value;return v==='_nuevo'?{grupoNuevo:'Grupo de intervención '+(((VIVO.grupos||[]).filter(g=>g.estado==='activo').length)+1)}:(v?{grupo:v}:{})}
+async function roster(){if(!ROSTERD){try{ROSTERD=need(await call('roster'))}catch(e){return null}}return ROSTERD}
+
+/* enviar llamado: ahora lleva observaciones y puede ser silencioso; desde el botón flotante termina en el panel de operación */
+{const el0=enviarLlamado;enviarLlamado=async function(v,out,btn,despues){
+  const m=v.tipo,lug=(v.lugar||'').trim(),co=(v.co||'').trim(),tel=(v.tel||'').replace(/[^\d+]/g,'');
+  if(!m){out.textContent='Elija el tipo de emergencia.';return false}
+  if(v.tel&&tel.replace(/\D/g,'').length<7){out.textContent='El teléfono parece incompleto. Revíselo o déjelo en blanco.';return false}
+  let lat='',lon='';if(co){const p=parseCoord(co);if(!p){out.textContent='No entendí las coordenadas. Escríbalas en grados, minutos y segundos (4°31\'50"N 76°06\'29"W) o en decimales.';return false}lat=+p.lat;lon=+p.lon}
+  if(v.silencioso&&!(v.para||[]).length&&!confirm('Es un llamado silencioso y no eligió a quién avisar: quedará registrado, sin avisar a nadie. ¿Continuar?'))return false;
+  if(!LL_CID)LL_CID='c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  if(btn)btn.disabled=true;out.textContent='Enviando…';
+  try{
+    const r=need(await call('llamado',{msg:m,lugar:lug,lat,lon,tel,cid:LL_CID,obs:(v.obs||'').trim(),silencioso:!!v.silencioso,para:v.para||[]}));
+    LL_CID='';
+    const wa=r.canales&&r.canales.silencioso?'Llamado silencioso: sin WhatsApp ni sirena.':canalTxt(r.canales),pu=r.push&&r.push.enviados?' Aviso a '+r.push.enviados+' teléfono(s).':'';
+    out.textContent=(r.repetida?'Ese llamado ya estaba registrado: no se duplicó. ':'Llamado registrado · consecutivo '+(r.num||'')+'. ')+wa+pu;
+    toast(r.repetida?'Llamado ya registrado (sin duplicar).':'Llamado enviado · '+(r.num||''));
+    if(despues)despues();pollVivo();
+    if(v._ir){showTab('vivo');setTimeout(()=>{const x=$('op-act');if(x)x.scrollIntoView({behavior:'smooth'})},250)}
+    return true;
+  }catch(e){out.textContent='No se pudo enviar: '+humanErr(e)+'. Sus datos siguen aquí; pulse de nuevo para reintentar (no se duplicará).';return false}
+  finally{if(btn)btn.disabled=false}
+}}
+async function abrirLlamadoRapido(){
+  const ro=await roster();
+  dlg('<h3>Llamado rápido</h3><div class="tools" style="flex-direction:column;align-items:stretch"><label>Tipo de emergencia<select id="d-tipo"><option value="">Elija…</option>'+CATS.map(c=>'<option>'+esc(c)+'</option>').join('')+'</select></label><label>Lugar<input id="d-lugar" placeholder="Dirección o referencia"></label><label>Coordenadas (opcional)<input id="d-co" placeholder="4°31\'50&quot;N 76°06\'29&quot;W o 4.5306, -76.1082"></label><label>Teléfono de quien reporta<input id="d-tel" inputmode="tel"></label><label>Observaciones<textarea id="d-obs" rows="2" placeholder="Qué se sabe de la emergencia, riesgos, indicaciones…"></textarea></label>'+
+    '<label style="flex-direction:row;gap:8px;align-items:center"><input type="checkbox" id="d-sil"> Llamado silencioso (no suena en todos: solo avisa a quienes elija)</label><div id="d-para" class="chk" hidden>'+((ro&&ro.personal)||[]).map(p=>'<label><input type="checkbox" value="'+esc(p.usuario)+'"> '+esc(p.grado?p.grado+' ':'')+esc(p.nombre)+'</label>').join('')+'</div></div><div class="derived" id="d-out" role="status"></div><div class="dl"><button class="btn" id="d-ok">Enviar llamado</button><button class="btn alt" id="d-no">Cancelar</button></div>',()=>{
+    $('d-no').onclick=dlgCerrar;
+    $('d-sil').onchange=()=>{$('d-para').hidden=!$('d-sil').checked};
+    $('d-ok').onclick=async()=>{const ok=await enviarLlamado({tipo:$('d-tipo').value,lugar:$('d-lugar').value,co:$('d-co').value,tel:$('d-tel').value,obs:$('d-obs').value,silencioso:$('d-sil').checked,para:[...document.querySelectorAll('#d-para input:checked')].map(i=>i.value),_ir:true},$('d-out'),$('d-ok'));if(ok)setTimeout(dlgCerrar,700)};
+  });
+}
+{const fab=$('fab-ll');if(fab)fab.onclick=()=>abrirLlamadoRapido()}
+
+/* tarjetas de emergencias activas: color de la fase, consecutivo, grupos y botón «Atención de la emergencia» */
+function gruposDe(id){return (VIVO.grupos||[]).filter(g=>g.estado==='activo'&&g.emerg===id)}
+function decorarEmergencias(){
+  const box=$('v-llam');if(!box)return;
+  const l=llamList(),cards=[...box.querySelectorAll('.emg')];
+  cards.forEach((c,i)=>{
+    const a=l[i];if(!a||c.querySelector('.ed'))return;
+    c.querySelectorAll('.fase-bar,.gchips,.num-badge').forEach(x=>x.remove());
+    const f=a.fase||'rojo';c.classList.remove('f-rojo','f-amarillo','f-verde');c.classList.add('f-'+f);
+    const h=c.querySelector('h4');
+    if(h&&a.num)h.insertAdjacentHTML('beforeend',' <span class="pill info num-badge">'+esc(a.num)+'</span>');
+    const bar=document.createElement('div');bar.className='fase-bar';
+    ['rojo','amarillo','verde'].forEach(k=>{const b=document.createElement('button');b.type='button';b.className='fase-'+k+(k===f?' on':'');b.textContent=(k==='rojo'?'🔴 ':k==='amarillo'?'🟡 ':'🟢 ')+FASE_TXT[k];b.disabled=!puedeF('llamados');
+      b.onclick=async()=>{if(k===f)return;if(k==='verde'&&!confirm('Marcar como ATENDIDA da por terminada la emergencia: el llamado se cierra y los grupos quedan disponibles. ¿Continuar?'))return;b.disabled=true;try{const r=need(await call('faseSet',{id:a.id,fase:k}));toast(r.cerrada?'Emergencia atendida y cerrada.':'Fase: '+FASE_TXT[k]);pollVivo()}catch(e){toast('No se pudo: '+humanErr(e),1);b.disabled=false}};bar.append(b)});
+    if(!puedeF('llamados'))bar.querySelectorAll('button').forEach(b=>{b.disabled=true;b.title='Solo lectura'});
+    if(h)h.after(bar);
+    const gs=gruposDe(a.id);
+    if(gs.length){const g=document.createElement('div');g.className='gchips';g.innerHTML=gs.map(x=>'<span class="chipg" style="background:'+esc(x.color)+'">'+esc(x.nombre)+(x.cmdn?' · mando: '+esc(x.cmdn):'')+'</span>').join('');bar.after(g)}
+    if(!c.querySelector('.hist-btn')){const d=c.querySelector('.dl');if(d){const hb=document.createElement('button');hb.className='btn alt sm hist-btn';hb.textContent='Atención de la emergencia';hb.onclick=()=>historiaEmerg({id:a.id});d.append(hb)}}
+  });
+}
+{const dl0=drawLlamados;drawLlamados=function(){dl0();try{decorarEmergencias();drawGrupos()}catch(e){console.error(e)}}}
+
+/* panel de grupos de intervención */
+function drawGrupos(){
+  const box=$('gi-box');if(!box)return;
+  if(box.querySelector('select:focus,input:focus'))return;
+  const gs=(VIVO.grupos||[]).filter(g=>g.estado==='activo'),ds=VIVO.despachos||[],al=llamList(),ed=puedeF('despacho');
+  const nomE=id=>{const a=al.find(x=>x.id===id);return a?a.msg+(a.num?' · '+a.num:'')+(a.lugar?' · '+a.lugar:''):''};
+  const optE=sel=>'<option value="">— Disponible (sin emergencia) —</option>'+al.map(a=>'<option value="'+esc(a.id)+'"'+(a.id===sel?' selected':'')+'>'+esc(nomE(a.id))+'</option>').join('');
+  let h='';
+  gs.forEach(g=>{
+    const us=ds.filter(x=>x.grupo===g.id),miembros=us.flatMap(x=>x.pers.map(p=>({u:p.u,n:p.n,veh:x.veh})));
+    const rol=p=>p.rol?'<span class="rol">'+esc(p.rol)+'</span>':'';
+    h+='<div class="gi" data-g="'+esc(g.id)+'" style="border-left-color:'+esc(g.color)+'"><h4><span class="dot" style="background:'+esc(g.color)+'"></span>'+esc(g.nombre)+'<span class="derived">'+(g.emerg?'→ '+esc(nomE(g.emerg)||'emergencia'):'Disponible')+'</span></h4>'+
+      (us.length?us.map(x=>'<div class="un"><b>'+esc(x.veh||'Sin vehículo')+'</b> · '+esc(EST_DESP[x.estado]||x.estado)+(x.conf&&x.conf.length?' · confirmó '+x.conf.length:'')+'<br>'+x.pers.map(p=>esc(p.n)+' '+rol(p)).join(' · ')+(ed?'<br><label class="derived">Pasar esta unidad a: <select data-mv="'+esc(x.id)+'"><option value="">elegir grupo…</option>'+gs.filter(o=>o.id!==g.id).map(o=>'<option value="'+esc(o.id)+'">'+esc(o.nombre)+'</option>').join('')+'<option value="_ninguno">Sin grupo</option></select></label>':'')+'</div>').join(''):'<p class="derived">Sin unidades. Asígnelas desde «Despachar» en una emergencia.</p>')+
+      (g.pre&&g.pre.length?'<div class="derived">En cola: '+g.pre.map(id=>'<span class="pill info">'+esc(nomE(id)||id)+(ed?' <a href="#" data-prx="'+esc(id)+'">✕</a>':'')+'</span>').join(' ')+'</div>':'')+
+      (ed?'<div class="tools" style="margin-top:6px"><label>Emergencia<select data-em>'+optE(g.emerg)+'</select></label><label>Comandante de incidentes<select data-cmd><option value="">— sin asignar —</option>'+miembros.map(p=>'<option value="'+esc(p.u)+'"'+(p.u===g.cmd?' selected':'')+'>'+esc(p.n)+'</option>').join('')+'</select></label><label>Maquinista<select data-maq><option value="">— sin asignar —</option>'+miembros.map(p=>'<option value="'+esc(p.u)+'"'+(p.u===g.maq?' selected':'')+'>'+esc(p.n)+'</option>').join('')+'</select></label><label>Pre-asignar<select data-pre><option value="">emergencia siguiente…</option>'+al.filter(a=>a.id!==g.emerg&&!(g.pre||[]).includes(a.id)).map(a=>'<option value="'+esc(a.id)+'">'+esc(nomE(a.id))+'</option>').join('')+'</select></label></div><div class="dl"><button class="btn alt sm" data-ren="1">Nombre y color</button><button class="btn alt sm danger" data-dis="1">Disolver grupo</button></div>':'')+'</div>';
+  });
+  const sin=ds.filter(x=>!x.grupo||!gs.some(g=>g.id===x.grupo));
+  if(sin.length)h+='<div class="gi" style="border-left-color:#6b7280"><h4>Unidades sin grupo</h4>'+sin.map(x=>'<div class="un"><b>'+esc(x.veh||'—')+'</b> · '+x.pers.map(p=>esc(p.n)).join(' · ')+(ed&&gs.length?' <label class="derived">Pasar a: <select data-mv="'+esc(x.id)+'"><option value="">elegir grupo…</option>'+gs.map(o=>'<option value="'+esc(o.id)+'">'+esc(o.nombre)+'</option>').join('')+'</select></label>':'')+'</div>').join('')+'</div>';
+  if(!gs.length&&!sin.length)h='<p class="derived">Todavía no hay grupos. El primer grupo se crea solo al asignar unidades a una emergencia.</p>';
+  if(ed)h+='<div class="dl"><button class="btn alt sm" id="gi-nuevo">+ Crear grupo vacío</button></div>';
+  box.innerHTML=h;
+  const act=async(g,args,msg)=>{try{need(await call('grupoSet',{id:g,...args}));toast(msg||'Grupo actualizado.');pollVivo()}catch(e){toast('No se pudo: '+humanErr(e),1)}};
+  box.querySelectorAll('.gi[data-g]').forEach(c=>{const g=c.dataset.g;
+    const em=c.querySelector('[data-em]');if(em)em.onchange=()=>{if(em.value&&!confirm('¿Mover TODO el grupo a esa emergencia? Cada unidad recibirá el aviso y deberá confirmar.'))return drawGrupos();act(g,{emerg:em.value},'Grupo movido; las unidades fueron avisadas.')};
+    const cm=c.querySelector('[data-cmd]');if(cm)cm.onchange=()=>act(g,{cmd:cm.value},'Comandante de incidentes actualizado.');
+    const mq=c.querySelector('[data-maq]');if(mq)mq.onchange=()=>act(g,{maq:mq.value},'Maquinista actualizado.');
+    const pr=c.querySelector('[data-pre]');if(pr)pr.onchange=async()=>{if(!pr.value)return;try{need(await call('grupoPre',{id:g,emerg:pr.value}));toast('Emergencia pre-asignada al grupo.');pollVivo()}catch(e){toast('No se pudo: '+humanErr(e),1)}};
+    c.querySelectorAll('[data-prx]').forEach(x=>x.onclick=async ev=>{ev.preventDefault();try{need(await call('grupoPre',{id:g,emerg:x.dataset.prx,op:'del'}));pollVivo()}catch(e){toast('No se pudo: '+humanErr(e),1)}});
+    const rn=c.querySelector('[data-ren]');if(rn)rn.onclick=()=>{const gg=gs.find(x=>x.id===g);dlg('<h3>Grupo de intervención</h3><label>Nombre<input id="gr-n" value="'+esc(gg.nombre)+'"></label><label>Color<input type="color" id="gr-c" value="'+esc(gg.color)+'"></label><div class="dl"><button class="btn" id="gr-ok">Guardar</button><button class="btn alt" id="gr-no">Cancelar</button></div>',()=>{$('gr-no').onclick=dlgCerrar;$('gr-ok').onclick=()=>{dlgCerrar();act(g,{nombre:$('gr-n').value,color:$('gr-c').value})}})};
+    const ds_=c.querySelector('[data-dis]');if(ds_)ds_.onclick=async()=>{if(!confirm('¿Disolver este grupo? Las unidades siguen asignadas pero quedan sin grupo.'))return;try{need(await call('grupoDel',{id:g}));toast('Grupo disuelto.');pollVivo()}catch(e){toast('No se pudo: '+humanErr(e),1)}};
+  });
+  box.querySelectorAll('[data-mv]').forEach(s=>s.onchange=async()=>{if(!s.value)return;try{need(await call('despGrupo',{id:s.dataset.mv,grupo:s.value==='_ninguno'?'':s.value}));toast('Unidad cambiada de grupo; se le avisó.');pollVivo()}catch(e){toast('No se pudo: '+humanErr(e),1)}});
+  const nu=$('gi-nuevo');if(nu)nu.onclick=()=>{const n=prompt('Nombre del grupo (opcional)','');if(n===null)return;act('',{nombre:n},'Grupo creado.')};
+}
+
+/* Atención de la emergencia: lo que se hizo en el sistema (fases, grupos, mando) y el reporte del comandante */
+async function historiaEmerg(arg){
+  dlg('<h3>Atención de la emergencia</h3><p class="derived">Cargando…</p>');
+  try{
+    const r=need(await call('emergHistoria',arg));
+    if(r.sinLlamado){dlg('<h3>Atención de la emergencia</h3><p>Este reporte no está vinculado a un llamado, por eso no hay historial de atención en el sistema.</p><div class="dl"><button class="btn alt" id="he-no">Cerrar</button></div>',()=>{$('he-no').onclick=dlgCerrar});return}
+    const a=r.alerta,F=k=>(k==='verde'?'🟢 ':k==='amarillo'?'🟡 ':'🔴 ')+(FASE_TXT[k]||k);
+    const ev=(a.hist||[]).filter(x=>x.k==='fase'||x.k==='edit').map(x=>'<li>'+fechaHora(x.t)+' · '+(x.k==='fase'?F(x.de||'rojo')+' → '+F(x.a):'Datos del llamado editados ('+esc((x.c||[]).join(', '))+')')+' · '+esc(x.por||'')+'</li>').join('');
+    const snap=(a.hist||[]).filter(x=>x.k==='atencion').slice(-1)[0],grupos=(snap?snap.grupos:r.actuales)||[];
+    const gtxt=grupos.map(g=>'<div class="gi" style="border-left-color:'+esc(g.color)+'"><h4><span class="dot" style="background:'+esc(g.color)+'"></span>'+esc(g.nombre)+'</h4>'+(g.cmd?'<div>Comandante de incidentes: <b>'+esc(g.cmd)+'</b></div>':'')+(g.maq?'<div>Maquinista: <b>'+esc(g.maq)+'</b></div>':'')+g.unidades.map(u=>'<div class="un"><b>'+esc(u.veh||'—')+'</b> · '+u.pers.map(p=>esc(p.n)+(p.rol?' <span class="rol">'+esc(p.rol)+'</span>':'')).join(' · ')+'</div>').join('')+'</div>').join('');
+    const rep=r.reportes.map(o=>'<div class="ntf" style="display:block"><b>'+esc(o.num)+'</b> · '+esc(tc(o.cat||''))+' · '+(o.estado==='final'?'<span class="pill on">Terminado</span>':'<span class="pill warn">En proceso</span>')+'<br><span class="derived">'+[o.por&&'Por '+esc(o.por),o.hsal&&'Salida '+esc(o.hsal),o.hlle&&'Llegada al sitio '+esc(o.hlle),o.hfin&&'Terminación '+esc(o.hfin),o.hreg&&'Llegada a la estación '+esc(o.hreg),o.uni&&'Unidades '+esc(o.uni),o.veh&&'Vehículos '+esc(o.veh)].filter(Boolean).join(' · ')+'</span>'+(o.desc?'<p style="margin:4px 0">'+esc(o.desc)+'</p>':'')+(o.cmd&&o.cmd.nombre?'<div class="derived">Comandante de incidentes en el reporte: '+esc(o.cmd.nombre)+'</div>':'')+'</div>').join('')||'<p class="derived">Todavía no hay un reporte vinculado.</p>';
+    dlg('<h3>Atención de la emergencia · '+esc(a.num||'')+'</h3><p><b>'+esc(a.msg)+'</b>'+(a.lugar?' · '+esc(a.lugar):'')+'<br><span class="derived">Llamado '+fechaHora(a.cuando)+' por '+esc(a.por)+' · '+(a.estado==='activa'?'Activa · '+F(a.fase):'Cerrada'+(a.ackcuando?' '+fechaHora(a.ackcuando)+' por '+esc(a.ackpor):''))+'</span></p>'+(a.obs?'<p><b>Observaciones del llamado:</b> '+esc(a.obs)+'</p>':'')+
+      '<h4>Fases</h4>'+(ev?'<ul style="margin:4px 0 8px 18px;padding:0">'+ev+'</ul>':'<p class="derived">Sin cambios de fase.</p>')+'<h4>Grupos de intervención que la atendieron</h4>'+(gtxt||'<p class="derived">No se asignaron grupos.</p>')+'<h4>Reporte del comandante de incidentes</h4>'+rep+'<div class="dl"><button class="btn alt" id="he-no">Cerrar</button></div>',()=>{$('he-no').onclick=dlgCerrar});
+  }catch(e){dlg('<h3>Atención de la emergencia</h3><p>No se pudo cargar: '+esc(humanErr(e))+'</p><div class="dl"><button class="btn alt" id="he-no">Cerrar</button></div>',()=>{$('he-no').onclick=dlgCerrar})}
+}
+{const sd0=showDetail;showDetail=async function(r){
+  await sd0(r);
+  try{
+    const ll=r.extra&&r.extra._llam;
+    const bx=document.querySelector('#detail .dl');
+    if(esMaster()&&!PREVIEW&&bx&&!bx.querySelector('.vin-btn')){const vb=document.createElement('button');vb.className='btn alt sm vin-btn';vb.textContent=ll?'Corregir vínculo con la emergencia':'Vincular con una emergencia';vb.onclick=()=>{
+      const n=prompt('Consecutivo de la emergencia a vincular (ej. EM-2026-00012). Déjelo vacío para quitar el vínculo actual.',''); if(n===null)return;
+      call('vincular',{tmp:r.tmp,num:n.trim(),emerg:''}).then(x=>{need(x);toast(n.trim()?'Reporte vinculado a '+(x.num||n)+'.':'Vínculo quitado.');dlgCerrar&&dlgCerrar();pollVivo()}).catch(e=>toast('No se pudo vincular: '+humanErr(e),1))};bx.append(vb)}
+    if(ll&&bx&&!bx.querySelector('.hist-btn')){const b=document.createElement('button');b.className='btn alt sm hist-btn';b.textContent='Atención de la emergencia';b.onclick=()=>historiaEmerg({tmp:r.tmp});bx.append(b)}
+  }catch(e){}
+}}
+
+/* ================= V2.2 · llamado general / solo empleados · emergencia o actividad institucional ================= */
+const ES_ASK=t=>/LABORES DE PREVENCI/i.test(String(t||''));
+const ES_INST=t=>/CAPACITACI|REUNI[ÓO]N|SERVICIO SOCIAL|SUMINISTRO|VISITA|ACTIVIDAD|INSTITUCIONAL|LOG[ÍI]STIC/i.test(String(t||''));
+const claseDeAlerta=a=>a.clase||(ES_INST(a.msg)?'institucional':'emergencia');
+function rutaTxt(clase,aud){
+  const emp=aud==='empleados',inst=clase==='institucional';
+  const gr=emp?'Empleados':(inst?'Bomberos':'Emergencias y Bomberos');
+  return (inst?'📋 Actividad institucional (aviso tranquilo, sin sirena)':'🚨 Emergencia (aviso con sonido y confirmación)')+' · '+(emp?'🏷 SOLO EMPLEADOS':'👥 Todo el personal')+' · WhatsApp: grupo '+gr;
+}
+function audHtml(p){
+  return '<fieldset class="aud"><legend>¿A quién va el llamado?</legend><label><input type="radio" name="'+p+'-aud" value="general" checked> 👥 Llamado general</label><label><input type="radio" name="'+p+'-aud" value="empleados"> 🏷 Llamado solo empleados</label></fieldset>'+
+    '<label id="'+p+'-clw" hidden>Este llamado es una… <select id="'+p+'-cl"><option value="">Elija…</option><option value="emergencia">Emergencia</option><option value="institucional">Solo acompañamiento o prevención (actividad institucional)</option></select></label>'+
+    '<p class="ruta-llamado" id="'+p+'-ruta" role="status"></p>';
+}
+function audLeer(p,tipo){
+  const aud=(document.querySelector('input[name="'+p+'-aud"]:checked')||{}).value||'general';
+  let clase=ES_ASK(tipo)?($(p+'-cl')||{}).value:(ES_INST(tipo)?'institucional':'emergencia');
+  if(ES_ASK(tipo)&&!clase)return {err:'Indique si «'+tipo+'» es una emergencia o solo acompañamiento/prevención.'};
+  return {aud,clase};
+}
+function audBind(p,selId){
+  const sel=$(selId);
+  const act=()=>{const t=sel.value;const ask=ES_ASK(t);$(p+'-clw').hidden=!ask;const aud=(document.querySelector('input[name="'+p+'-aud"]:checked')||{}).value||'general';const cl=ask?($(p+'-cl').value||''):(ES_INST(t)?'institucional':'emergencia');
+    $(p+'-ruta').textContent=t?(cl?'Se enviará como: '+rutaTxt(cl,aud):'Elija si es emergencia o actividad institucional.'):'Elija el tipo de emergencia para ver a quién llegará.'};
+  sel.addEventListener('change',act);document.querySelectorAll('input[name="'+p+'-aud"]').forEach(r=>r.addEventListener('change',act));$(p+'-cl').addEventListener('change',act);act();
+}
+function bindLlamado(){
+  const b=$('ll-send');if(!b||b._b)return;b._b=1;
+  const sel=$('ll-tipo');if(sel&&!sel.options.length)sel.innerHTML='<option value="">Elija el tipo de emergencia…</option>'+CATS.map(c=>'<option>'+esc(c)+'</option>').join('');
+  $('ll-extra').innerHTML=audHtml('ll')+'<label>Observaciones<textarea id="ll-obs" rows="2" placeholder="Qué se sabe, riesgos, indicaciones…"></textarea></label>';
+  audBind('ll','ll-tipo');
+  b.onclick=async()=>{const a=audLeer('ll',sel.value);if(a.err){$('ll-out').textContent=a.err;return}
+    const ok=await enviarLlamado({tipo:sel.value,lugar:$('ll-lugar').value,co:$('ll-co').value,tel:$('ll-tel').value,obs:$('ll-obs').value,aud:a.aud,clase:a.clase},$('ll-out'),b);
+    if(ok){sel.value='';$('ll-lugar').value='';$('ll-co').value='';$('ll-tel').value='';$('ll-obs').value='';$('ll-cl').value='';audBind('ll','ll-tipo')}};
+  const fab=$('fab-ll');if(fab&&!fab._b){fab._b=1;fab.onclick=()=>abrirLlamadoRapido()}
+}
+{const el1=enviarLlamado;enviarLlamado=async function(v,out,btn,despues){
+  /* misma lógica de V2.2 pero con audiencia y clase */
+  const m=v.tipo,lug=(v.lugar||'').trim(),co=(v.co||'').trim(),tel=(v.tel||'').replace(/[^\d+]/g,'');
+  if(!m){out.textContent='Elija el tipo de emergencia.';return false}
+  if(v.tel&&tel.replace(/\D/g,'').length<7){out.textContent='El teléfono parece incompleto. Revíselo o déjelo en blanco.';return false}
+  let lat='',lon='';if(co){const p=parseCoord(co);if(!p){out.textContent='No entendí las coordenadas. Escríbalas en grados, minutos y segundos (4°31\'50"N 76°06\'29"W) o en decimales.';return false}lat=+p.lat;lon=+p.lon}
+  if(!LL_CID)LL_CID='c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  if(btn)btn.disabled=true;out.textContent='Enviando…';
+  try{
+    const r=need(await call('llamado',{msg:m,lugar:lug,lat,lon,tel,cid:LL_CID,obs:(v.obs||'').trim(),aud:v.aud||'general',clase:v.clase||''}));
+    LL_CID='';
+    out.textContent=(r.repetida?'Ese llamado ya estaba registrado: no se duplicó. ':'Llamado registrado · consecutivo '+(r.num||'')+' · '+(r.ruta||'')+'. ')+canalTxt(r.canales)+(r.push&&r.push.enviados?' Aviso a '+r.push.enviados+' teléfono(s).':'');
+    toast(r.repetida?'Llamado ya registrado (sin duplicar).':'Llamado enviado · '+(r.num||'')+' · '+(r.ruta||''));
+    if(despues)despues();pollVivo();
+    if(v._ir){showTab('vivo');setTimeout(()=>{const x=$('op-act');if(x)x.scrollIntoView({behavior:'smooth'})},250)}
+    return true;
+  }catch(e){out.textContent='No se pudo enviar: '+humanErr(e)+'. Sus datos siguen aquí; pulse de nuevo para reintentar (no se duplicará).';return false}
+  finally{if(btn)btn.disabled=false}
+}}
+async function abrirLlamadoRapido(){
+  dlg('<h3>Llamado rápido</h3><div class="tools" style="flex-direction:column;align-items:stretch"><label>Tipo de emergencia<select id="d-tipo"><option value="">Elija…</option>'+CATS.map(c=>'<option>'+esc(c)+'</option>').join('')+'</select></label><label>Lugar<input id="d-lugar" placeholder="Dirección o referencia"></label><label>Coordenadas (opcional)<input id="d-co" placeholder="4°31\'50&quot;N 76°06\'29&quot;W o 4.5306, -76.1082"></label><label>Teléfono de quien reporta<input id="d-tel" inputmode="tel"></label><label>Observaciones<textarea id="d-obs" rows="2" placeholder="Qué se sabe, riesgos, indicaciones…"></textarea></label>'+audHtml('d')+'</div><div class="derived" id="d-out" role="status"></div><div class="dl"><button class="btn" id="d-ok">Enviar llamado</button><button class="btn alt" id="d-no">Cancelar</button></div>',()=>{
+    $('d-no').onclick=dlgCerrar;audBind('d','d-tipo');
+    $('d-ok').onclick=async()=>{const a=audLeer('d',$('d-tipo').value);if(a.err){$('d-out').textContent=a.err;return}
+      const ok=await enviarLlamado({tipo:$('d-tipo').value,lugar:$('d-lugar').value,co:$('d-co').value,tel:$('d-tel').value,obs:$('d-obs').value,aud:a.aud,clase:a.clase,_ir:true},$('d-out'),$('d-ok'));if(ok)setTimeout(dlgCerrar,700)};
+  });
+}
+/* repetir: siempre se ve a quién se envía */
+async function repetirLlamado(a,btn){
+  const ruta=rutaTxt(claseDeAlerta(a),a.aud||'general');
+  if(!confirm('¿Repetir el llamado «'+a.msg+'»?\n\nSe enviará como:\n'+ruta+'\n\nNo se avisa de nuevo a quienes ya confirmaron o están asignados.'))return;
+  btn.disabled=true;
+  try{const r=need(await call('llamadoRepetir',{id:a.id}));toast('Recordatorio n.º '+r.rep+' enviado · '+(r.ruta||'')+'. '+canalTxt(r.canales));pollVivo()}
+  catch(e){toast('No se repitió: '+humanErr(e),1)}
+  btn.disabled=false;
+}
+{const dec0=decorarEmergencias;decorarEmergencias=function(){
+  dec0();
+  const box=$('v-llam');if(!box)return;const l=llamList();
+  [...box.querySelectorAll('.emg')].forEach((c,i)=>{const a=l[i];if(!a||c.querySelector('.ed'))return;c.querySelectorAll('.aud-chip').forEach(x=>x.remove());
+    const emp=a.aud==='empleados',inst=claseDeAlerta(a)==='institucional';
+    const h=c.querySelector('h4');if(h)h.insertAdjacentHTML('beforeend',' <span class="pill '+(emp?'warn':'info')+' aud-chip">'+(emp?'🏷 Solo empleados':'👥 General')+'</span>'+(inst?' <span class="pill off aud-chip">📋 Actividad institucional</span>':''))})
+}}
+/* grupos de WhatsApp en la configuración */
+{const aw0=admWha;admWha=async function(){
+  await aw0();
+  try{
+    const box=$('as-wha')||$('a-box');if(!box||box.querySelector('#wa-grupos'))return;
+    const c=need(await call('cfgGet')).cfg;const w=c.whatsapp&&!Array.isArray(c.whatsapp)?c.whatsapp:null;
+    if(!w||w.proveedor==='ninguno')return;
+    const g=Object.assign({emergencias:[],bomberos:[],empleados:[]},w.grupos||{});
+    const d=document.createElement('div');d.className='card';d.id='wa-grupos';
+    d.innerHTML='<h3>Grupos de WhatsApp</h3><p class="derived">Emergencia general → «Emergencias» y «Bomberos». Emergencia solo empleados → «Empleados». Actividad institucional → «Bomberos». Un identificador por línea (el de un grupo termina en @g.us). Si deja los tres vacíos se usa la lista general de destinos.</p>'+
+      [['emergencias','Grupo Emergencias'],['bomberos','Grupo Bomberos'],['empleados','Grupo Empleados']].map(([k,t])=>'<label>'+t+'<textarea rows="2" data-g="'+k+'">'+esc((g[k]||[]).join('\n'))+'</textarea></label>').join('')+'<div class="dl"><button class="btn" id="wa-g-ok">Guardar grupos</button></div><div class="derived" id="wa-g-out" role="status"></div>';
+    box.append(d);
+    $('wa-g-ok').onclick=async()=>{const grupos={};d.querySelectorAll('[data-g]').forEach(t=>grupos[t.dataset.g]=t.value.split('\n').map(x=>x.trim()).filter(Boolean));
+      try{const cur=need(await call('cfgGet')).cfg.whatsapp;need(await call('cfgSet',{clave:'whatsapp',valor:Object.assign({},cur,{grupos})}));$('wa-g-out').textContent='Guardado.'}catch(e){$('wa-g-out').textContent='No se pudo: '+humanErr(e)}};
+  }catch(e){}
+}}
+
+/* al asignar, la central puede fijar quién es comandante de incidentes y maquinista */
+async function aplicarRoles(r){
+  const cmd=($('ds-cmd')||{}).value||'',maq=($('ds-maq')||{}).value||'',g=r&&r.despacho&&r.despacho.grupo;
+  if(!(cmd||maq)||!g)return;
+  try{const x={};if(cmd)x.cmd=cmd;if(maq)x.maq=maq;need(await call('grupoSet',{id:g,...x}))}catch(e){toast('Asignado, pero no se pudieron fijar los roles: '+humanErr(e),1)}
+}
+/* resumen de personas y vehículos activados */
+function drawResumenAct(){
+  const box=$('op-act');if(!box)return;let r=$('act-res');
+  if(!r){r=document.createElement('div');r.id='act-res';r.className='emgnums';const h=box.querySelector('h3');h.insertAdjacentElement('afterend',r)}
+  const ids=new Set(llamList().map(a=>a.id)),ds=(VIVO.despachos||[]).filter(x=>ids.has(x.emerg));
+  const per=new Set(ds.flatMap(x=>x.pers.map(p=>p.u||p.n))),veh=new Set(ds.map(x=>x.veh).filter(Boolean));
+  r.innerHTML='<div><b>'+ids.size+'</b><span>emergencias</span></div><div><b>'+per.size+'</b><span>personas activadas</span></div><div><b>'+veh.size+'</b><span>vehículos</span></div>';
+}
+{const d1=decorarEmergencias;decorarEmergencias=function(){d1();try{drawResumenAct()}catch(e){}}}
+
+/* descargar los datos del mapa de calor */
+function calorBajar(fmt){
+  if(!CALOR_LAST||!CALOR_LAST.filas.length){toast('No hay puntos para descargar con este filtro.',1);return}
+  const f=CALOR_LAST.filas,nom='mapa-calor-'+(CALOR_LAST.capa==='emerg'?'emergencias':'recorridos')+'-'+isoDate(new Date());
+  let txt,tipo;
+  if(fmt==='csv'){const cols=Object.keys(f[0]);txt='\ufeff'+cols.join(';')+'\n'+f.map(r=>cols.map(c=>'"'+String(r[c]).replace(/"/g,'""')+'"').join(';')).join('\n');tipo='text/csv'}
+  else{txt=JSON.stringify({type:'FeatureCollection',features:f.map(r=>({type:'Feature',geometry:{type:'Point',coordinates:[r.lon,r.lat]},properties:Object.fromEntries(Object.entries(r).filter(([k])=>k!=='lat'&&k!=='lon'))}))});tipo='application/geo+json'}
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:tipo}));a.download=nom+(fmt==='csv'?'.csv':'.geojson');document.body.append(a);a.click();a.remove();
+}
+{const c0=calorUI;calorUI=function(){c0();const s=$('calor-sum');if(s&&!$('calor-dl')){const d=document.createElement('div');d.id='calor-dl';d.className='dl';d.innerHTML='<button class="btn alt sm" id="cdl-csv">Descargar tabla (CSV para Excel)</button><button class="btn alt sm" id="cdl-geo">Descargar para mapas (GeoJSON)</button>';s.insertAdjacentElement('afterend',d);$('cdl-csv').onclick=()=>calorBajar('csv');$('cdl-geo').onclick=()=>calorBajar('geo')}}}
+
+const TXT_APP=["Abrir en Google Maps", "Acepto y continuar", "Activar avisos del teléfono", "Agregar a la bitácora", "Anterior", "Apoyos para emergencias", "Armar la descripción con la bitácora", "Bienvenido", "Bitácora", "Bitácora en vivo", "Borradores y enviados", "CBV La Unión", "CBV La Unión · Registro de emergencias", "Cambiar clave", "Cambiar mi clave", "Cargando…", "Cerrar", "Cerrar sesión", "Cerrar y volver al reporte", "Clave", "Clave actual", "Clave nueva (mínimo 6 caracteres)", "Clave, avisos y datos", "Configuración", "Confirmar asistencia", "Copiar mi ubicación", "Cédula (su usuario)", "DESACTIVAR SOS (ya estoy a salvo)", "Desarrollado por Cristhian Steven Blandón Henao · Derechos reservados", "Desarrollado por Cristhian Steven Blandón Henao · V1.0", "Emergencias activas", "Entrar", "Enviar", "Enviar pendientes ahora", "Guardar clave nueva", "Guardar también en el teléfono una copia de las fotos tomadas con la cámara", "Guardia, mapas, GRE, SCI y chat", "Hora de la anotación", "Instalar en este teléfono", "Mapa", "Mi ubicación y punto de la emergencia", "Mis registros", "No acepto", "Ocultar esta pantalla", "Omitir", "Panel de la central", "Probar conexión", "Qué funciona sin internet", "Realizar registro", "Registrar emergencia", "Repita la clave nueva", "Reporte de emergencia o actividad", "SOS", "SOS ACTIVADO", "Siguiente", "UNIDAD ACTIVA", "Versión", "Vista previa del reporte", "Volver al menú", "¿Qué está haciendo o qué ocurre ahora?", "⌂ Volver al menú", "➕ Dejar pendiente y empezar otra emergencia", "🎤 Grabar audio", "💾 Guardar borrador"];
+/* textos editables: el superadministrador cambia rótulos; se aplican sobre el texto original, siempre reversibles */
+let TXTMAP={},TXTOBS=null;const TXTORIG=new WeakMap();
+function aplicarTextos(m){
+  TXTMAP=m&&typeof m==='object'&&!Array.isArray(m)?m:{};
+  const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,{acceptNode:n=>/^(SCRIPT|STYLE|TEXTAREA)$/.test(n.parentNode.nodeName)?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT});
+  const ns=[];while(w.nextNode())ns.push(w.currentNode);
+  ns.forEach(n=>{
+    let s=TXTORIG.get(n);const cur=n.nodeValue;
+    if(!s||cur!==s.a){s={o:cur,a:cur};TXTORIG.set(n,s)}
+    const o=s.o,k=o.trim(),r=TXTMAP[k];
+    const nuevo=(r!=null&&r!=='')?o.replace(k,r):o;
+    if(cur!==nuevo)n.nodeValue=nuevo;s.a=nuevo;
+  });
+  document.querySelectorAll('[placeholder],[title],[aria-label]').forEach(e=>['placeholder','title','aria-label'].forEach(at=>{
+    if(!e.hasAttribute(at))return;const key='_s_'+at,cur=e.getAttribute(at);let s=e[key];
+    if(!s||cur!==s.a){s={o:cur,a:cur};e[key]=s}
+    const r=TXTMAP[s.o.trim()],nuevo=(r!=null&&r!=='')?r:s.o;if(cur!==nuevo)e.setAttribute(at,nuevo);s.a=nuevo}));
+  if(!TXTOBS&&Object.keys(TXTMAP).length){let t=null;TXTOBS=new MutationObserver(()=>{clearTimeout(t);t=setTimeout(()=>{TXTOBS.disconnect();try{aplicarTextos(TXTMAP)}finally{TXTOBS.observe(document.body,{childList:true,subtree:true,characterData:true})}},120)});TXTOBS.observe(document.body,{childList:true,subtree:true,characterData:true})}
+}
+
+/* editor de textos (superadministrador): rótulos del celular y de esta plataforma */
+async function admTxt(){
+  const cur=(need(await call('cfgGet')).cfg||{}).textos||{};let M=Object.assign({},cur);
+  const box=$('a-box');box.innerHTML='';
+  const c=document.createElement('div');c.className='card';
+  c.innerHTML='<h3>Textos de la aplicación y de la plataforma</h3><p class="derived">Cambie el nombre de botones, títulos y rótulos. Se aplican a todos sin tocar el código y puede volver al original dejando el cuadro vacío. El cambio se reconoce por el texto exacto actual (si el texto original cambia en una versión futura, habrá que repetirlo).</p>'+
+    '<div class="tools"><label>Dónde<select id="tx-w"><option value="app">Aplicación del celular</option><option value="est">Esta plataforma (central)</option></select></label><label>Buscar<input id="tx-q" placeholder="parte del texto"></label></div>'+
+    '<div id="tx-l" style="max-height:55vh;overflow:auto"></div><div class="dl"><button class="btn" id="tx-ok">Guardar cambios</button></div><div class="derived" id="tx-out" role="status"></div>';
+  box.append(c);
+  const orig=()=>{ // textos originales de esta plataforma: los que no tienen reemplazo activo
+    const inv={};Object.keys(M).forEach(k=>inv[M[k]]=k);const out=new Set();
+    document.querySelectorAll('#app button,#app h1,#app h2,#app h3,#app h4,#app label,#app th,#app summary,#app legend,button,h2,h3,summary,th').forEach(e=>{const n=[...e.childNodes].filter(x=>x.nodeType===3).map(x=>x.nodeValue).join('').trim();if(n.length>2&&n.length<90)out.add(inv[n]||n)});
+    return [...out].sort()};
+  const pintar=()=>{
+    const w=$('tx-w').value,q=$('tx-q').value.toLowerCase();
+    const base=w==='app'?TXT_APP.slice():orig();Object.keys(M).forEach(k=>{if(!base.includes(k))base.push(k)});
+    $('tx-l').innerHTML=base.filter(t=>!q||t.toLowerCase().includes(q)||(M[t]||'').toLowerCase().includes(q)).map(t=>'<div class="tools" style="align-items:center"><span style="flex:1 1 40%">'+esc(t)+'</span><input style="flex:1 1 50%" data-o="'+esc(t)+'" value="'+esc(M[t]||'')+'" placeholder="(sin cambio)"></div>').join('')||'<p class="derived">Sin resultados.</p>';
+    $('tx-l').querySelectorAll('[data-o]').forEach(i=>i.oninput=()=>{if(i.value.trim())M[i.dataset.o]=i.value.trim();else delete M[i.dataset.o]});
+  };
+  $('tx-w').onchange=$('tx-q').oninput=pintar;pintar();
+  $('tx-ok').onclick=async()=>{try{need(await call('cfgSet',{clave:'textos',valor:M}));CFGP.textos=M;aplicarTextos(M);$('tx-out').textContent='Guardado. El celular lo recibe al abrir la aplicación o al actualizarse.'}catch(e){$('tx-out').textContent='No se pudo guardar: '+humanErr(e)}};
+}
+
+{const ac0=aplicarCfg;aplicarCfg=function(c){ac0(c);try{aplicarTextos((c||{}).textos)}catch(e){}}}
+
+/* ================= V2.2 · comparar varios años (completos o hasta la fecha de hoy) ================= */
+let YSEL=null,YMODE=lsGet('cbv_ymode','completo');const YCOL=['#2563eb','#dc2626','#16a34a','#d97706','#7c3aed','#0891b2','#be185d','#4d7c0f'];
+function renderAnios(){
+  const box=$('est-anios');if(!box)return;
+  const base=filtroAll(),ys=[...new Set(base.map(r=>r.fecha.slice(0,4)).filter(y=>/^\d{4}$/.test(y)))].sort();
+  if(!ys.length){box.innerHTML='';return}
+  const hoy=isoDate(new Date()),mmdd=hoy.slice(5),anioAct=hoy.slice(0,4);
+  if(!YSEL)YSEL=new Set(ys.slice(-3));[...YSEL].forEach(y=>{if(!ys.includes(y))YSEL.delete(y)});
+  const sel=ys.filter(y=>YSEL.has(y));
+  const cuenta=(y)=>base.filter(r=>r.fecha.slice(0,4)===y&&(YMODE==='completo'||r.fecha.slice(5)<=mmdd));
+  const datos=sel.map(y=>({y,rows:cuenta(y)}));
+  const cats=CATS.filter(c=>datos.some(d=>d.rows.some(r=>r.cat===c)));
+  const nota=YMODE==='completo'?'Cada año se cuenta completo (1 de enero a 31 de diciembre'+(sel.includes(anioAct)?'; '+anioAct+' va solo hasta hoy porque aún no termina':'')+').':'Todos los años se cuentan solo del 1 de enero al '+GEN.dmy(hoy).slice(0,5)+' (la misma fecha de corte), para compararlos en igualdad de condiciones.';
+  let h='<div class="chart" id="g-anios"><h3>Comparar varios años</h3><p class="exp2"><b>Qué muestra:</b> la cantidad de emergencias por categoría en los años que marque. <b>Cómo leerlo:</b> la última columna compara el último año marcado con el primero. '+esc(nota)+'</p>'+
+    '<div class="tools"><fieldset class="aud" style="margin:0"><legend>Años</legend>'+ys.map(y=>'<label><input type="checkbox" data-y="'+y+'"'+(YSEL.has(y)?' checked':'')+'> '+y+'</label>').join('')+'</fieldset>'+
+    '<fieldset class="aud" style="margin:0"><legend>Periodo de cada año</legend><label><input type="radio" name="ymode" value="completo"'+(YMODE==='completo'?' checked':'')+'> Año completo</label><label><input type="radio" name="ymode" value="ytd"'+(YMODE==='ytd'?' checked':'')+'> Hasta hoy ('+GEN.dmy(hoy).slice(0,5)+')</label></fieldset></div>';
+  if(sel.length<1)h+='<p class="derived">Marque al menos un año.</p>';
+  else{
+    const a=datos[0],z=datos[datos.length-1];
+    h+='<div class="tw"><table><tr><th>Categoría</th>'+datos.map(d=>'<th class="n">'+d.y+'</th>').join('')+(sel.length>1?'<th class="n">'+z.y+' vs '+a.y+'</th>':'')+'</tr>';
+    const fila=(nom,fn,cls)=>{const q=datos.map(d=>fn(d.rows));let v='';if(sel.length>1){const p=q[0],c=q[q.length-1];v=p>0?(c>p?'▲ +':c<p?'▼ ':'= ')+(((c-p)/p)*100).toLocaleString('es-CO',{maximumFractionDigits:0})+' %':(c>0?'▲ nuevo':'—')}
+      return '<tr'+(cls?' class="'+cls+'"':'')+'><td>'+esc(nom)+'</td>'+q.map(x=>'<td class="n">'+nf.format(x)+'</td>').join('')+(sel.length>1?'<td class="n">'+v+'</td>':'')+'</tr>'};
+    cats.forEach(c=>h+=fila(c,rows=>rows.filter(r=>r.cat===c).length));
+    h+=fila('TOTAL',rows=>rows.length,'tot')+'</table></div>';
+    h+='<div class="gsvg">'+svgBarras({labels:MES.map(m=>m.slice(0,3).toLowerCase()),series:datos.map((d,i)=>({n:d.y,c:YCOL[i%YCOL.length],v:MES.map((_,m)=>d.rows.filter(r=>+r.fecha.slice(5,7)===m+1).length)})),alt:'Comparación mes a mes de los años '+sel.join(', ')})+'</div>'+
+      '<p class="derived">'+datos.map((d,i)=>'<span style="color:'+YCOL[i%YCOL.length]+'">■</span> '+d.y).join(' &nbsp; ')+'</p>';
+    h+='<div class="dl"><button class="btn alt sm" id="anios-csv">Descargar esta tabla (Excel/CSV)</button><button class="btn alt sm" id="anios-png">Descargar gráfico (PNG)</button></div>';
+  }
+  box.innerHTML=h+'</div>';
+  box.querySelectorAll('[data-y]').forEach(i=>i.onchange=()=>{i.checked?YSEL.add(i.dataset.y):YSEL.delete(i.dataset.y);renderAnios()});
+  box.querySelectorAll('[name=ymode]').forEach(i=>i.onchange=()=>{YMODE=i.value;lsSet('cbv_ymode',YMODE);renderAnios()});
+  const csv=$('anios-csv');if(csv)csv.onclick=()=>{const rows=[['Categoría'].concat(datos.map(d=>d.y))].concat(cats.map(c=>[c].concat(datos.map(d=>d.rows.filter(r=>r.cat===c).length)))).concat([['TOTAL'].concat(datos.map(d=>d.rows.length))]);
+    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+rows.map(r=>r.map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(';')).join('\n')],{type:'text/csv'}));a.download='comparacion-anios-'+sel.join('-')+(YMODE==='ytd'?'-hasta-hoy':'')+'.csv';document.body.append(a);a.click();a.remove()};
+  const png=$('anios-png');if(png)png.onclick=()=>descargarGrafico(box.querySelector('svg'),'COMPARACION AÑOS '+sel.join('-'),'Comparación de años '+sel.join(', '));
+}
+{const rp1=renderPanel;renderPanel=function(){rp1();try{renderAnios()}catch(e){console.error(e)}}}
+
+/* ================= V2.2 · un solo Histórico: archivo base, cargas y series en la misma pestaña ================= */
+function renderHisCard(){
+  const c=$('his-card');if(!c)return;if(!esMaster()||PREVIEW){c.hidden=true;return}c.hidden=false;
+  c.innerHTML='<h3>Histórico 2013–2026 (archivo base)</h3><p class="derived" id="his-info"></p><p class="derived">El archivo historico.json se carga una sola vez (también incluye los incendios forestales ya reportados al SNIF). Se sube en trozos pequeños y con reintentos; si se corta, vuelva a elegir el archivo: no duplica nada.</p><label>Elegir historico.json<input type="file" id="his-f" accept=".json,application/json"></label><div class="derived" id="his-m" role="status"></div>';
+  const info=$('his-info');renderAdmHisInfo(info);
+  $('his-f').onchange=()=>{const x=$('his-f').files[0];$('his-f').value='';if(x)cargarHistorico(x,$('his-m')).then(()=>{renderAdmHisInfo(info);renderSeries&&renderSeries()})};
+}
+{const rc0=renderCarga;renderCarga=function(){rc0();try{renderHisCard()}catch(e){}}}
 
 $('flogin').onsubmit=login;$('docs-bulk').onclick=docsBulk;
 $('atabs').onclick=e=>{const b=e.target.closest('button');if(b)renderAdm(b.dataset.a)};
