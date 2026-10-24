@@ -1592,7 +1592,7 @@ async function admDgn(){
     add('Cuenta que ejecuta el script',true,d.cuenta+' (comparta con esta cuenta el Formulario de Google, como editor)');
     add('Correos de alerta disponibles hoy',typeof d.correosRestantes==='number',String(d.correosRestantes));
     add('Formulario de Google',!/^error/.test(d.form),d.form);
-    add('WhatsApp (CallMeBot)',d.whatsapp==='configurado'?true:null,d.whatsapp);
+    add('WhatsApp',/^configurado/.test(d.whatsapp||'')?true:(d.whatsapp==='incompleto'?false:null),d.whatsapp);
     add('Recordatorios de borradores',/activos/.test(d.recordatorios||'')?true:false,d.recordatorios||'');
     const bh=d.borradosEnLaHoja||[];add('Registros borrados a mano de la hoja',bh.length?false:true,bh.length?bh.join(', ')+' (se borraron sin usar «Eliminar» de la central: no quedó el motivo)':'ninguno');
   }catch(e){add('Diagnóstico del servidor',false,humanErr(e))}
