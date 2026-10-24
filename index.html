@@ -605,7 +605,7 @@ async function fotosParaReporte(tmp){
 async function generarReporte(reg){
   const d=reg.datos||{};
   const rpt=Object.assign({},d.rpt||{},{zona:d.zona||''});
-  const r=Object.assign({},d,{id:reg.num,rpt,area:d.area,extraTxt:extraTxt(d),fotos:await fotosParaReporte(reg.tmp),elabora:reg.finAt||Date.now()});
+  const grados={};(d.pers||[]).forEach(n=>{const g=gradoDe(n);if(g)grados[n]=g});const r=Object.assign({},d,{grados,id:reg.num,rpt,area:d.area,extraTxt:extraTxt(d),fotos:await fotosParaReporte(reg.tmp),elabora:reg.finAt||Date.now()});
   if(!(d.rpt&&Object.keys(d.rpt).length))r.rpt=rpt;
   return window.GEN.reporteEmergencia(window.JSZip,await plantillaRep(),r);
 }
@@ -899,7 +899,7 @@ function renderField(f){
     case 'num':{const i=inp('number',{min:0,inputMode:'numeric'});i.value=v==null?'':v;i.oninput=()=>setV(f.p,i.value===''?null:+i.value);ctl.append(i);break}
     case 'hec':{ctl.append(areaUI(f,dis));break}
     case 'auto':{const i=inp('text');i.disabled=true;i.value=String((D.pers||[]).length||D.uni||0);ctl.append(i);break}
-    case 'cmdn':{ctl.append(personaSel(getP(D,f.p)||'',n=>{setV(f.p,n);const pl=(AJ.plantilla||[]).find(x=>x.n===n);if(pl){if(!nonEmpty(getP(D,'rpt.cmd.g'))&&pl.g)setP(D,'rpt.cmd.g',pl.g);autoCargoCmd(n);renderStep()}},[],dis));break}
+    case 'cmdn':{ctl.append(personaSel(getP(D,f.p)||'',n=>{setV(f.p,n);const pl=(AJ.plantilla||[]).find(x=>x.n===n);if(pl){if(!nonEmpty(getP(D,'rpt.cmd.g'))&&pl.g)setP(D,'rpt.cmd.g',pl.g);autoCargoCmd(n);renderStep()}},ordenarPorRango((AJ.plantilla||[]).map(x=>x.n).filter(n=>n&&!personasD().includes(n))),dis));break}
     case 'date':{const i=inp('date');i.value=v||'';i.onchange=()=>setV(f.p,i.value);ctl.append(i);break}
     case 'time':{ctl.append(timePick(v||'',x=>setV(f.p,x),dis));break}
     case 'area':{const t=el('textarea');t.rows=3;t.disabled=dis;t.value=v||'';t.oninput=()=>setV(f.p,t.value.trim()===''?'':t.value);ctl.append(t);break}
@@ -1261,8 +1261,7 @@ function goStep(i){stepIdx=Math.max(0,Math.min(nSteps()-1,i));renderStep();windo
 async function nextStep(){
   const S=stepsEff();
   if(stepIdx>=S.length){await guardar(true);return}
-  const bad=stepIssues(S[stepIdx]);
-  if(bad.length){showBad=true;msg('Falta completar '+bad.length+' punto(s) de este paso (o marcar «No aplica»).');renderStep();const f=document.querySelector('.fld.bad');if(f)f.scrollIntoView({block:'center',behavior:'smooth'});return}
+  /* se puede avanzar y retroceder sin completar: lo que falta se muestra en la revisión y al terminar y enviar */
   msg('');goStep(stepIdx+1);
 }
 const msg=(m,ok)=>{const e=$('err');e.className='err'+(ok?' ok':'');e.textContent=m||''};
@@ -1270,7 +1269,7 @@ const msg=(m,ok)=>{const e=$('err');e.className='err'+(ok?' ok':'');e.textConten
 async function guardar(final){
   if(final){
     const all=allIssues();
-    if(all.length){showBad=true;msg('No se puede terminar: faltan '+all.length+' punto(s). Complételos o marque «No aplica».');renderStep();return}
+    if(all.length){showBad=true;msg('No se puede terminar: faltan '+all.length+' punto(s). Toque el paso marcado con ✖ para completarlo, o marque «No aplica».');renderStep();const r=document.querySelector('.rv .r.no');if(r)r.scrollIntoView({block:'center',behavior:'smooth'});return}
     D.completo=true;
   }
   D.tipo=tipoDe(D.cat);if((D.pers||[]).length)D.uni=D.pers.length;
@@ -1702,7 +1701,12 @@ function pintarMenu(){
   ];
   if(AJ.rol&&AJ.rol!=='campo')tiles.splice(4,0,['cfg','Panel de la central','Llamados, despacho y registros',()=>irPanelCentral(AJ),'']);
   box.innerHTML='';
-  tiles.forEach(([ic,t,sub,fn,badge])=>{
+  /* diseño del menú definido por el superadministrador: orden y botones ocultos (Configuración nunca se oculta) */
+  tiles.forEach((x,i)=>{x[5]=(x[1]==='Panel de la central')?'cen':x[0]});
+  const LY=(CF&&CF.layout)||{};
+  if(Array.isArray(LY.menu)&&LY.menu.length){const o=k=>{const i=LY.menu.indexOf(k);return i<0?99:i};tiles.sort((a,b)=>o(a[5])-o(b[5]))}
+  const vis=tiles.filter(x=>x[5]==='cfg'||!(LY.hideMenu||[]).includes(x[5]));
+  vis.forEach(([ic,t,sub,fn,badge])=>{
     const b=el('button','tile t-'+ic);b.type='button';b.innerHTML=ICONOS[ic];
     b.append(el('b','',t),el('small','',sub));
     if(badge){const x=el('span','tbadge',badge);b.append(x)}
@@ -2387,7 +2391,7 @@ async function pintarEmerg(silencio){
   const res=el('section','card emgres');
   res.innerHTML='<div class="emgnums"><div><b>'+l.length+'</b><span>emergencia'+(l.length===1?'':'s')+'</span></div><div><b>'+per.size+'</b><span>persona'+(per.size===1?'':'s')+' activada'+(per.size===1?'':'s')+'</span></div><div><b>'+veh.size+'</b><span>vehículo'+(veh.size===1?'':'s')+'</span></div></div>';
   box.append(res);
-  if(!l.length){box.append(el('section','card')).append(el('p','','No hay emergencias activas en este momento.'));return}
+  if(!l.length){const nc=el('section','card');nc.append(el('p','','No hay emergencias activas en este momento.'));box.append(nc);return}
   l.forEach(e=>{
     const c=el('section','card emgc f-'+e.fase);
     const h=el('h3','');h.append(el('span','faseb f-'+e.fase,FASE_TXT[e.fase]||''),document.createTextNode(' '+(e.num?e.num+' · ':'')+e.msg));c.append(h);
@@ -2465,6 +2469,201 @@ function cronoCalc(){
   /* en reporte simplificado la duración también se calcula con salida y regreso */
   if(modoSimple()&&D.hsal&&D.hreg&&!(D.na&&D.na.durmin)){const d=lapse(D.hsal,D.hreg);if(d!=null&&d>0&&d<1440){D.durmin=d;const i=document.querySelector('[data-p="durmin"] input');if(i)i.value=d}}
   try{cronoCalc()}catch(e){}}}}
+
+
+/* ================= V2.3 · panel de emergencias con detalle, confirmación en el menú, reportes pendientes ================= */
+/* el acceso rápido de arriba no aparece en el menú principal ni dentro del propio panel; en los demás módulos abre el panel */
+verEmergenciasActivas=function(){show('emerg')};
+{const p0=pintarTrkBan;pintarTrkBan=function(){p0();const b=$('trkban');if(!b)return;
+  if(VISTA==='menu'||VISTA==='emerg'||VISTA==='setup'){[...b.querySelectorAll('button')].forEach(x=>x.remove());if(!b.children.length)b.hidden=true}}}
+{const s0=show;show=function(v){s0(v);try{pintarTrkBan()}catch(e){}}}
+
+/* cronología: sólo la duración del evento (si pasa de la medianoche se calcula bien; más de 24 h se escribe a mano) */
+cronoCalc=function(){
+  const ref=document.querySelector('[data-p="hreg"]')||document.querySelector('[data-p="hsal"]');if(!ref||typeof D==='undefined'||!D)return;
+  let p=document.getElementById('crono-calc');if(!p){p=document.createElement('p');p.id='crono-calc';p.className='derived';p.style.cssText='margin:6px 0;padding:8px;border:1px dashed var(--line);border-radius:8px';ref.insertAdjacentElement('afterend',p)}
+  const d=lapse(D.hora,D.hfin);
+  p.innerHTML='Duración del evento: <b>'+(d==null||d<=0||d>=1440?'—':durTxt(Math.round(d)))+'</b>';
+};
+
+/* ---------- menú principal: sólo el aviso de asignación por confirmar ---------- */
+pintarAsig=function(){
+  let box=$('asigbox');
+  if(!box){const g=$('menugrid');if(!g)return;box=document.createElement('div');box.id='asigbox';g.parentNode.insertBefore(box,g)}
+  box.innerHTML='';
+  (ASIG.lista||[]).filter(x=>x.estado==='asignado'&&x.emerg).forEach(x=>{
+    const e=x.emergencia||{},g=x.grupo;
+    const c=el('section','card asigc');if(g&&g.color)c.style.borderLeft='8px solid '+g.color;
+    c.append(el('h3','','🚒 Tiene una asignación por confirmar'));
+    c.append(el('p','',(e.num?e.num+' · ':'')+(e.msg||'Emergencia')+(e.lugar?' · '+e.lugar:'')+(x.veh?' · vehículo '+x.veh:'')+(x.mi_rol?' · su función: '+x.mi_rol:'')));
+    if(!online)c.append(el('p','derived','Sin internet: la confirmación necesita conexión.'));
+    const b=el('button','btn big','Confirmar asignación');b.type='button';b.disabled=!online;
+    b.onclick=async()=>{b.disabled=true;try{const r=await call('despEstado',{id:x.id,estado:'confirmado'});if(!r.ok)throw new Error(r.error||'servidor');toast('Asignación confirmada.');await asigPoll();EMG.sel=x.emerg;show('emerg')}catch(er){toast('No se pudo confirmar: '+humanErr(er),1);b.disabled=false}};
+    c.append(b);box.append(c);
+  });
+};
+
+/* ---------- panel «Emergencias activas»: lista y detalle de cada emergencia ---------- */
+EMG.sel=null;
+const hh12=t=>new Date(t).toLocaleTimeString('es-CO',{hour:'numeric',minute:'2-digit'});
+const hayCoord=e=>e.lat!==''&&e.lat!=null&&isFinite(+e.lat)&&e.lon!==''&&e.lon!=null&&isFinite(+e.lon);
+function emergDetalle(box,e){
+  const back=el('button','btn alt sm','← Todas las emergencias');back.type='button';back.onclick=()=>{EMG.sel=null;pintarEmerg()};box.append(back);
+  const c=el('section','card emgc f-'+e.fase);
+  const h=el('h3','');h.append(el('span','faseb f-'+e.fase,FASE_TXT[e.fase]||''),document.createTextNode(' '+(e.num?e.num+' · ':'')+e.msg));c.append(h);
+  if(e.mia)c.append(el('p','derived','✅ Usted está asignado a esta emergencia.'));
+  c.append(el('p','derived','Llamado a las '+hh12(e.cuando)));
+  if(e.lugar)c.append(el('p','','📍 Dirección: '+e.lugar));
+  if(hayCoord(e))c.append(el('p','sa-co',gms(e.lat,e.lon)));
+  if(e.tel){const p=el('p','','📞 Contacto: ');const a=el('a','',e.tel);a.href='tel:'+e.tel;p.append(a);c.append(p)}
+  if(e.obs)c.append(el('p','','📝 '+e.obs));
+  const row=el('div','chips');
+  if(hayCoord(e)){
+    const a=el('a','btn alt','Cómo llegar');a.href=dirUrl(e.lat,e.lon);a.target='_blank';a.rel='noopener';row.append(a);
+    const m=el('a','btn alt','Ver en el mapa');m.href=mapsUrl(e.lat,e.lon);m.target='_blank';m.rel='noopener';row.append(m);
+    const k=el('button','btn alt','Copiar coordenadas');k.type='button';k.onclick=()=>{copyTxt(gms(e.lat,e.lon));toast('Coordenadas copiadas.')};row.append(k)}
+  if(e.tel){const a=el('a','btn alt','Llamar al contacto');a.href='tel:'+e.tel;row.append(a)}
+  c.append(row);
+  /* mando */
+  const mando=el('div','emggrp');mando.append(el('b','','Mando del incidente (SCI)'));
+  mando.append(el('div','','Comandante de incidentes: '+(e.cmd||'sin asignar')));
+  (e.sci||[]).forEach(s=>mando.append(el('div','',s.rol+': '+s.n)));
+  c.append(mando);
+  /* grupos, unidades, personal */
+  e.grupos.forEach(g=>{
+    const d=el('div','emggrp');d.style.borderLeft='6px solid '+(g.color||'#888');
+    d.append(el('b','','Grupo de intervención · '+g.nombre),el('div','derived','Líder de equipo: '+(g.cmd||'sin asignar')+(g.maq?' · Maquinista: '+g.maq:'')));
+    g.unidades.forEach(u=>d.append(el('div','',unTxt(u))));
+    if(!g.unidades.length)d.append(el('div','derived','Sin unidades todavía.'));
+    c.append(d)});
+  if(e.sueltas.length){const d=el('div','emggrp');d.append(el('b','','Unidades sin grupo'));e.sueltas.forEach(u=>d.append(el('div','',unTxt(u))));c.append(d)}
+  if(!e.grupos.length&&!e.sueltas.length)c.append(el('p','derived','Todavía no hay unidades asignadas.'));
+  /* mi asignación */
+  const x=(ASIG.lista||[]).find(z=>z.emerg===e.id);
+  if(x){
+    const mine=el('div','chips');
+    if(x.estado==='asignado'){const b=el('button','btn','Confirmar asignación');b.type='button';b.disabled=!online;b.onclick=async()=>{b.disabled=true;try{const r=await call('despEstado',{id:x.id,estado:'confirmado'});if(!r.ok)throw new Error(r.error||'servidor');toast('Asignación confirmada.');await asigPoll();pintarEmerg()}catch(er){toast('No se pudo confirmar: '+humanErr(er),1);b.disabled=false}};mine.append(b)}
+    else if(debeReportar(x)){const rb=el('button','btn',x.reporte?'Continuar el reporte de esta emergencia':'Hacer el reporte de esta emergencia');rb.type='button';rb.onclick=()=>reporteDeLlamado(x);mine.append(rb)}
+    c.append(mine);
+  }
+  /* la fase sólo la cambia el comandante de incidentes de esta emergencia */
+  if(e.soyCmd)c.append(faseBotones(e.id,e.fase));
+  else c.append(el('p','derived','La fase la cambia el comandante de incidentes de esta emergencia'+(e.cmd?' ('+e.cmd+')':'')+'.'));
+  box.append(c);
+}
+pintarEmerg=async function(silencio){
+  const box=$('emergbox');if(!box)return;
+  if(!silencio){box.innerHTML='';box.append(el('p','derived','Cargando…'))}
+  let r=null;
+  if(online){try{r=await call('emergActivas');if(r&&r.ok){EMG.lista=r.emergencias;EMG.t=Date.now();lsSet('cbv_emg',EMG.lista)}}catch(e){}}
+  if(!r||!r.ok)EMG.lista=lsGet('cbv_emg',EMG.lista||[]);
+  box.innerHTML='';
+  const l=EMG.lista;
+  if(!r||!r.ok)box.append(el('p','derived','Sin conexión: se muestra lo último recibido'+(EMG.t?' a las '+hh12(EMG.t):'')+'.'));
+  if(EMG.sel){const e=l.find(x=>x.id===EMG.sel);if(e){emergDetalle(box,e);return}EMG.sel=null}
+  const per=new Set(),veh=new Set();
+  l.forEach(e=>{[].concat(e.grupos.flatMap(g=>g.unidades),e.sueltas).forEach(u=>{if(u.veh)veh.add(u.veh);(u.pers||[]).forEach(p=>per.add(p.n))})});
+  const res=el('section','card emgres');
+  res.innerHTML='<div class="emgnums"><div><b>'+l.length+'</b><span>emergencia'+(l.length===1?'':'s')+'</span></div><div><b>'+per.size+'</b><span>persona'+(per.size===1?'':'s')+' activada'+(per.size===1?'':'s')+'</span></div><div><b>'+veh.size+'</b><span>vehículo'+(veh.size===1?'':'s')+'</span></div></div>';
+  box.append(res);
+  if(!l.length){const nc=el('section','card');nc.append(el('p','','No hay emergencias activas en este momento.'));box.append(nc);return}
+  l.forEach(e=>{
+    const c=el('section','card emgc f-'+e.fase);c.style.cursor='pointer';
+    const h=el('h3','');h.append(el('span','faseb f-'+e.fase,FASE_TXT[e.fase]||''),document.createTextNode(' '+(e.num?e.num+' · ':'')+e.msg));c.append(h);
+    if(e.mia)c.append(el('p','derived','✅ Usted está asignado a esta emergencia.'));
+    if(e.lugar)c.append(el('p','','📍 '+e.lugar));
+    c.append(el('p','derived','Comandante de incidentes: '+(e.cmd||'sin asignar')+' · llamado a las '+hh12(e.cuando)));
+    const b=el('button','btn','Abrir la emergencia');b.type='button';b.onclick=ev=>{ev.stopPropagation();EMG.sel=e.id;pintarEmerg()};c.append(b);
+    c.onclick=()=>{EMG.sel=e.id;pintarEmerg()};
+    box.append(c);
+  });
+};
+
+/* ---------- reportes pendientes: ventana con plazo de 48 horas, enlace directo y vínculo con «Realizar registro» ---------- */
+let PEND=lsGet('cbv_pend',{lista:[],t:0});
+const plazoTxt=p=>{const ms=p.limite-Date.now();return ms<=0?'⚠️ Plazo vencido (se cumplió el '+fhTxt(p.limite)+')':'Plazo: hasta el '+fhTxt(p.limite)+' ('+(ms<3600000?Math.max(1,Math.round(ms/60000))+' min':Math.round(ms/3600000)+' h')+' restantes)'};
+async function repPendPoll(){
+  if(!online||!loggedIn())return;
+  try{const r=await call('repPend');if(r&&r.ok){PEND={lista:r.pendientes||[],t:Date.now()};lsSet('cbv_pend',PEND);avisarPend()}}catch(e){}
+}
+function hacerReportePend(p){
+  if(p.reporte&&p.reporte.tmp&&p.reporte.estado!=='final')return abrir(p.reporte.tmp);
+  return reporteDeLlamado({emerg:p.id,emergencia:{msg:p.msg,lugar:p.lugar,lat:p.lat,lon:p.lon,num:p.num}});
+}
+function avisarPend(){
+  if(!PEND.lista.length||VISTA==='form'||document.visibilityState!=='visible')return;
+  const av=lsGet('cbv_pend_avis',{}),ahora=Date.now();
+  const nuevos=PEND.lista.filter(p=>!av[p.id]||ahora-av[p.id]>6*3600000);
+  if(!nuevos.length||document.querySelector('dialog[open]'))return;
+  nuevos.forEach(p=>av[p.id]=ahora);lsSet('cbv_pend_avis',av);
+  let h='<h3>📝 Tiene reportes pendientes</h3><p class="derived">El reporte de cada emergencia debe entregarse dentro de las 48 horas siguientes al registro de su terminación.</p>';
+  nuevos.forEach((p,i)=>{h+='<div class="fnrow" style="display:block"><b>'+esc((p.num?p.num+' · ':'')+p.msg)+'</b>'+(p.lugar?'<br>'+esc(p.lugar):'')+'<br><span class="derived">'+esc(plazoTxt(p))+'</span><br><button class="btn" type="button" data-pp="'+i+'" style="margin-top:6px">Hacer el reporte ahora</button></div>'});
+  h+='<div class="chips"><button class="btn alt" type="button" id="pp-no">Más tarde</button></div>';
+  dlgA(h,d=>{$('pp-no').onclick=dlgC;d.querySelectorAll('[data-pp]').forEach(b=>b.onclick=()=>{dlgC();hacerReportePend(nuevos[+b.dataset.pp])})});
+}
+/* «Mis registros»: los pendientes aparecen vinculados arriba */
+{const rl0=renderList;renderList=async function(){await rl0.apply(this,arguments);
+  const box=$('recs');if(!box||!PEND.lista.length)return;
+  const w=el('section','card');w.append(el('h3','','📝 Reportes pendientes de emergencias'));
+  PEND.lista.forEach(p=>{const d=el('div','fnrow');d.style.display='block';d.append(el('b','',(p.num?p.num+' · ':'')+p.msg),el('br'),el('span','derived',plazoTxt(p)),el('br'));
+    const b=el('button','btn sm',p.reporte&&p.reporte.estado!=='final'?'Continuar el reporte':'Hacer el reporte');b.type='button';b.onclick=()=>hacerReportePend(p);d.append(b);w.append(d)});
+  box.prepend(w);
+}}
+/* al pulsar «Realizar registro»: ¿es el reporte de una emergencia pendiente o asignada? (consecutivo, fecha, categoría) */
+preguntarVinculo=async function(){
+  if(online)await repPendPoll();
+  const cand=PEND.lista.map(p=>({id:p.id,num:p.num,msg:p.msg,lugar:p.lugar,fecha:p.cierre||p.cuando,p}));
+  (ASIG.lista||[]).filter(x=>x.estado!=='asignado'&&x.emerg&&debeReportar(x)&&!cand.some(c=>c.id===x.emerg)).forEach(x=>{const e=x.emergencia||{};cand.push({id:x.emerg,num:e.num,msg:e.msg,lugar:e.lugar,fecha:e.cuando||Date.now(),x})});
+  if(!cand.length)return false;
+  return new Promise(res=>{
+    let h='<h3>¿Es el reporte de una emergencia?</h3><p class="derived">Tiene emergencias a su cargo sin reporte. Elija a cuál corresponde este registro.</p>';
+    cand.forEach((c,i)=>{h+='<div class="fnrow" style="display:block"><b>'+esc((c.num||'Sin consecutivo')+' · '+(c.msg||'Emergencia'))+'</b><br><span class="derived">'+esc(fhTxt(c.fecha))+(c.lugar?' · '+esc(c.lugar):'')+'</span><br><button class="btn" type="button" data-vq="'+i+'" style="margin-top:6px">Sí, es el reporte de esta</button></div>'});
+    h+='<div class="chips"><button class="btn alt" type="button" id="vq-no">No, es otro evento</button></div>';
+    dlgA(h,d=>{
+      d.querySelectorAll('[data-vq]').forEach(b=>b.onclick=()=>{dlgC();const c=cand[+b.dataset.vq];if(c.p)hacerReportePend(c.p);else reporteDeLlamado(c.x);res(true)});
+      $('vq-no').onclick=()=>{dlgC();res(false)}});
+  });
+};
+/* enlace directo ?reporte=<id> */
+async function reporteDesdeAviso(id){
+  await repPendPoll();
+  const p=PEND.lista.find(x=>x.id===id);
+  if(p)hacerReportePend(p);else toast('Esa emergencia ya no tiene un reporte pendiente para usted.');
+}
+/* los avisos de «pendiente» abren directamente el reporte */
+{const nd0=nfDetalle;nfDetalle=function(i){
+  if(i.refTipo==='pendiente'&&i.ref&&PEND.lista.some(p=>p.id===i.ref)){NF.seen[i.id]=1;nfGuardar();nfBadge();const p=PEND.lista.find(x=>x.id===i.ref);
+    dlgA('<h3>'+esc(i.titulo)+'</h3><p>'+esc(i.texto||'')+'</p><div class="chips"><button class="btn" type="button" id="np-go">Hacer el reporte ahora</button><button class="btn alt" type="button" id="np-no">Cerrar</button></div>',()=>{$('np-go').onclick=()=>{dlgC();hacerReportePend(p)};$('np-no').onclick=dlgC});return}
+  nd0.apply(this,arguments)}}
+setInterval(()=>{if(loggedIn()&&online)repPendPoll()},5*60000);
+setTimeout(()=>{if(loggedIn()&&online)repPendPoll()},7000);
+
+/* ---------- bitácora en vivo: llega a la central mientras se escribe y mueve la fase de la emergencia ---------- */
+const FASE_POR_ENTRADA={'Llegada al sitio':'amarillo','Reconocimiento de la escena':'amarillo','Inicio del ataque / atención':'amarillo','Situación controlada':'amarillo','Desmovilización hacia el cuartel':'amarillo','Terminación de la emergencia':'verde'};
+const BL={tm:null,fase:{}};
+function bitacoraLive(txt){
+  const id=D&&D.extra&&D.extra._llam;if(!id)return;
+  clearTimeout(BL.tm);
+  BL.tm=setTimeout(async()=>{if(!online||!loggedIn())return;try{await call('bitLive',{id,items:accList(),cin:String(getP(D,'rpt.cmd.nom')||'')})}catch(e){}},700);
+  const q=txt&&QUICK.find(z=>(z[2]||z[0])===txt),f=q&&FASE_POR_ENTRADA[q[0]];
+  if(f&&BL.fase[id]!==f&&online&&loggedIn()){
+    call('faseSet',{id,fase:f}).then(r=>{if(r&&r.ok){BL.fase[id]=f;toast(f==='verde'?'La emergencia pasó a «Atendida» y se cerró en la central.':'La central ve la emergencia como «'+(f==='amarillo'?'Atendiendo':'Requiere atención')+'».');try{pollAlerts();asigPoll()}catch(e){}}}).catch(()=>{});
+  }
+}
+{const la0=logAdd;logAdd=function(h,a){const ok=la0.apply(this,arguments);if(ok)bitacoraLive(String(a||'').trim());return ok}}
+{const dl0=drawLog;drawLog=function(){dl0.apply(this,arguments);bitacoraLive('')}}
+window.addEventListener('online',()=>bitacoraLive(''));
+/* el comandante que la central ya asignó aparece escrito en el reporte */
+{const rd0=reporteDeLlamado;reporteDeLlamado=async function(x){
+  await rd0.apply(this,arguments);
+  try{
+    const e=(EMG.lista||[]).find(z=>z.id===x.emerg),nom=(e&&e.cmd)||(x.grupo&&x.grupo.cmd)||'';
+    if(nom&&!nonEmpty(getP(D,'rpt.cmd.n'))){setP(D,'rpt.cmd.n',nom);const pl=(AJ.plantilla||[]).find(z=>z.n===nom);if(pl&&pl.g&&!nonEmpty(getP(D,'rpt.cmd.g')))setP(D,'rpt.cmd.g',pl.g);autosave();renderStep()}
+  }catch(er){}
+}}
+
+/* el nombre del comando de incidentes también viaja a la central apenas se escribe */
+{const sv0=setV;setV=function(p,v){const r=sv0.apply(this,arguments);if(p==='rpt.cmd.nom')bitacoraLive('');return r}}
 
 
 /* ================= MIS REGISTROS ================= */
@@ -2755,6 +2954,7 @@ async function main(){
   if(online)pingRoster().then(r=>{if(r&&r.ok){if(!REG||REG.estado!=='final')renderStep();pintarPwBan();pintarMenu();pintarMarca();marcaImagenes();pedirConsentimiento()}else if(r&&r.error==='clave')sesionInvalida()}).catch(()=>{});
   const qp=new URLSearchParams(location.search);
   if(qp.get('llamado')){const id=qp.get('llamado'),ac=qp.get('acc')||'';history.replaceState(null,'',location.pathname);setTimeout(()=>atenderDesdeAviso(id,ac),800)}
+  else if(qp.get('reporte')){const id=qp.get('reporte');history.replaceState(null,'',location.pathname);setTimeout(()=>reporteDesdeAviso(id),1200)}
   else if(qp.get('mapa')){history.replaceState(null,'',location.pathname);setTimeout(()=>irA('mapa'),500)}
   else if(qp.get('chat')){history.replaceState(null,'',location.pathname);setTimeout(()=>irA('chat'),500)}
   else if(qp.get('alerta')){history.replaceState(null,'',location.pathname);setTimeout(()=>irA('alerta'),500)}

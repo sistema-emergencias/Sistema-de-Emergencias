@@ -184,6 +184,52 @@
     return out(zip);
   }
 
+
+  /* ---- ajuste de texto largo: celdas combinadas con ajuste de línea y filas que crecen ---- */
+  const CPL_K = 1.4, LH = 12;           // caracteres por unidad de ancho de columna (letra de 9 pt) y alto de línea en puntos
+  function xfsDe(st) { const m = st.match(/<cellXfs count="\d+">([\s\S]*?)<\/cellXfs>/); return m ? m[1].match(/<xf [^>]*?(?:\/>|>[\s\S]*?<\/xf>)/g) || [] : []; }
+  /* clona el estilo idx con ajuste de línea; devuelve [styles nuevo, índice nuevo] */
+  function estiloAjuste(st, idx, horiz, vert) {
+    const xfs = xfsDe(st); const base = xfs[idx]; if (!base) return [st, idx];
+    let x = base.replace(/<alignment[^>]*\/>/, '');
+    if (/\/>$/.test(x) && !/<\/xf>$/.test(x)) x = x.replace(/\/>$/, '></xf>');
+    x = x.replace('</xf>', `<alignment${horiz ? ` horizontal="${horiz}"` : ''} vertical="${vert || 'center'}" wrapText="1"/></xf>`);
+    if (!/applyAlignment=/.test(x)) x = x.replace('<xf ', '<xf applyAlignment="1" '); else x = x.replace(/applyAlignment="0"/, 'applyAlignment="1"');
+    const n = xfs.length;
+    st = st.replace(/<cellXfs count="\d+">([\s\S]*?)<\/cellXfs>/, (m, a) => `<cellXfs count="${n + 1}">${a}${x}</cellXfs>`);
+    return [st, n];
+  }
+  const estiloDe = (s, ref) => { const m = s.match(new RegExp('<c r="' + ref + '"[^>]*? s="(\\d+)"')); return m ? +m[1] : 0; };
+  const anchoCol = (s, c) => { const re = /<col min="(\d+)" max="(\d+)" width="([\d.]+)"/g; let m; while ((m = re.exec(s))) if (c >= +m[1] && c <= +m[2]) return +m[3]; return 11.2; };
+  const anchoRango = (s, c1, c2) => { let w = 0; for (let c = colNum(c1); c <= colNum(c2); c++) w += anchoCol(s, c); return w; };
+  const lineasDe = (txt, ancho) => Math.max(1, wrapAll(txt, Math.max(8, Math.floor(ancho * CPL_K))).length);
+  const altoDe = (s, n) => { const m = s.match(new RegExp('<row r="' + n + '"[^>]*? ht="([\\d.]+)"')); return m ? +m[1] : 14.95; };
+  function fijaAlto(s, n, ht) {
+    return s.replace(new RegExp('<row r="' + n + '"([^>]*?)>'), (m, a) => { a = a.replace(/ ht="[\d.]+"/, '').replace(/ customHeight="1"/, ''); return `<row r="${n}"${a} ht="${(Math.round(ht * 100) / 100)}" customHeight="1">`; });
+  }
+  /* reparte la altura necesaria entre las filas dadas (sólo crece) */
+  function crecer(s, filas, necesaria) {
+    const actual = filas.reduce((t, n) => t + altoDe(s, n), 0);
+    if (necesaria <= actual) return s;
+    const cada = necesaria / filas.length;
+    filas.forEach(n => { s = fijaAlto(s, n, Math.max(altoDe(s, n), cada)); });
+    return s;
+  }
+  const unirCeldas = (s, quitar, poner) => { quitar.forEach(m => { s = s.replace(new RegExp('<mergeCell ref="' + m + '"/>'), ''); }); s = s.replace(/<mergeCells count="(\d+)">/, (m, c) => `<mergeCells count="${+c - quitar.length + 1}">`); return s.replace('</mergeCells>', `<mergeCell ref="${poner}"/></mergeCells>`); };
+
+  /* Carta (21.59 × 27.94 cm), márgenes de 1 cm, cuatro páginas por bloques de columnas, escala calculada */
+  function paginaCarta(s) {
+    const bloques = [['A', 'O'], ['P', 'U'], ['V', 'AC'], ['AD', 'AK']];
+    let maxPx = 0; bloques.forEach(([a, b]) => { let px = 0; for (let c = colNum(a); c <= colNum(b); c++) px += Math.round(anchoCol(s, c) * 7 + 5); maxPx = Math.max(maxPx, px); });
+    let hPt = 0; for (let r = 1; r <= 59; r++) hPt += altoDe(s, r);
+    const sw = (19.59 / 2.54) / (maxPx / 96), sh = (25.94 / 2.54 * 72) / hPt;
+    const esc = Math.max(40, Math.min(100, Math.floor(Math.min(sw, sh) * 100) - 1));
+    const M = (1 / 2.54).toFixed(5);
+    s = s.replace(/<pageMargins[^>]*\/>/, `<printOptions horizontalCentered="1"/><pageMargins left="${M}" right="${M}" top="${M}" bottom="${M}" header="0" footer="0"/>`);
+    s = s.replace(/<pageSetup[^>]*\/>/, `<pageSetup paperSize="1" scale="${esc}" pageOrder="overThenDown" orientation="portrait"/><colBreaks count="3" manualBreakCount="3"><brk id="15" max="1048575" man="1"/><brk id="21" max="1048575" man="1"/><brk id="29" max="1048575" man="1"/></colBreaks>`);
+    return s;
+  }
+
   /* ---------- 3. REPORTE DE EMERGENCIAS (un incidente, datos conocidos) ---------- */
   async function reporteEmergencia(JSZip, tpl, r) {
     const zip = await load(JSZip, tpl);
@@ -209,7 +255,15 @@
     if (!lat && r.coord) s = setCell(s, 'I24', r.coord);
     const rp = r.rpt || {};
     const wrap = (txt, n, max) => { const out = ['', '', '', '']; let li = 0, over = false; String(txt || '').split(/\s+/).filter(Boolean).forEach(w => { if (over) return; if ((out[li] + ' ' + w).trim().length > n) { li++; if (li >= max) { over = true; return; } } out[li] = (out[li] + ' ' + w).trim(); }); return { out, over }; };
-    s = put(s, 'I30', 'Ver la descripción de los hechos en el numeral 9 (resumen de las acciones realizadas).'); s = put(s, 'I31', 'N/A');
+    let st = await zip.file('xl/styles.xml').async('string');
+    const ajusta = (refs, horiz, vert) => { const m = {}; refs.forEach(ref => { const i = estiloDe(s, ref); const k = i + '|' + (horiz || '') + '|' + (vert || ''); if (!(k in m)) { const r2 = estiloAjuste(st, i, horiz, vert); st = r2[0]; m[k] = r2[1]; } s = s.replace(new RegExp('(<c r="' + ref + '")( s="\\d+")?'), `$1 s="${m[k]}"`); }); };
+    s = unirCeldas(s, ['I30:O30', 'I31:O31'], 'I30:O31'); s = unirCeldas(s, ['I32:O32', 'I33:O33', 'I34:O34'], 'I32:O34'); s = unirCeldas(s, ['I35:O35', 'I36:O36', 'I37:O37'], 'I35:O37');
+    const wI = anchoRango(s, 'I', 'O');
+    s = pn(s, 'I30', rp.dinc); s = pn(s, 'I32', rp.amen); s = pn(s, 'I35', rp.obj);
+    ajusta(['I30', 'I32', 'I35'], 'left', 'top');
+    s = crecer(s, [30, 31], lineasDe(blank(rp.dinc) ? 'N/A' : rp.dinc, wI) * LH + 4);
+    s = crecer(s, [32, 33, 34], lineasDe(blank(rp.amen) ? 'N/A' : rp.amen, wI) * LH + 4);
+    s = crecer(s, [35, 36, 37], lineasDe(blank(rp.obj) ? 'N/A' : rp.obj, wI) * LH + 4);
     // 1. propiedad
     const prop = rp.prop || {};
     const pm = { 'Vivienda': 'J12', 'Finca': 'J13', 'Comercial': 'J14', 'Agrícola': 'J15', 'Vía pública': 'N12', 'Lote baldío': 'N13', 'Industrial': 'N14', 'Otro': 'N15' };
@@ -220,9 +274,6 @@
     if (rp.zona === 'URBANA') s = put(s, 'D23', 'X'); if (rp.zona === 'RURAL') s = put(s, 'G23', 'X');
     s = pn(s, 'G25', rp.pc); s = pn(s, 'G26', rp.pcid); s = pn(s, 'G27', rp.ae); s = pn(s, 'G28', rp.acv);
     // 3. evaluación inicial
-    const am = wrap(rp.amen, 62, 3), ob = wrap(rp.obj, 62, 3);
-    ['I32', 'I33', 'I34'].forEach((c, i) => { s = i === 0 ? pn(s, c, am.out[i]) : put(s, c, am.out[i]); });
-    ['I35', 'I36', 'I37'].forEach((c, i) => { s = i === 0 ? pn(s, c, ob.out[i]) : put(s, c, ob.out[i]); });
     const esc = rp.esc || {};
     [['alt', 38, 40], ['prot', 41, 43], ['int', 44, 46]].forEach(([k, row, rowT]) => {
       if (esc[k] === 'SI') s = put(s, 'L' + row, 'X'); if (esc[k] === 'NO') s = put(s, 'O' + row, 'X');
@@ -252,12 +303,18 @@
     if (resto.length) s = put(s, 'X58', '(continúa en la hoja CONTINUACIÓN)');
     if (!lineas.length) s = put(s, 'X3', 'N/A');
     // 10. unidad que comandó
-    const cm = rp.cmd || {}; s = pn(s, 'AD4', cm.n); s = pn(s, 'AG4', cm.g); s = pn(s, 'AH4', cm.c);
+    const cm = rp.cmd || {}; const gradosDe = r.grados || {};
+    s = pn(s, 'AD4', cm.n); s = pn(s, 'AG4', cm.g || gradosDe[cm.n]); s = pn(s, 'AH4', cm.c);
+    ajusta(['AD4', 'AG4', 'AH4'], 'center', 'center');
+    s = crecer(s, [4], Math.max(lineasDe(cm.n || 'N/A', anchoRango(s, 'AD', 'AF')), lineasDe(cm.g || gradosDe[cm.n] || 'N/A', anchoCol(s, 33)), lineasDe(cm.c || 'N/A', anchoCol(s, 34))) * LH + 4);
     // 11. unidades que intervinieron (12 nombres, dos columnas)
     if (!(r.pers || []).length) s = put(s, 'AD7', 'N/A');
-    (r.pers || []).slice(0, 12).forEach((nom, i) => { const row = 7 + (i >> 1), [g, n2] = splitGrado(nom); if (i % 2 === 0) { s = put(s, 'AD' + row, n2); s = put(s, 'AG' + row, g); } else { s = put(s, 'AH' + row, n2); s = put(s, 'AK' + row, g); } });
+    const pers = (r.pers || []).slice(0, 12);
+    pers.forEach((nom, i) => { const row = 7 + (i >> 1); let [g, n2] = splitGrado(nom); if (!g) g = gradosDe[nom] || ''; if (i % 2 === 0) { s = put(s, 'AD' + row, n2); s = put(s, 'AG' + row, g); ajusta(['AD' + row, 'AG' + row], 'center', 'center'); } else { s = put(s, 'AH' + row, n2); s = put(s, 'AK' + row, g); ajusta(['AH' + row, 'AK' + row], 'center', 'center'); } });
+    for (let row = 7; row <= 12; row++) { const a = pers[(row - 7) * 2], b = pers[(row - 7) * 2 + 1]; const [ga, na2] = a ? splitGrado(a) : ['', '']; const [gb, nb2] = b ? splitGrado(b) : ['', '']; s = crecer(s, [row], Math.max(lineasDe(na2, anchoRango(s, 'AD', 'AF')), lineasDe(ga || gradosDe[a] || '', anchoCol(s, 33)), lineasDe(nb2, anchoRango(s, 'AH', 'AJ')), lineasDe(gb || gradosDe[b] || '', anchoCol(s, 37))) * LH + 3); }
     // 12. observaciones
     const obs = [];
+    if (cm.nom) obs.push('Comando de incidentes: ' + cm.nom + '.');
     obs.push(blank(rp.obs) ? 'Sin observaciones adicionales del comandante del incidente.' : rp.obs);
     obs.push(`Duración: ${durOf(r)}. Unidades que asistieron: ${na(r.uni)}. Vehículos: ${na(r.veh)}.`);
     if (r.hsal) obs.push('Salida de estación: ' + h24(r.hsal) + ' h.');
@@ -270,8 +327,10 @@
     if (!(rp.les || []).length && r.lesionados) obs.push('Lesionados: ' + r.lesionados + (r.trasladado ? ' (trasladado a ' + r.trasladado + ')' : ''));
     if (r.canal) obs.push('Aviso recibido por: ' + r.canal + (r.rep ? ' (' + r.rep + ')' : '') + '.');
     if (!r.rpt) obs.push('Datos completados desde el registro ' + (r.id || '') + '. Faltan los demás campos del formato.');
-    const chunk = []; obs.join(' ').match(/.{1,70}(\s|$)/g).forEach(x => chunk.push(x.trim()));
-    ['AD15', 'AD16', 'AD17', 'AD18', 'AD19', 'AD20'].forEach((ref, i) => { if (chunk[i]) s = setCell(s, ref, chunk[i]); });
+    const obsTxt = obs.join(' ');
+    s = unirCeldas(s, ['AD15:AK15', 'AD16:AK16', 'AD17:AK17', 'AD18:AK18', 'AD19:AK19', 'AD20:AK20'], 'AD15:AK20');
+    s = setCell(s, 'AD15', obsTxt); ajusta(['AD15'], 'left', 'top');
+    s = crecer(s, [15, 16, 17, 18, 19, 20], lineasDe(obsTxt, anchoRango(s, 'AD', 'AK')) * LH + 4);
     // 7. organización del incidente (SCI) dentro de los recuadros del formato
     let dr = await zip.file('xl/drawings/drawing1.xml').async('string');
     dr = organigrama(dr, rp.sci || {}, rp.cmd || {}, r);
@@ -280,6 +339,9 @@
     if (fotos.length) s = await fotosReporte(zip, s, dr, fotos, r);
     else zip.file('xl/drawings/drawing1.xml', dr);
     if (resto.length) { let ct2 = await zip.file('[Content_Types].xml').async('string'); ct2 = await hojaContinuacion(zip, ct2, resto, r); zip.file('[Content_Types].xml', ct2); }
+    if ((r.sistema || []).length) { let ct3 = await zip.file('[Content_Types].xml').async('string'); ct3 = await hojaContinuacion(zip, ct3, r.sistema, r, { n: 5, rid: 'rId11', sid: 11, name: 'REGISTROS_SISTEMA', titulo: 'ANEXO · REGISTROS DEL SISTEMA (hora · evento registrado automáticamente en la plataforma)' }); zip.file('[Content_Types].xml', ct3); }
+    zip.file('xl/styles.xml', st);
+    s = paginaCarta(s);
     zip.file('xl/worksheets/sheet1.xml', s);
     await forceCalc(zip);
     return out(zip);
@@ -295,18 +357,19 @@
     return out;
   }
   /* hoja adicional: continuación del numeral 9 cuando el texto no cabe */
-  async function hojaContinuacion(zip, ct, lineas, r) {
-    let rows = `<row r="1" ht="22" customHeight="1"><c r="A1" t="inlineStr"><is><t>${X('REPORTE DE EMERGENCIAS · ' + (r.id || '') + ' · CONTINUACIÓN DEL NUMERAL 9 (RESUMEN DE LAS ACCIONES REALIZADAS)')}</t></is></c></row>`;
+  async function hojaContinuacion(zip, ct, lineas, r, o) {
+    o = o || { n: 4, rid: 'rId10', sid: 10, name: 'CONTINUACION', titulo: 'CONTINUACIÓN DEL NUMERAL 9 (RESUMEN DE LAS ACCIONES REALIZADAS)' };
+    let rows = `<row r="1" ht="22" customHeight="1"><c r="A1" t="inlineStr"><is><t>${X('REPORTE DE EMERGENCIAS · ' + (r.id || '') + ' · ' + o.titulo)}</t></is></c></row>`;
     lineas.forEach((x, i) => { const n = 2 + i; rows += `<row r="${n}"><c r="A${n}" t="inlineStr"><is><t>${X(x.h)}</t></is></c><c r="B${n}" t="inlineStr"><is><t xml:space="preserve">${X(x.a)}</t></is></c></row>`; });
     const sheet = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><cols><col min="1" max="1" width="10" customWidth="1"/><col min="2" max="2" width="110" customWidth="1"/></cols><sheetData>${rows}</sheetData><pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/><pageSetup orientation="portrait" fitToHeight="0"/></worksheet>`;
-    zip.file('xl/worksheets/sheet4.xml', sheet);
+    zip.file('xl/worksheets/sheet' + o.n + '.xml', sheet);
     let wb = await zip.file('xl/workbook.xml').async('string');
-    wb = wb.replace('</sheets>', '<sheet name="CONTINUACION" sheetId="10" r:id="rId10"/></sheets>');
+    wb = wb.replace('</sheets>', '<sheet name="' + o.name + '" sheetId="' + o.sid + '" r:id="' + o.rid + '"/></sheets>');
     zip.file('xl/workbook.xml', wb);
     let wr = await zip.file('xl/_rels/workbook.xml.rels').async('string');
-    wr = wr.replace('</Relationships>', '<Relationship Id="rId10" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet4.xml"/></Relationships>');
+    wr = wr.replace('</Relationships>', '<Relationship Id="' + o.rid + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' + o.n + '.xml"/></Relationships>');
     zip.file('xl/_rels/workbook.xml.rels', wr);
-    return ct.replace('</Types>', '<Override PartName="/xl/worksheets/sheet4.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>');
+    return ct.replace('</Types>', '<Override PartName="/xl/worksheets/sheet' + o.n + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>');
   }
 
   /* texto dentro de un recuadro (forma) del dibujo, por nombre */
@@ -320,11 +383,13 @@
   function organigrama(dr, sci, cmd, r) {
     const noAct = /no se activ/i;
     const nom = k => { const v = sci[k]; return v && !noAct.test(v) ? v : ''; };
-    const rol = (t, k) => [{ t, b: 1, sz: 650 }, { t: nom(k) || (k === 'ci' ? (sci.ci || cmd.n || 'N/A') : 'Asume el comandante del incidente'), sz: 700 }];
-    dr = textoForma(dr, '3 Rectángulo', rol('COMANDANTE DEL INCIDENTE', 'ci'));
+    const rol = (t, k) => [{ t, b: 1, sz: 650 }, { t: nom(k) || (k === 'ci' ? (sci.ci || cmd.n || 'N/A') : 'Lo asume el comandante'), sz: 700 }];
+    dr = textoForma(dr, '3 Rectángulo', rol('COMANDANTE DEL INCIDENTE' + (cmd.nom ? ' · ' + cmd.nom : ''), 'ci'));
     dr = textoForma(dr, '8 Rectángulo', rol('Oficial de seguridad', 'seg'));
     dr = textoForma(dr, '9 Rectángulo', rol('Oficial de información pública', 'inf'));
     dr = textoForma(dr, '10 Rectángulo', rol('Oficial de enlace', 'enl'));
+    /* el recuadro del oficial de enlace es más bajo que los otros dos: se alarga para que quepan sus dos líneas */
+    dr = dr.replace(/<xdr:twoCellAnchor[\s\S]*?<\/xdr:twoCellAnchor>/g, a => /name="10 Rect/.test(a) ? a.replace(/(<xdr:to>[\s\S]*?)<xdr:row>17<\/xdr:row><xdr:rowOff>\d+<\/xdr:rowOff>/, '$1<xdr:row>18</xdr:row><xdr:rowOff>80000</xdr:rowOff>').replace(/(<a:ext cx="\d+" cy=")\d+/, '$1430000') : a);
     const grupos = (sci.grupos || []).filter(g => g && g.u);
     const ops = rol('JEFE DE OPERACIONES', 'ops');
     grupos.slice(0, 6).forEach(g => ops.push({ t: g.u + ': ' + (g.f || '') + (g.n ? ' (' + g.n + ')' : ''), sz: 600 }));
@@ -356,11 +421,11 @@
     fotos.slice(0, 4).forEach((f, i) => {
       const b = BOX[i], n = i + 1;
       let bw = 0; for (let c = b.c1; c <= b.c2; c++) bw += cw[c] || 0;
-      const bh = (b.r2 - b.r1 + 1) * ROW_EMU, pad = 45000;
+      const hE = n => Math.round(altoDe(s, n) * 12700); let bh = 0; for (let q = b.r1; q <= b.r2; q++) bh += hE(q); const pad = 45000;
       const [W, H] = fit(f, bw - 2 * pad, bh - 2 * pad);
       const px = Math.floor((bw - W) / 2), py = Math.floor((bh - H) / 2);
       let c = b.c1, acc = 0; while (c < b.c2 && acc + (cw[c] || 0) <= px) { acc += cw[c] || 0; c++; }
-      const row0 = (b.r1 - 1) + Math.floor(py / ROW_EMU), rowOff = py % ROW_EMU;
+      let row0 = b.r1, rowOff = py; while (row0 < b.r2 && rowOff >= hE(row0)) { rowOff -= hE(row0); row0++; } row0 -= 1;
       const name = 'media/repfoto' + n + '.jpeg', rid = 'rIdRf' + n;
       zip.file('xl/' + name, f.data);
       rels = rels.replace('</Relationships>', `<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../${name}"/></Relationships>`);
@@ -423,7 +488,7 @@
     const lat = gmsLat(r.lat), lon = gmsLon(r.lon);
     const acc = (rp.acc || []).slice().sort((a, b) => h24(a.h).localeCompare(h24(b.h)));
     const fotos = o.fotos || r.fotos || [];
-    const css = `@page{size:A4;margin:10mm}*{box-sizing:border-box}body{font:10.5px/1.3 Arial,Helvetica,sans-serif;color:#000;margin:0}h1,h2{margin:0}.hd{display:grid;grid-template-columns:80px 1fr 80px;align-items:center;border:1.5px solid #000;padding:4px}.hd img{max-height:64px;max-width:76px}.hd .t{text-align:center;font-weight:700;font-size:13px}table{border-collapse:collapse;width:100%;margin-top:4px;page-break-inside:avoid}th,td{border:1px solid #000;padding:3px 5px;vertical-align:top;text-align:left}th{background:#eee;width:23%;font-weight:700}.sec{background:#222;color:#fff;font-weight:700;text-align:center;padding:3px;margin-top:6px;border:1px solid #000;page-break-after:avoid}.ck{margin-right:12px;white-space:nowrap}.org{display:grid;gap:6px;justify-items:center;border:1px solid #000;padding:6px;margin-top:4px;page-break-inside:avoid}.bx{border:1.5px solid #000;padding:4px 8px;text-align:center;min-width:130px}.bx b{display:block;font-size:9px}.row{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}.ph{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}.ph figure{margin:0;border:1px solid #000;padding:4px;text-align:center;page-break-inside:avoid}.ph img{max-width:100%;max-height:230px}.ph figcaption{font-size:9.5px}.sign{height:46px}`;
+    const css = `@page{size:21.59cm 27.94cm;margin:1cm}*{box-sizing:border-box}body{font:10.5px/1.3 Arial,Helvetica,sans-serif;color:#000;margin:0}h1,h2{margin:0}.hd{display:grid;grid-template-columns:80px 1fr 80px;align-items:center;border:1.5px solid #000;padding:4px}.hd img{max-height:64px;max-width:76px}.hd .t{text-align:center;font-weight:700;font-size:13px}table{border-collapse:collapse;width:100%;margin-top:4px;page-break-inside:avoid}th,td{border:1px solid #000;padding:3px 5px;vertical-align:top;text-align:left}th{background:#eee;width:23%;font-weight:700}.sec{background:#222;color:#fff;font-weight:700;text-align:center;padding:3px;margin-top:6px;border:1px solid #000;page-break-after:avoid}.ck{margin-right:12px;white-space:nowrap}.org{display:grid;gap:6px;justify-items:center;border:1px solid #000;padding:6px;margin-top:4px;page-break-inside:avoid}.bx{border:1.5px solid #000;padding:4px 8px;text-align:center;min-width:130px}.bx b{display:block;font-size:9px}.row{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}.ph{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}.ph figure{margin:0;border:1px solid #000;padding:4px;text-align:center;page-break-inside:avoid}.ph img{max-width:100%;max-height:230px}.ph figcaption{font-size:9.5px}.sign{height:46px}`;
     const gr = (sci.grupos || []).map(g => `<div class="bx"><b>Unidad ${E(g.u)}</b>${E(g.f || '')}${g.n ? '<br>' + E(g.n) : ''}</div>`).join('');
     return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Reporte de Emergencias ${E(r.id)}</title><style>${css}</style></head><body>
 <div class="hd">${o.logo1 ? `<img src="${o.logo1}" alt="">` : '<span></span>'}<div class="t">CUERPO DE BOMBEROS VOLUNTARIOS<br>LA UNION - VALLE DEL CAUCA<br><br>REPORTE DE EMERGENCIAS</div>${o.logo2 ? `<img src="${o.logo2}" alt="">` : '<span></span>'}</div>
@@ -438,7 +503,7 @@
 <tr><th>Coordenadas</th><td colspan="3">Latitud: <b>${E(lat)}</b> &nbsp; Longitud: <b>${E(lon)}</b></td></tr>
 ${row('Ubicación del puesto de comando', v(rp.pc))}${row('Identificación del puesto de comando', v(rp.pcid))}${row('Ubicación del área de espera', v(rp.ae))}${row('Ubicación del A.C.V.', v(rp.acv))}</table>
 <div class="sec">3. EVALUACIÓN INICIAL DEL INCIDENTE</div>
-<table>${row('Descripción del incidente', v(r.desc))}${row('Amenazas del incidente', v(rp.amen))}${row('Objetivos iniciales', v(rp.obj))}
+<table>${row('Descripción del incidente', v(rp.dinc))}${row('Amenazas del incidente', v(rp.amen))}${row('Objetivos iniciales', v(rp.obj))}
 <tr><th>Hubo alteración en la escena antes de la llegada de bomberos</th><td>${chk(esc.alt === 'SI', 'SI')}${chk(esc.alt === 'NO', 'NO')}</td><th>Cómo se alteró</th><td>${v(esc.altc)}</td></tr>
 <tr><th>Se realizó protección del área luego del arribo</th><td>${chk(esc.prot === 'SI', 'SI')}${chk(esc.prot === 'NO', 'NO')}</td><th>Cómo se realizó</th><td>${v(esc.protc)}</td></tr>
 <tr><th>Hubo personas que intervinieron antes de la llegada de bomberos</th><td>${chk(esc.int === 'SI', 'SI')}${chk(esc.int === 'NO', 'NO')}</td><th>Quiénes intervinieron</th><td>${v(esc.intc)}</td></tr></table>
@@ -449,7 +514,7 @@ ${row('Ubicación del puesto de comando', v(rp.pc))}${row('Identificación del p
 <div class="sec">6. INFORMACIÓN DE VEHÍCULOS IMPLICADOS</div>
 <table><tr><th>Conductor</th><th>Doc. identidad</th><th>Vehículo</th><th>Color / placa</th></tr>${(rp.vimp || []).map(x => `<tr><td>${v(x.c)}</td><td>${v(x.d)}</td><td>${v(x.v)}</td><td>${v(x.col)} ${v(x.pl)}</td></tr>`).join('') || '<tr><td colspan="4">N/A</td></tr>'}</table>
 <div class="sec">7. ORGANIZACIÓN DEL INCIDENTE (SCI)</div>
-<div class="org"><div class="bx"><b>COMANDANTE DEL INCIDENTE</b>${E(sci.ci || cmd.n || '')}</div>
+<div class="org"><div class="bx"><b>COMANDANTE DEL INCIDENTE${cmd.nom ? " · " + E(cmd.nom) : ""}</b>${E(sci.ci || cmd.n || '')}</div>
 <div class="row"><div class="bx"><b>Oficial de seguridad</b>${E(nm('seg'))}</div><div class="bx"><b>Oficial de información pública</b>${E(nm('inf'))}</div><div class="bx"><b>Oficial de enlace</b>${E(nm('enl'))}</div></div>
 <div class="row"><div class="bx"><b>JEFE DE OPERACIONES</b>${E(nm('ops'))}</div><div class="bx"><b>JEFE DE PLANIFICACIÓN</b>${E(nm('pla'))}</div><div class="bx"><b>JEFE DE LOGÍSTICA</b>${E(nm('log'))}</div><div class="bx"><b>JEFE DE ADMON. Y FINANZAS</b>${E(nm('adm'))}</div></div>
 ${gr ? `<div><b>Función de cada unidad</b></div><div class="row">${gr}</div>` : ''}</div>
@@ -876,16 +941,16 @@ ${fotos.length ? `<div class="sec" style="page-break-before:always">14. REGISTRO
           lines += '<line x1="' + a.toFixed(1) + '" y1="' + c.toFixed(1) + '" x2="' + b.toFixed(1) + '" y2="' + e.toFixed(1) + '" stroke="' + d.lnC + '" stroke-width="' + d.lnW + '"/>'; return;
         }
         if (d.kind === 'sp') {
-          let s = 'position:absolute;left:' + x1.toFixed(1) + 'px;top:' + y1.toFixed(1) + 'px;width:' + w.toFixed(1) + 'px;height:' + hh.toFixed(1) + 'px;display:flex;flex-direction:column;justify-content:' + (d.anchor === 'ctr' ? 'center' : d.anchor === 'b' ? 'flex-end' : 'flex-start') + ';overflow:hidden;box-sizing:border-box;';
+          let s = 'position:absolute;left:' + x1.toFixed(1) + 'px;top:' + y1.toFixed(1) + 'px;width:' + w.toFixed(1) + 'px;height:' + hh.toFixed(1) + 'px;display:flex;flex-direction:column;justify-content:' + (d.anchor === 'ctr' ? 'safe center' : d.anchor === 'b' ? 'flex-end' : 'flex-start') + ';overflow:visible;box-sizing:border-box;';
           if (d.fill) s += 'background:' + d.fill + ';';
           if (!d.lnNo) s += 'border:' + d.lnW + 'px solid ' + d.lnC + ';';
           if (d.geom === 'roundRect') s += 'border-radius:8px;'; if (d.geom === 'ellipse') s += 'border-radius:50%;';
-          const ps = (d.paras || []).map(p => '<div style="text-align:' + ({ ctr: 'center', r: 'right', l: 'left', just: 'justify' }[p.al] || 'left') + ';line-height:1.15">' + p.runs.map(r => '<span style="font-size:' + (r.sz * 96 / 72).toFixed(1) + 'px;' + (r.b ? 'font-weight:700;' : '') + (r.i ? 'font-style:italic;' : '') + (r.c ? 'color:' + r.c + ';' : '') + '">' + ESC(r.t) + '</span>').join('') + '</div>').join('');
+          const ps = (d.paras || []).map(p => '<div style="text-align:' + ({ ctr: 'center', r: 'right', l: 'left', just: 'justify' }[p.al] || 'left') + ';line-height:1.15;font-size:' + (((p.runs[0] || {}).sz || 10) * 96 / 72).toFixed(1) + 'px">' + p.runs.map(r => '<span style="font-size:' + (r.sz * 96 / 72).toFixed(1) + 'px;' + (r.b ? 'font-weight:700;' : '') + (r.i ? 'font-style:italic;' : '') + (r.c ? 'color:' + r.c + ';' : '') + '">' + ESC(r.t) + '</span>').join('') + '</div>').join('');
           sh += '<div style="' + s + '">' + ps + '</div>';
         }
       });
-      const SC = Math.min(756 / W, 986 / H);
-      html += '<section class="pg" data-n="' + ESC(nombre) + '" style="position:relative;width:' + (W * SC + 4).toFixed(1) + 'px;height:' + (H * SC + 4).toFixed(1) + 'px;overflow:hidden"><div class="band" style="position:absolute;left:2px;top:2px;width:' + W + 'px;height:' + H + 'px;transform:scale(' + SC.toFixed(5) + ');transform-origin:0 0"><div style="position:relative;width:' + W + 'px;height:' + H + 'px">' + t + '<svg class="ln" width="' + W + '" height="' + H + '">' + lines + '</svg>' + sh + '</div></div></section>';
+      const SC = Math.min(738 / W, 976 / H);
+      html += '<section class="pg" data-n="' + ESC(nombre) + '" style="position:relative;width:' + (W * SC + 4).toFixed(1) + 'px;height:' + (H * SC + 4).toFixed(1) + 'px;overflow:hidden;contain:strict"><div class="band" style="position:absolute;left:2px;top:2px;width:' + W + 'px;height:' + H + 'px;transform:scale(' + SC.toFixed(5) + ');transform-origin:0 0"><div style="position:relative;width:' + W + 'px;height:' + H + 'px">' + t + '<svg class="ln" width="' + W + '" height="' + H + '">' + lines + '</svg>' + sh + '</div></div></section>';
     });
     return html;
   }
@@ -920,7 +985,7 @@ ${fotos.length ? `<div class="sec" style="page-break-before:always">14. REGISTRO
       const tg = wrels[rid]; const path = 'xl/' + tg.replace(/^\/?(xl\/)?/, '');
       html += await hojaHtml(zip, path, nm, th, xfs, ss, defs[i], opt);
     }
-    const css = 'html,body{margin:0;background:#e9ecef;font-family:Calibri,Carlito,Arial,sans-serif}.pg{background:#fff;margin:8px auto;box-shadow:0 1px 4px rgba(0,0,0,.25)}svg.fit{width:100%;height:auto;display:block}.band{position:relative;font-family:Calibri,Carlito,Arial,sans-serif;color:#000}table.x{border-collapse:collapse;table-layout:fixed;font-size:14px}table.x td{padding:0 2px;line-height:1.15;overflow:hidden}svg.ln{position:absolute;left:0;top:0;pointer-events:none}.rot{display:inline-block;writing-mode:vertical-rl;transform:rotate(180deg)}.rot.up{transform:none}.mk{font-size:8px;color:#999;text-align:center;padding:2px;font-family:Arial}' + (opt.sinImpresion ? '@media print{body{display:none}}' : '@page{size:letter portrait;margin:.25in}@media print{html,body{background:#fff}.pg{box-shadow:none;margin:0 auto;page-break-after:always;break-after:page}.pg:last-child{page-break-after:auto}.nop{display:none}}');
+    const css = 'html,body{margin:0;background:#e9ecef;font-family:Calibri,Carlito,Arial,sans-serif}.pg{background:#fff;margin:8px auto;box-shadow:0 1px 4px rgba(0,0,0,.25)}svg.fit{width:100%;height:auto;display:block}.band{position:relative;font-family:Calibri,Carlito,Arial,sans-serif;color:#000}table.x{border-collapse:collapse;table-layout:fixed;font-size:14px}table.x td{padding:0 2px;line-height:1.15;overflow:hidden}svg.ln{position:absolute;left:0;top:0;pointer-events:none}.rot{display:inline-block;writing-mode:vertical-rl;transform:rotate(180deg)}.rot.up{transform:none}.mk{font-size:8px;color:#999;text-align:center;padding:2px;font-family:Arial}' + (opt.sinImpresion ? '@media print{body{display:none}}' : '@page{size:21.59cm 27.94cm;margin:1cm}@media print{html,body{background:#fff}.pg{box-shadow:none;margin:0 auto;page-break-after:always;break-after:page}.pg:last-child{page-break-after:auto}.nop{display:none}}');
     return '<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="author" content="Cristhian Steven Blandón Henao"><title>' + ESC(opt.titulo || 'Reporte de Emergencias') + '</title><style>' + css + '</style></head><body>' + (opt.sinImpresion ? '' : '<button class="nop" style="position:fixed;right:12px;top:12px;z-index:9;padding:10px 16px;font:600 15px Arial;background:#b4251b;color:#fff;border:0;cursor:pointer" onclick="window.print()">Imprimir</button>') + html + '<div class="mk nop">Sistema desarrollado por Cristhian Steven Blandón Henao</div></body></html>';
   }
   g.GEN = g.GEN || {};

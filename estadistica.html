@@ -221,7 +221,7 @@ fieldset.aud label{display:flex;align-items:center;gap:6px;font-weight:600}
 <div id="toasts" aria-live="polite"></div>
 <dialog id="dlg"></dialog>
   <section id="v-pan" hidden>
-    <div class="note" id="histbanner" hidden>Falta cargar el histórico (estadística 2013–2026). Vaya a la pestaña <b>Histórico</b> y elija el archivo historico.json.</div>
+    <div class="note" id="histbanner" hidden>El histórico (estadística 2013–2026) se está cargando solo la primera vez. Si este aviso no desaparece, suba el archivo <b>historico.json</b> al sitio junto con las demás páginas o cárguelo desde Administración → Histórico.</div>
     <div class="sec">
       <div class="card" id="fcard">
         <div class="tools">
@@ -278,7 +278,8 @@ fieldset.aud label{display:flex;align-items:center;gap:6px;font-weight:600}
 
       <div id="p-reg" class="sec" hidden>
         <div class="card" id="v-pend-card"><div id="v-pend"></div></div>
-        <div class="card"><label>Buscar<input id="q" placeholder="Número, categoría, dirección, barrio o descripción"></label><label class="only-master" style="flex-direction:row;display:flex;gap:8px;align-items:center;margin-top:8px" hidden><input type="checkbox" id="showanul" style="width:auto"> Mostrar también los registros anulados</label></div>
+        <div class="card" id="emg-at-card"><h3>Emergencias atendidas</h3><p class="derived">Todas las emergencias con llamado (activas y terminadas), con su reporte vinculado. «Completada» no las saca de aquí.</p><div class="tools"><label>Buscar<input id="at-q" placeholder="Consecutivo, tipo o lugar"></label><label style="flex-direction:row;gap:8px;align-items:center"><input type="checkbox" id="at-sin" style="width:auto"> Solo las que no tienen reporte</label><button class="btn alt sm" id="at-rec">Actualizar</button></div><div class="scroll"><table id="at-tab"></table></div><div class="derived" id="at-pg"></div></div>
+        <div class="card"><label>Buscar<input id="q" placeholder="Número, categoría, dirección, barrio o descripción"></label><label class="only-master" style="flex-direction:row;display:flex;gap:8px;align-items:center;margin-top:8px" hidden><input type="checkbox" id="showanul" style="width:auto"> Mostrar también los registros eliminados</label></div>
         <div class="scroll"><table id="rtab"></table></div>
         <div class="tools"><button class="btn alt sm" id="prev">Anterior</button><span class="derived" id="pg"></span><button class="btn alt sm" id="next">Siguiente</button></div>
         <div class="card" id="detail" hidden></div>
@@ -354,6 +355,8 @@ fieldset.aud label{display:flex;align-items:center;gap:6px;font-weight:600}
           <button role="tab" aria-selected="false" data-a="perm">Funciones por rol</button>
           <button role="tab" aria-selected="false" data-a="seg">Seguridad y mantenimiento</button>
           <button role="tab" aria-selected="false" data-a="txt" data-solo="master">Textos</button>
+          <button role="tab" aria-selected="false" data-a="geo">Geocerco de la estación</button>
+          <button role="tab" aria-selected="false" data-a="dis" data-solo="master">Diseño de menús</button>
           <button role="tab" aria-selected="false" data-a="dgn">Diagnóstico</button>
         </div>
         <div id="a-box" class="sec"></div>
@@ -379,7 +382,7 @@ fieldset.aud label{display:flex;align-items:center;gap:6px;font-weight:600}
 'use strict';
 const CFG=window.CBV_CONFIG||{};
 const E=window.CBV_ESQ;
-const VERSION_ESPERADA='2.2';
+const VERSION_ESPERADA='2.3';
 const TIPO_CAT={"CAÍDA / CORTES DE ARBOL": "OTROS", "CONTROL DE ABEJAS": "OTROS", "CONTROL DE AVISPAS": "OTROS", "CAÍDA DE CUERDAS": "OTROS", "CORTO CIRCUITO": "INCENDIOS", "COLAPSO DE ESTRUCTURAS": "OTROS", "CAPACITACIONES": "OTROS", "EXTRICACIÓN VEHICULAR": "RESCATES", "FUGA DE GAS NATURAL": "OTROS", "FUGA DE GAS GLP": "MATERIALES PELIGROSOS", "INCENDIO FORESTAL": "INCENDIOS", "INCENDIO ESTRUCTURAL": "INCENDIOS", "INCENDIO VEHICULAR": "INCENDIOS", "INUNDACIÓN": "OTROS", "LABORES DE PREVENCION O ACOMPAÑAMIENTO EN GESTION DEL RIESGO": "OTROS", "MATERIALES PELIGROSOS / DERRAMES": "MATERIALES PELIGROSOS", "PRIMEROS AUXILIOS": "OTROS", "RESCATE DE PERSONA / PARAPENTE": "RESCATES", "RESCATE DE ANIMAL": "RESCATES", "REUNIÓN EN LA ALCALDÍA": "OTROS", "REUNIONES DE SERVICIO SOCIAL": "OTROS", "SUMINISTROS DE AGUA": "OTROS", "VISITAS DE SEGURIDAD": "INSPECCIONES DE SEGURIDAD"};
 let CATS=GEN.CATS.slice();
 const TIPOS=['INCENDIOS','RESCATES','MATERIALES PELIGROSOS','INSPECCIONES DE SEGURIDAD','FALSA ALARMA','BUSQUEDA Y RESCATE','OTROS'];
@@ -444,11 +447,12 @@ async function rawCall(body,ms){
     try{return JSON.parse(txt)}catch(x){const er=new Error(/<\s*(html|!doctype)/i.test(txt)?'html':'respuesta');er.snip=txt.replace(/<script[\s\S]*?<\/script>/gi,' ').replace(/<style[\s\S]*?<\/style>/gi,' ').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0,140);throw er}
   }finally{clearTimeout(t)}
 }
+let CENT_GEO=null;
 async function call(a,extra,opt){
   let last;
   for(let i=0;i<3;i++){
     try{
-      const j=await rawCall({u:USER,t:TOKEN,a,canal:'computador',ua:(navigator.userAgent||'').replace(/^Mozilla\/5.0 /,'').slice(0,90),...(a==='llamado'||a==='llamadoRepetir'?{appUrl:location.origin+location.pathname.replace(/[^\/]*$/,'')+'index.html'}:{}),...(extra||{})},opt&&opt.ms);
+      const j=await rawCall({u:USER,t:TOKEN,a,canal:'computador',ua:(navigator.userAgent||'').replace(/^Mozilla\/5.0 /,'').slice(0,90),...(typeof CENT_GEO!=='undefined'&&CENT_GEO?{geo:CENT_GEO}:{}),...(a==='llamado'||a==='llamadoRepetir'||a==='pendRecordar'?{appUrl:location.origin+location.pathname.replace(/[^\/]*$/,'')+'index.html'}:{}),...(extra||{})},opt&&opt.ms);
       if(j&&j.error==='clave'&&a!=='login'){salir('Su sesión ya no es válida (cambió la clave o el usuario). Entre de nuevo.');return j}
       return j;
     }catch(e){last=e;if(e.message==='sin_url')throw e;await new Promise(r=>setTimeout(r,1200*(i+1)))}
@@ -506,7 +510,7 @@ async function initPanel(){
   $('q').oninput=()=>{page=0;renderRecs()};$('prev').onclick=()=>{page=Math.max(0,page-1);renderRecs()};$('next').onclick=()=>{page++;renderRecs()};
   $('gen').onclick=()=>informe($('gen'));$('gen-snif').onclick=()=>snifSolo($('gen-snif'));
   $('refresh').onclick=async()=>{$('opmsg').textContent='Actualizando…';try{await loadAll();renderPanel();$('opmsg').textContent='Datos al día ('+new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'})+').'}catch(e){$('opmsg').textContent='No se pudo actualizar: '+humanErr(e)}};
-  $('backup').onclick=backup;$('showanul').onchange=()=>{page=0;renderRecs()};
+  $('backup').onclick=backup;$('showanul').onchange=async()=>{page=0;if($('showanul').checked&&typeof cargarElim==='function')await cargarElim();renderRecs()};
   $('fsum').textContent='Cargando datos…';
   try{await loadAll()}catch(e){$('fsum').textContent='No se pudieron cargar los datos ('+humanErr(e)+'). Revise la conexión y pulse «Actualizar datos».'}
   refreshSelectors(true);
@@ -639,10 +643,10 @@ function drawMonths(){
 }
 
 function renderRecs(){
-  const q=$('q').value.trim().toLowerCase(),base=CUR.concat([...REGS.values()].filter(o=>o.cat&&o.fecha&&!o.anulado&&o.estado!=='final').map(toRow),$('showanul')&&$('showanul').checked?[...REGS.values()].filter(o=>o.anulado&&o.cat).map(toRow):[]),rows=base.filter(r=>!q||[r.id,r.cat,r.dir,r.bar,r.desc].join(' ').toLowerCase().includes(q)).slice().reverse();
+  const q=$('q').value.trim().toLowerCase(),base=CUR.concat([...REGS.values()].filter(o=>o.cat&&o.fecha&&!o.anulado&&o.estado!=='final').map(toRow),$('showanul')&&$('showanul').checked?[...REGS.values()].filter(o=>o.anulado&&o.cat).map(toRow).concat(typeof ELIMROWS!=='undefined'?ELIMROWS:[]):[]),rows=base.filter(r=>!q||[r.id,r.cat,r.dir,r.bar,r.desc].join(' ').toLowerCase().includes(q)).slice().reverse();
   const PS=40,pages=Math.max(1,Math.ceil(rows.length/PS));if(page>=pages)page=pages-1;
   const sl=rows.slice(page*PS,page*PS+PS);
-  $('rtab').innerHTML='<tr><th>N°</th><th>Día</th><th>Categoría</th><th>Lugar</th><th class="n">Unid.</th><th>Vehículo</th><th>Origen</th></tr>'+(sl.length?sl.map(r=>'<tr class="click" data-i="'+rows.indexOf(r)+'"'+(r.anulado?' style="text-decoration:line-through;opacity:.6"':'')+'><td class="m">'+esc(r.id)+'</td><td>'+GEN.dmy(r.fecha)+' '+esc(r.hora||'')+'</td><td>'+esc(tc(r.cat))+'</td><td>'+esc(r.dir||'—')+'</td><td class="n">'+(r.uni==null?'—':r.uni)+'</td><td>'+esc(r.veh||'—')+'</td><td>'+(r.src==='app'?'App '+estadoPill(r):'Excel')+'</td></tr>').join(''):'<tr><td colspan="7">Sin registros con estos filtros.</td></tr>');
+  $('rtab').innerHTML='<tr><th>N°</th><th>Día</th><th>Categoría</th><th>Lugar</th><th class="n">Unid.</th><th>Vehículo</th><th>Origen</th></tr>'+(sl.length?sl.map(r=>'<tr class="click" data-i="'+rows.indexOf(r)+'"'+(r.anulado||r.eliminado?' style="text-decoration:line-through;opacity:.6"':'')+'><td class="m">'+esc(r.id)+'</td><td>'+GEN.dmy(r.fecha)+' '+esc(r.hora||'')+'</td><td>'+esc(tc(r.cat))+'</td><td>'+esc(r.dir||'—')+'</td><td class="n">'+(r.uni==null?'—':r.uni)+'</td><td>'+esc(r.veh||'—')+'</td><td>'+(r.src==='app'?'App '+estadoPill(r):'Excel')+'</td></tr>').join(''):'<tr><td colspan="7">Sin registros con estos filtros.</td></tr>');
   $('pg').textContent='Página '+(page+1)+' de '+pages+' · '+nf.format(rows.length)+' registros';
   $('prev').disabled=page===0;$('next').disabled=page>=pages-1;
   $('rtab').querySelectorAll('tr.click').forEach(tr=>tr.onclick=()=>showDetail(rows[+tr.dataset.i]));
@@ -1024,7 +1028,32 @@ async function fotosBajadas(r){
 async function repData(r){
   const out=[];
   try{for(const f of await fotosBajadas(r))out.push(await reducir(f.d,f.desc))}catch(e){}
-  return {...repArg(r),fotos:out};
+  const grados={};try{const ro=typeof roster==='function'?await roster():null;((ro&&ro.personal)||[]).forEach(x=>{grados[x.nombre]=x.grado})}catch(e){}
+  let sistema=[];try{sistema=await sistemaLineas(r)}catch(e){}
+  return {...repArg(r),grados,fotos:out,sistema};
+}
+/* anexo «Registros del sistema»: lo que la plataforma registró de esta emergencia (llamado, fases, mando, grupos, salidas y llegadas) */
+async function sistemaLineas(r){
+  if(!(r.src==='app'&&(r.tmp||(r.extra&&r.extra._llam))))return [];
+  const h=need(await call('emergHistoria',r.extra&&r.extra._llam?{id:r.extra._llam}:{tmp:r.tmp}));
+  if(h.sinLlamado||!h.alerta)return [];
+  const a=h.alerta,F=k=>FASE_TXT[k]||k,hh=t=>{const d=new Date(+t);return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
+  const L=[{t:+a.cuando,a:'Llamado recibido: '+a.msg+(a.lugar?' · '+a.lugar:'')+' (registrado por '+(a.por||'—')+')'}];
+  (a.hist||[]).forEach(x=>{const t=+x.t||0,p=x.por?' ('+x.por+')':'';let m='';
+    switch(x.k){
+      case 'fase':m='Fase de la emergencia: '+F(x.de||'rojo')+' → '+F(x.a)+p;break;
+      case 'rol':m=(x.rol==='cmd'?'Comandante de incidentes':x.rol==='lider'?'Líder de equipo de '+(x.grupo||'grupo'):x.rol==='maq'?'Maquinista de '+(x.grupo||'grupo'):'Función '+x.rol)+': '+(x.n||'—')+p+(x.auto?' (asignado automáticamente)':'');break;
+      case 'despacho':m='Despacho de '+(x.veh||'vehículo')+' con '+(x.n||'—')+p;break;
+      case 'unidad':m='Unidad '+(x.veh||'')+' pasó de '+(x.de||'sin grupo')+' a '+(x.a||'')+p;break;
+      case 'salida':m='Salida de la estación: '+(x.veh||'')+' · '+(x.n||'');break;
+      case 'estacion':m='Llegada a la estación: '+(x.veh||'')+' · '+(x.n||'');break;
+      case 'terminar':m='Terminó la atención: '+(x.veh||'')+' · '+(x.n||'')+p;break;
+      case 'atencion':m='Resumen de grupos: '+((x.grupos||[]).map(g=>g.nombre+(g.cmd?' (líder '+g.cmd+')':'')).join('; ')||'—');break;
+      case 'edit':m='Datos del llamado editados ('+(x.c||[]).join(', ')+')'+p;break}
+    if(m)L.push({t,a:m})});
+  if(+a.ackcuando)L.push({t:+a.ackcuando,a:'Emergencia cerrada en la plataforma'+(a.ackpor?' ('+a.ackpor+')':'')});
+  if(a.cin)L.push({t:+a.cuando,a:'Nombre del comando de incidentes: '+a.cin});
+  return L.sort((x,y)=>x.t-y.t).map(x=>({h:x.t?hh(x.t):'',a:x.a}));
 }
 let LOGOS=null;
 async function logosRep(){
@@ -1086,7 +1115,7 @@ async function showDetail(r){
     [['Día',GEN.dmy(r.fecha)],['Alerta',hh(r.hora)],['Salida de estación',hh(r.hsal)],['Llegada al sitio',hh(r.hlle)],['Terminación de la emergencia',hh(r.hfin)],['Llegada a la estación',hh(r.hreg)],['Respuesta (alerta a llegada)',lapse(r.hora,r.hlle)!=null?lapse(r.hora,r.hlle)+' min':''],['Aviso recibido por',r.canal],['Quién reportó',r.rep],['Personal que atendió',(r.pers||[]).join(', ')],['Tipo',tc(r.tipo||'')],['Duración',dur],['Lugar',r.dir],['Barrio o vereda',r.bar],['Coordenadas',co?gms(co[0],co[1]):(r.coord||'')],['Área',r.area],['Incendio forestal',incTxt],['Unidades',r.uni],['Vehículo',r.veh],['Descripción',r.desc],['Registró',(r._nombre||'')+(r.usuario?' ('+r.usuario+')':'')],['Lesionados',r.les?r.les+(r.tras?' · trasladados a '+r.tras:''):''],['Puntos marcados «No aplica»',naL?String(naL):''],['Otros datos',r.extraTxt],['Formulario de Google',app?r.form||'':'']]
       .filter(x=>x[1]!=null&&x[1]!=='').map(x=>'<dt>'+x[0]+'</dt><dd>'+esc(x[1])+'</dd>').join('')+'</dl><div id="d-ub"></div>'+
     (app?'<p>'+(!co&&r.dir?'<a href="https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(r.dir+', La Unión, Valle del Cauca')+'" target="_blank" rel="noopener">Buscar la dirección en el mapa (el registro no trae coordenadas)</a> · ':'')+(r.carpeta?'<a href="'+esc(r.carpeta)+'" target="_blank" rel="noopener">Carpeta de la emergencia en Drive</a>':'')+(r.doc?' · <a href="'+esc(r.doc)+'" target="_blank" rel="noopener">Reporte de Emergencias en Drive</a>':' · <span class="derived">el reporte aún no está en Drive</span>')+'</p>':'')+
-    '<div class="fotos" id="dfotos"></div><div class="dl"><button class="btn sm" id="d-print">Imprimir reporte</button><button class="btn alt sm" id="d-rep">Descargar Reporte de Emergencias (.xlsx)</button>'+(app&&r.nfotos?'<button class="btn alt sm" id="d-foto">Registro fotográfico (.docx)</button>':'')+(app&&!r.borrador?'<button class="btn alt sm" id="d-drive">Guardar el reporte en Drive</button>':'')+(app&&esMaster()?'<button class="btn alt sm" id="d-edit">Corregir datos (superadministrador)</button><button class="btn alt sm" id="d-anul">'+(r.anulado?'Restaurar registro':'Anular registro')+'</button><button class="btn alt sm" id="d-del">Eliminar registro</button>':'')+'</div><div id="d-form"></div><div class="derived" id="d-msg"></div><div id="d-tl"></div></div>';
+    '<div class="fotos" id="dfotos"></div><div class="dl"><button class="btn sm" id="d-print">Imprimir reporte</button><button class="btn alt sm" id="d-rep">Descargar Reporte de Emergencias (.xlsx)</button>'+(app&&r.nfotos?'<button class="btn alt sm" id="d-foto">Registro fotográfico (.docx)</button>':'')+(app&&!r.borrador?'<button class="btn alt sm" id="d-drive">Guardar el reporte en Drive</button>':'')+(app&&esMaster()?'<button class="btn alt sm" id="d-edit">Corregir datos (superadministrador)</button>'+(r.anulado?'<button class="btn alt sm" id="d-anul">Restaurar registro</button>':'')+'<button class="btn alt sm" id="d-del">Eliminar registro</button>':'')+'</div><div id="d-form"></div><div class="derived" id="d-msg"></div><div id="d-tl"></div></div>';
   if(co)$('d-ub').append(ubicActs(co[0],co[1],r.id));
   d.scrollIntoView({behavior:'smooth',block:'nearest'});
   $('d-print').onclick=async()=>{$('d-print').disabled=true;await imprimirReporte(r);$('d-print').disabled=false};
@@ -1698,14 +1727,17 @@ async function pcSet(h){const db=await idbPC();await new Promise(r=>{const t=db.
 async function pcPermiso(h,ask){try{let p=await h.queryPermission({mode:'readwrite'});if(p!=='granted'&&ask)p=await h.requestPermission({mode:'readwrite'});return p==='granted'}catch(e){return false}}
 const limpiaNom=s=>String(s||'').replace(/[\\\/:*?"<>|]+/g,' ').replace(/\s+/g,' ').trim().slice(0,80);
 async function escribirPC(dir,nombre,data){const f=await dir.getFileHandle(nombre,{create:true});const w=await f.createWritable();await w.write(data instanceof Blob?data:new Blob([data]));await w.close()}
-/* Guarda en la carpeta elegida: <consecutivo> <tipo>/ con el reporte, constancia y las fotos */
+/* Guarda en la carpeta elegida: EMERGENCIAS <año>/<n> - <MES> <año>/<consecutivo> <tipo>/ con el reporte y las fotos (la constancia queda sólo en Drive) */
 async function carpetaPC(r,ask){
   const h=await pcGet();if(!h)return false;
   if(!(await pcPermiso(h,ask)))return false;
-  const sub=await h.getDirectoryHandle(limpiaNom(r.id+' '+tc(r.cat)),{create:true});
+  const MESN=['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+  const fy=String(r.fecha||'').slice(0,4)||String(new Date().getFullYear()),fm=Math.min(12,Math.max(1,+String(r.fecha||'').slice(5,7)||1));
+  const dAnio=await h.getDirectoryHandle('EMERGENCIAS '+fy,{create:true});
+  const dMes=await dAnio.getDirectoryHandle(fm+' - '+MESN[fm-1]+' '+fy,{create:true});
+  const sub=await dMes.getDirectoryHandle(limpiaNom(r.id+' '+tc(r.cat)),{create:true});
   const u8=await GEN.reporteEmergencia(JSZip,await tpl('reporte_emergencias.xlsx'),await repData(r));
   await escribirPC(sub,'REPORTE DE EMERGENCIAS '+r.id+'.xlsx',u8);
-  if(esMaster()&&typeof constanciaBlob==='function'){try{await escribirPC(sub,'CONSTANCIA DE ATENCION '+r.id+'.docx',await constanciaBlob(r))}catch(e){}}
   const fs=await fotosBajadas(r);
   for(let i=0;i<fs.length;i++){await escribirPC(sub,'Foto '+String(i+1).padStart(2,'0')+'.jpg',b64(fs[i].d))}
   return true;
@@ -1719,7 +1751,7 @@ async function autoCopias(tmp){
 async function pcElegir(){
   const o=$('pc-msg');
   if(!window.showDirectoryPicker){o.textContent='Este navegador no permite elegir una carpeta. Use Chrome o Edge en el computador de la central.';return}
-  try{const h=await window.showDirectoryPicker({mode:'readwrite',id:'cbv-copias'});await pcSet(h);o.textContent='Listo: cada reporte nuevo o modificado se guardará completo (reporte, constancia y fotos) en «'+h.name+'» mientras esta página esté abierta.';$('pc-est').textContent='Carpeta: '+h.name}catch(e){if(e&&e.name!=='AbortError')o.textContent='No se pudo: '+(e.message||e)}
+  try{const h=await window.showDirectoryPicker({mode:'readwrite',id:'cbv-copias'});await pcSet(h);o.textContent='Listo: cada reporte nuevo o modificado se guardará completo (reporte y fotos, en EMERGENCIAS <año>/<mes>) en «'+h.name+'» mientras esta página esté abierta.';$('pc-est').textContent='Carpeta: '+h.name}catch(e){if(e&&e.name!=='AbortError')o.textContent='No se pudo: '+(e.message||e)}
 }
 async function pcTodo(){
   const o=$('pc-msg'),h=await pcGet();
@@ -1774,9 +1806,11 @@ async function constanciaDatos(r){
 }
 /* firma: la persona que el superadministrador registró como Comandante y Representante Legal */
 function firmaConstancia(M){
+  const conGrado=p=>{const n=String(p.nombre||'').trim(),g=String(p.grado||'').trim();return g&&!n.toLowerCase().startsWith(g.toLowerCase())?g+' '+n:n};
   const rl=(ROSTER||[]).find(p=>p.activo!==false&&/representante\s+legal/i.test(String(p.cargo||'')));
-  if(rl)return {nombre:String(rl.nombre).trim(),cargo:String(rl.cargo).trim()};
-  return {nombre:M.repLegal||'',cargo:M.repCargo||'Comandante y Representante Legal'};
+  if(rl)return {nombre:conGrado(rl),cargo:String(rl.cargo).trim()};
+  const q=String(M.repLegal||'').trim().toLowerCase(),pp=q&&(ROSTER||[]).find(p=>String(p.nombre||'').trim().toLowerCase()===q);
+  return {nombre:pp?conGrado(pp):(M.repLegal||''),cargo:M.repCargo||'Comandante y Representante Legal'};
 }
 async function constanciaBlob(r){return new Blob([await GEN.constancia(JSZip,await tpl('constancia.docx'),await constanciaDatos(r))])}
 /* botón «Constancia» en el detalle de cada emergencia */
@@ -1993,8 +2027,7 @@ function drawLlamados(){
       (ds.length?'<div>'+ds.map(x=>'<span class="pill on">'+esc(x.veh||'Sin vehículo')+' · '+x.pers.length+' persona(s) · '+esc(EST_DESP[x.estado]||x.estado)+'</span>').join(' ')+'</div>':'<div class="derived">Sin vehículos asignados.</div>');
     const b=document.createElement('div');b.className='dl';
     const mk=(t,f,cl)=>{const x=document.createElement('button');x.className='btn '+(cl||'alt')+' sm';x.textContent=t;x.onclick=()=>f(x);return x};
-    b.append(mk('Repetir llamado / Recordar emergencia',x=>repetirLlamado(a,x)),mk('Agregar o actualizar ubicación',()=>editarUbic(a,d)));
-    b.append(mk('Ver toda la información',()=>detalleEmerg(a.id),'')); 
+    b.append(mk('Ver toda la información',()=>emergResumen(a.id),''),mk('Repetir llamado',x=>repetirLlamado(a,x)),mk('Agregar o actualizar información',()=>editarUbic(a,d)));
     if(puedeF('despacho'))b.append(mk('Despachar',()=>despachoUI(a)));
     b.append(mk('Cerrar llamado',async x=>{if(!confirm('¿Cerrar este llamado? Las asignaciones de vehículos terminan.'))return;x.disabled=true;try{need(await call('alertAck',{id:a.id,nota:'Llamado cerrado'}));toast('Llamado cerrado.');pollVivo()}catch(e){toast('No se pudo cerrar: '+humanErr(e),1);x.disabled=false}}));
     if(okNum(a.lat))b.append(ubicActs(a.lat,a.lon,'Llamado'));
@@ -2133,7 +2166,7 @@ function drawPend(){
   const f=PEND,fila=(x,tag,acc)=>'<div class="ntf"><div>'+tag+' <b>'+esc(x.num||x.tmp)+'</b> · '+esc(tc(x.cat||''))+'<br><span class="derived">Responsable: '+esc(x.por||x.usuario||'—')+' · '+fechaHora(x.t)+'</span>'+(acc&&puedeF('pendientes')?'<div class="dl"><button class="btn alt sm pa" data-k="rec" data-t="'+esc(x.tmp)+'">Avisar al responsable</button>'+(acc==='bor'?'<button class="btn alt sm pa" data-k="del" data-t="'+esc(x.tmp)+'">Eliminar borrador</button>':'')+'</div>':'')+'</div></div>';
   const b=[];
   f.borradores.forEach(x=>b.push(fila(x,x.completo?'<span class="pill warn">Completo, no enviado</span>':'<span class="pill off">Borrador incompleto</span>','bor')));
-  (f.llamSinReporte||[]).forEach(x=>b.push('<div class="ntf"><div><span class="pill warn">Llamado sin reporte</span> <b>'+esc(x.msg)+'</b>'+(x.lugar?' · '+esc(x.lugar):'')+'<br><span class="derived">'+fechaHora(x.t)+' · '+(x.estado==='activa'?'emergencia activa':'cerrado')+'. Toda emergencia con llamado debe tener su reporte.</span>'+(x.num?'<br><span class="derived">Consecutivo reservado: <b>'+esc(x.num)+'</b> · Comandante de incidentes: <b>'+esc(x.resp||'sin asignar')+'</b></span>':'')+(puedeF('pendientes')?'<div class="dl"><button class="btn alt sm pa" data-k="recll" data-t="'+esc(x.id)+'">Avisar al comandante de incidentes</button><button class="btn alt sm pa" data-k="comp" data-t="'+esc(x.id)+'">Marcar como completado</button></div>':'')+'</div></div>'));
+  (f.llamSinReporte||[]).forEach(x=>b.push(pendFilaLlamado(x)));
   f.sinDrive.forEach(x=>b.push(fila(x,'<span class="pill info">Esperando carga a Drive</span>')));
   (f.sinUbic||[]).forEach(x=>b.push('<div class="ntf"><div><span class="pill bad">Falta registrar la ubicación del evento</span> <b>'+esc(x.num||x.tmp)+'</b> · '+esc(tc(x.cat||''))+'<br><span class="derived">Responsable: '+esc(x.por||x.usuario||'—')+' · '+fechaHora(x.t)+'</span><div class="dl">'+(puedeF('ubicacion')?'<button class="btn alt sm ub-add" data-t="'+esc(x.tmp)+'">Agregar ubicación en el mapa</button>':'')+(ROL==='master'?'<button class="btn alt sm ub-his" data-t="'+esc(x.tmp)+'">Recuperar ubicación histórica</button>':'')+'</div></div></div>'));
   f.colas.forEach(x=>b.push('<div class="ntf"><div><span class="pill '+(x.cola.err?'bad':'info')+'">'+(x.cola.err?'Error de sincronización':'Esperando sincronizar')+'</span> <b>'+esc(x.n)+'</b>'+(x.enLinea?'':' <span class="derived">(sin conexión)</span>')+'<br><span class="derived">'+[x.cola.borr&&x.cola.borr+' borrador(es)',x.cola.pend&&x.cola.pend+' por enviar',x.cola.err&&x.cola.err+' con error'].filter(Boolean).join(' · ')+' · '+fechaHora(x.t)+'</span></div></div>'));
@@ -2143,6 +2176,9 @@ function drawPend(){
     try{
       if(k==='rec'){const r=need(await call('pendRecordar',{tipo:'reg',tmp:t}));toast(r.aviso)}
       else if(k==='recll'){const r=need(await call('pendRecordar',{tipo:'llamado',id:t}));toast(r.aviso)}
+      else if(k==='asig'){x.disabled=false;asignarComandante(t);return}
+      else if(k==='vinc'){x.disabled=false;vincularReporteUI(t);return}
+      else if(k==='abrir'){x.disabled=false;emergResumen(t);return}
       else if(k==='comp'){const m=prompt('¿Por qué se completa sin reporte? (queda anotado)','Sin reporte necesario');if(m===null){x.disabled=false;return}need(await call('pendCompletar',{tipo:'llamado',id:t,motivo:m}));toast('Marcado como completado.');pollPend()}
       else if(k==='del'){if(!confirm('¿Eliminar este borrador? Desaparece también del teléfono de quien lo hizo cuando se conecte.')){x.disabled=false;return}need(await call('pendEliminar',{tmp:t}));toast('Borrador eliminado.');pollPend()}
     }catch(e){toast('No se pudo: '+humanErr(e),1)}
@@ -2480,7 +2516,7 @@ function renderEstNuevo(){
   const box=$('est-nuevo');if(!box)return;
   const per=period(),base=filtroAll(),porAnio={};
   base.forEach(r=>{const y=String(r.fecha).slice(0,4);if(/^\d{4}$/.test(y))porAnio[y]=(porAnio[y]||0)+1});
-  const anios=Object.keys(porAnio).sort(),hoy=String(new Date().getFullYear());
+  const hoy=String(new Date().getFullYear());if(base.length&&!porAnio[hoy])porAnio[hoy]=0;const anios=Object.keys(porAnio).sort();
   let h='';
   /* 1. años */
   if(anios.length){
@@ -2652,7 +2688,6 @@ function decorarEmergencias(){
     if(h)h.after(bar);
     const gs=gruposDe(a.id);
     if(gs.length){const g=document.createElement('div');g.className='gchips';g.innerHTML=gs.map(x=>'<span class="chipg" style="background:'+esc(x.color)+'">'+esc(x.nombre)+(x.cmdn?' · mando: '+esc(x.cmdn):'')+'</span>').join('');bar.after(g)}
-    if(!c.querySelector('.hist-btn')){const d=c.querySelector('.dl');if(d){const hb=document.createElement('button');hb.className='btn alt sm hist-btn';hb.textContent='Atención de la emergencia';hb.onclick=()=>historiaEmerg({id:a.id});d.append(hb)}}
   });
 }
 {const dl0=drawLlamados;drawLlamados=function(){dl0();try{decorarEmergencias();drawGrupos()}catch(e){console.error(e)}}}
@@ -2669,27 +2704,29 @@ function drawGrupos(){
     const us=ds.filter(x=>x.grupo===g.id),miembros=us.flatMap(x=>x.pers.map(p=>({u:p.u,n:p.n,veh:x.veh})));
     const rol=p=>p.rol?'<span class="rol">'+esc(p.rol)+'</span>':'';
     h+='<div class="gi" data-g="'+esc(g.id)+'" style="border-left-color:'+esc(g.color)+'"><h4><span class="dot" style="background:'+esc(g.color)+'"></span>'+esc(g.nombre)+'<span class="derived">'+(g.emerg?'→ '+esc(nomE(g.emerg)||'emergencia'):'Disponible')+'</span></h4>'+
-      (us.length?us.map(x=>'<div class="un"><b>'+esc(x.veh||'Sin vehículo')+'</b> · '+esc(EST_DESP[x.estado]||x.estado)+(x.conf&&x.conf.length?' · confirmó '+x.conf.length:'')+'<br>'+x.pers.map(p=>esc(p.n)+' '+rol(p)).join(' · ')+(ed?'<br><label class="derived">Pasar esta unidad a: <select data-mv="'+esc(x.id)+'"><option value="">elegir grupo…</option>'+gs.filter(o=>o.id!==g.id).map(o=>'<option value="'+esc(o.id)+'">'+esc(o.nombre)+'</option>').join('')+'<option value="_ninguno">Sin grupo</option></select></label>':'')+'</div>').join(''):'<p class="derived">Sin unidades. Asígnelas desde «Despachar» en una emergencia.</p>')+
+      (us.length?us.map(x=>'<div class="un"><b>'+esc(x.veh||'Sin vehículo')+'</b> · '+esc(EST_DESP[x.estado]||x.estado)+(x.conf&&x.conf.length?' · confirmó '+x.conf.length:'')+'<br>'+x.pers.map(p=>esc(p.n)+' '+rol(p)).join(' · ')+(ed?'<br><label class="derived">Unir recurso a grupo de intervención: <select data-mv="'+esc(x.id)+'"><option value="">elegir grupo…</option>'+gs.filter(o=>o.id!==g.id).map(o=>'<option value="'+esc(o.id)+'">'+esc(o.nombre)+'</option>').join('')+'<option value="_nuevo">Nuevo grupo de intervención '+(gs.length+1)+'</option><option value="_ninguno">Sin grupo</option></select></label> <button class="btn alt sm" data-term="'+esc(x.id)+'">Terminar labores</button> <button class="btn alt sm" data-quit="'+esc(x.id)+'">Quitar de la emergencia</button>':'')+'</div>').join(''):'<p class="derived">Sin unidades. Asígnelas desde «Despachar» en una emergencia.</p>')+
       (g.pre&&g.pre.length?'<div class="derived">En cola: '+g.pre.map(id=>'<span class="pill info">'+esc(nomE(id)||id)+(ed?' <a href="#" data-prx="'+esc(id)+'">✕</a>':'')+'</span>').join(' ')+'</div>':'')+
-      (ed?'<div class="tools" style="margin-top:6px"><label>Emergencia<select data-em>'+optE(g.emerg)+'</select></label><label>Comandante de incidentes<select data-cmd><option value="">— sin asignar —</option>'+miembros.map(p=>'<option value="'+esc(p.u)+'"'+(p.u===g.cmd?' selected':'')+'>'+esc(p.n)+'</option>').join('')+'</select></label><label>Maquinista<select data-maq><option value="">— sin asignar —</option>'+miembros.map(p=>'<option value="'+esc(p.u)+'"'+(p.u===g.maq?' selected':'')+'>'+esc(p.n)+'</option>').join('')+'</select></label><label>Pre-asignar<select data-pre><option value="">emergencia siguiente…</option>'+al.filter(a=>a.id!==g.emerg&&!(g.pre||[]).includes(a.id)).map(a=>'<option value="'+esc(a.id)+'">'+esc(nomE(a.id))+'</option>').join('')+'</select></label></div><div class="dl"><button class="btn alt sm" data-ren="1">Nombre y color</button><button class="btn alt sm danger" data-dis="1">Disolver grupo</button></div>':'')+'</div>';
+      (ed?'<div class="tools" style="margin-top:6px"><label>Emergencia<select data-em>'+optE(g.emerg)+'</select></label><label>Líder de equipo<select data-cmd><option value="">— sin asignar —</option>'+miembros.map(p=>'<option value="'+esc(p.u)+'"'+(p.u===g.cmd?' selected':'')+'>'+esc(p.n)+'</option>').join('')+'</select></label><label>Maquinista<select data-maq><option value="">— sin asignar —</option>'+miembros.map(p=>'<option value="'+esc(p.u)+'"'+(p.u===g.maq?' selected':'')+'>'+esc(p.n)+'</option>').join('')+'</select></label><label>Pre-asignar<select data-pre><option value="">emergencia siguiente…</option>'+al.filter(a=>a.id!==g.emerg&&!(g.pre||[]).includes(a.id)).map(a=>'<option value="'+esc(a.id)+'">'+esc(nomE(a.id))+'</option>').join('')+'</select></label></div><div class="dl"><button class="btn alt sm" data-ren="1">Nombre y color</button><button class="btn alt sm danger" data-dis="1">Disolver grupo</button></div>':'')+'</div>';
   });
   const sin=ds.filter(x=>!x.grupo||!gs.some(g=>g.id===x.grupo));
   if(sin.length)h+='<div class="gi" style="border-left-color:#6b7280"><h4>Unidades sin grupo</h4>'+sin.map(x=>'<div class="un"><b>'+esc(x.veh||'—')+'</b> · '+x.pers.map(p=>esc(p.n)).join(' · ')+(ed&&gs.length?' <label class="derived">Pasar a: <select data-mv="'+esc(x.id)+'"><option value="">elegir grupo…</option>'+gs.map(o=>'<option value="'+esc(o.id)+'">'+esc(o.nombre)+'</option>').join('')+'</select></label>':'')+'</div>').join('')+'</div>';
   if(!gs.length&&!sin.length)h='<p class="derived">Todavía no hay grupos. El primer grupo se crea solo al asignar unidades a una emergencia.</p>';
-  if(ed)h+='<div class="dl"><button class="btn alt sm" id="gi-nuevo">+ Crear grupo vacío</button></div>';
+  if(ed)h+='<div class="dl"><button class="btn alt sm" id="gi-nuevo">+ Crear grupo de intervención '+(gs.length+1)+'</button></div>';
   box.innerHTML=h;
   const act=async(g,args,msg)=>{try{need(await call('grupoSet',{id:g,...args}));toast(msg||'Grupo actualizado.');pollVivo()}catch(e){toast('No se pudo: '+humanErr(e),1)}};
   box.querySelectorAll('.gi[data-g]').forEach(c=>{const g=c.dataset.g;
     const em=c.querySelector('[data-em]');if(em)em.onchange=()=>{if(em.value&&!confirm('¿Mover TODO el grupo a esa emergencia? Cada unidad recibirá el aviso y deberá confirmar.'))return drawGrupos();act(g,{emerg:em.value},'Grupo movido; las unidades fueron avisadas.')};
-    const cm=c.querySelector('[data-cmd]');if(cm)cm.onchange=()=>act(g,{cmd:cm.value},'Comandante de incidentes actualizado.');
+    const cm=c.querySelector('[data-cmd]');if(cm)cm.onchange=()=>act(g,{cmd:cm.value},'Líder de equipo actualizado.');
     const mq=c.querySelector('[data-maq]');if(mq)mq.onchange=()=>act(g,{maq:mq.value},'Maquinista actualizado.');
     const pr=c.querySelector('[data-pre]');if(pr)pr.onchange=async()=>{if(!pr.value)return;try{need(await call('grupoPre',{id:g,emerg:pr.value}));toast('Emergencia pre-asignada al grupo.');pollVivo()}catch(e){toast('No se pudo: '+humanErr(e),1)}};
     c.querySelectorAll('[data-prx]').forEach(x=>x.onclick=async ev=>{ev.preventDefault();try{need(await call('grupoPre',{id:g,emerg:x.dataset.prx,op:'del'}));pollVivo()}catch(e){toast('No se pudo: '+humanErr(e),1)}});
     const rn=c.querySelector('[data-ren]');if(rn)rn.onclick=()=>{const gg=gs.find(x=>x.id===g);dlg('<h3>Grupo de intervención</h3><label>Nombre<input id="gr-n" value="'+esc(gg.nombre)+'"></label><label>Color<input type="color" id="gr-c" value="'+esc(gg.color)+'"></label><div class="dl"><button class="btn" id="gr-ok">Guardar</button><button class="btn alt" id="gr-no">Cancelar</button></div>',()=>{$('gr-no').onclick=dlgCerrar;$('gr-ok').onclick=()=>{dlgCerrar();act(g,{nombre:$('gr-n').value,color:$('gr-c').value})}})};
     const ds_=c.querySelector('[data-dis]');if(ds_)ds_.onclick=async()=>{if(!confirm('¿Disolver este grupo? Las unidades siguen asignadas pero quedan sin grupo.'))return;try{need(await call('grupoDel',{id:g}));toast('Grupo disuelto.');pollVivo()}catch(e){toast('No se pudo: '+humanErr(e),1)}};
   });
-  box.querySelectorAll('[data-mv]').forEach(s=>s.onchange=async()=>{if(!s.value)return;try{need(await call('despGrupo',{id:s.dataset.mv,grupo:s.value==='_ninguno'?'':s.value}));toast('Unidad cambiada de grupo; se le avisó.');pollVivo()}catch(e){toast('No se pudo: '+humanErr(e),1)}});
-  const nu=$('gi-nuevo');if(nu)nu.onclick=()=>{const n=prompt('Nombre del grupo (opcional)','');if(n===null)return;act('',{nombre:n},'Grupo creado.')};
+  box.querySelectorAll('[data-mv]').forEach(s=>s.onchange=()=>{if(!s.value)return;moverUnidad(s.dataset.mv,s.value,s.options[s.selectedIndex].text)});
+  box.querySelectorAll('[data-term]').forEach(b=>b.onclick=()=>terminarUnidad(b.dataset.term));
+  box.querySelectorAll('[data-quit]').forEach(b=>b.onclick=()=>quitarUnidad(b.dataset.quit));
+  const nu=$('gi-nuevo');if(nu)nu.onclick=()=>act('',{nombre:'Grupo de intervención '+(gs.length+1)},'Grupo creado.');
 }
 
 /* Atención de la emergencia: lo que se hizo en el sistema (fases, grupos, mando) y el reporte del comandante */
@@ -2715,7 +2752,7 @@ async function historiaEmerg(arg){
     if(esMaster()&&!PREVIEW&&bx&&!bx.querySelector('.vin-btn')){const vb=document.createElement('button');vb.className='btn alt sm vin-btn';vb.textContent=ll?'Corregir vínculo con la emergencia':'Vincular con una emergencia';vb.onclick=()=>{
       const n=prompt('Consecutivo de la emergencia a vincular (ej. EM-2026-00012). Déjelo vacío para quitar el vínculo actual.',''); if(n===null)return;
       call('vincular',{tmp:r.tmp,num:n.trim(),emerg:''}).then(x=>{need(x);toast(n.trim()?'Reporte vinculado a '+(x.num||n)+'.':'Vínculo quitado.');dlgCerrar&&dlgCerrar();pollVivo()}).catch(e=>toast('No se pudo vincular: '+humanErr(e),1))};bx.append(vb)}
-    if(ll&&bx&&!bx.querySelector('.hist-btn')){const b=document.createElement('button');b.className='btn alt sm hist-btn';b.textContent='Atención de la emergencia';b.onclick=()=>historiaEmerg({tmp:r.tmp});bx.append(b)}
+    if(ll&&bx&&!bx.querySelector('.hist-btn')){const b=document.createElement('button');b.className='btn alt sm hist-btn';b.textContent='Ver toda la información de la emergencia';b.onclick=()=>emergResumen(ll);bx.append(b)}
   }catch(e){}
 }}
 
@@ -2891,7 +2928,7 @@ async function admTxt(){
 let YSEL=null,YMODE=lsGet('cbv_ymode','completo');const YCOL=['#2563eb','#dc2626','#16a34a','#d97706','#7c3aed','#0891b2','#be185d','#4d7c0f'];
 function renderAnios(){
   const box=$('est-anios');if(!box)return;
-  const base=filtroAll(),ys=[...new Set(base.map(r=>r.fecha.slice(0,4)).filter(y=>/^\d{4}$/.test(y)))].sort();
+  const base=filtroAll(),ys=[...new Set(base.map(r=>r.fecha.slice(0,4)).filter(y=>/^\d{4}$/.test(y)).concat(base.length?[String(new Date().getFullYear())]:[]))].sort();
   if(!ys.length){box.innerHTML='';return}
   const hoy=isoDate(new Date()),mmdd=hoy.slice(5),anioAct=hoy.slice(0,4);
   if(!YSEL)YSEL=new Set(ys.slice(-3));[...YSEL].forEach(y=>{if(!ys.includes(y))YSEL.delete(y)});
@@ -2932,6 +2969,441 @@ function renderHisCard(){
   $('his-f').onchange=()=>{const x=$('his-f').files[0];$('his-f').value='';if(x)cargarHistorico(x,$('his-m')).then(()=>{renderAdmHisInfo(info);renderSeries&&renderSeries()})};
 }
 {const rc0=renderCarga;renderCarga=function(){rc0();try{renderHisCard()}catch(e){}}}
+
+
+/* ================= V2.3 · centro de la emergencia, pendientes con acciones, emergencias atendidas, sesiones ================= */
+const SCI_LISTA=[['cmd','Comandante de incidentes'],['seg','Oficial de seguridad'],['enl','Oficial de enlace'],['inf','Oficial de información pública'],['ope','Jefe de operaciones'],['pla','Jefe de planificación'],['log','Jefe de logística'],['adm','Jefe de administración y finanzas']];
+const copiarTxt=t=>{try{navigator.clipboard.writeText(t)}catch(e){const x=document.createElement('textarea');x.value=t;document.body.append(x);x.select();try{document.execCommand('copy')}catch(_){}x.remove()}toast('Copiado.')};
+const nuevoGrupoNom=emerg=>'Grupo de intervención '+((VIVO.grupos||[]).filter(g=>g.estado==='activo'&&g.emerg===emerg).length+1);
+var ELIMROWS=[];
+async function cargarElim(){
+  try{const l=need(await call('eliminadosGet')).elim||[];ELIMROWS=l.map(x=>({id:x.num||'',tmp:x.tmp,fecha:x.fecha,hora:x.hora,cat:x.cat,dir:x.dir,uni:x.uni,veh:x.veh,src:'app',eliminado:true,anulado:true,motivoElim:x.elim_motivo||'',elimPor:x.elim_por||'',elimCuando:x.elim_cuando}))}catch(e){ELIMROWS=[]}
+}
+{const sd0=showDetail;showDetail=async function(r){
+  if(r&&r.eliminado){dlg('<h3>🗑️ Registro eliminado · '+esc(r.id)+'</h3><p>'+esc(tc(r.cat||''))+' · '+GEN.dmy(r.fecha)+(r.dir?' · '+esc(r.dir):'')+'</p><p><b>Eliminado por:</b> '+esc(r.elimPor||'—')+' · '+(r.elimCuando?fechaHora(+r.elimCuando):'')+'<br><b>Motivo:</b> '+esc(r.motivoElim||'—')+'</p><p class="derived">Ya no cuenta en la estadística. Queda guardado en Auditoría → Registros eliminados.</p><div class="dl"><button class="btn alt" id="el-no">Cerrar</button></div>',()=>{$('el-no').onclick=dlgCerrar});return}
+  return sd0.apply(this,arguments)}}
+
+/* ---------- elegir persona / comandante / roles del SCI ---------- */
+async function elegirPersona(titulo,actual,cb,volver){
+  const ro=await roster();
+  const opts=((ro&&ro.personal)||[]).map(p=>'<option value="'+esc(p.usuario)+'" data-n="'+esc(p.nombre)+'">'+esc((p.grado?p.grado+' ':'')+p.nombre)+'</option>').join('');
+  dlg('<h3>'+esc(titulo)+'</h3><label>Persona<select id="ep-p"><option value="">— sin asignar —</option>'+opts+'</select></label><div class="derived" id="ep-out" role="status"></div><div class="dl"><button class="btn" id="ep-ok">Guardar</button><button class="btn alt" id="ep-no">Cancelar</button></div>',()=>{
+    if(actual)[...$('ep-p').options].forEach(o=>{if(o.dataset.n===actual||o.value===actual)o.selected=true});
+    $('ep-no').onclick=()=>volver?volver():dlgCerrar();
+    $('ep-ok').onclick=async()=>{const o=$('ep-p').selectedOptions[0];$('ep-ok').disabled=true;try{await cb(o.value,(o.dataset&&o.dataset.n)||'');volver?volver():dlgCerrar()}catch(e){$('ep-out').textContent='No se pudo: '+humanErr(e);$('ep-ok').disabled=false}}});
+}
+function asignarRol(id,rol,etq,actual,volver){
+  elegirPersona(etq+' de esta emergencia',actual,async(u,n)=>{
+    need(await call('emergRol',{id,rol,persona:u,nombre:n}));toast(u?(n||u)+' quedó como '+etq.toLowerCase()+'. Se le avisó.':etq+' sin asignar.');pollVivo();pollPend()},volver);
+}
+const asignarComandante=(id,volver)=>asignarRol(id,'cmd','Comandante de incidentes','',volver);
+
+/* ---------- vincular un reporte a una emergencia ---------- */
+async function vincularReporteUI(id,volver){
+  dlg('<h3>Vincular un reporte</h3><p class="derived">Cargando reportes…</p>');
+  try{
+    const r=need(await call('repCandidatos',{id}));
+    dlg('<h3>Vincular un reporte a la emergencia</h3><p class="derived">Elija el reporte que corresponde a esta emergencia. Al vincularlo, el sistema la marca como completa. Primero aparecen los del comandante y los de la misma categoría.</p><div class="scroll" style="max-height:50vh">'+
+      (r.candidatos.length?r.candidatos.map(c=>'<label class="ntf" style="display:flex;gap:8px;align-items:flex-start"><input type="radio" name="vc" value="'+esc(c.tmp)+'" style="width:auto;margin-top:4px"><div><b>'+esc(c.num||c.tmp)+'</b> · '+esc(tc(c.cat||''))+' · '+esc(c.fecha||'')+' '+esc(c.hora||'')+'<br><span class="derived">'+esc(c.por||'')+(c.dir?' · '+esc(c.dir):'')+' · '+(c.estado==='final'?'terminado':'borrador')+'</span>'+(c.delCmd?' <span class="pill on">del comandante</span>':'')+(c.mismaCat?' <span class="pill info">misma categoría</span>':'')+'</div></label>').join(''):'<p class="derived">No hay reportes sin vincular.</p>')+
+      '</div><div class="derived" id="vc-out" role="status"></div><div class="dl"><button class="btn" id="vc-ok">Vincular el reporte elegido</button><button class="btn alt" id="vc-no">Cancelar</button></div>',()=>{
+      $('vc-no').onclick=()=>volver?volver():dlgCerrar();
+      $('vc-ok').onclick=async()=>{const sel=document.querySelector('input[name=vc]:checked');if(!sel){$('vc-out').textContent='Elija un reporte.';return}
+        $('vc-ok').disabled=true;try{need(await call('vincular',{tmp:sel.value,emerg:id}));await loadAll();toast('Reporte vinculado: la emergencia quedó completa.');pollPend();AT.t=0;pintarAtendidas();pollVivo();volver?volver():dlgCerrar()}catch(e){$('vc-out').textContent='No se pudo: '+humanErr(e);$('vc-ok').disabled=false}}});
+  }catch(e){dlg('<h3>Vincular un reporte</h3><p>No se pudo cargar: '+esc(humanErr(e))+'</p><div class="dl"><button class="btn alt" id="vc-no">Cerrar</button></div>',()=>{$('vc-no').onclick=dlgCerrar})}
+}
+
+/* ---------- pendientes ---------- */
+function pendFilaLlamado(x){
+  const cie=x.cierre||x.t,lim=cie+48*3600000,act=x.estado==='activa',vence=!act&&Date.now()>lim,can=puedeF('pendientes');
+  return '<div class="ntf"><div><span class="pill '+(vence?'bad':'warn')+'">'+(act?'Emergencia activa, aún sin reporte':vence?'Reporte vencido (más de 48 h)':'Reporte pendiente')+'</span> <b>'+esc(x.msg)+'</b>'+(x.lugar?' · '+esc(x.lugar):'')+
+    '<br><span class="derived">'+fechaHora(x.t)+' · '+(act?'emergencia activa':'terminada '+(x.cierre?fechaHora(x.cierre):''))+(act?'':' · plazo: hasta '+fechaHora(lim))+'</span>'+
+    (x.num?'<br><span class="derived">Consecutivo: <b>'+esc(x.num)+'</b> · Comandante de incidentes: <b>'+esc(x.resp||'sin asignar')+'</b></span>':'')+
+    '<div class="dl"><button class="btn alt sm pa" data-k="abrir" data-t="'+esc(x.id)+'">Abrir la emergencia</button>'+(can?'<button class="btn alt sm pa" data-k="asig" data-t="'+esc(x.id)+'">'+(x.resp?'Cambiar comandante de incidentes':'Asignar comandante de incidentes')+'</button>'+(x.resp?'<button class="btn alt sm pa" data-k="recll" data-t="'+esc(x.id)+'">Enviar recordatorio con enlace</button>':'')+'<button class="btn alt sm pa" data-k="vinc" data-t="'+esc(x.id)+'">Vincular un reporte ya hecho</button><button class="btn alt sm pa" data-k="comp" data-t="'+esc(x.id)+'">Marcar como completada</button>':'')+'</div></div></div>';
+}
+
+/* ---------- emergencias atendidas ---------- */
+const AT={lista:[],t:0};
+async function pintarAtendidas(forzar){
+  const tab=$('at-tab');if(!tab||!puedeF('pendientes')&&!puedeF('llamados')&&!esMaster())return;
+  if(forzar||Date.now()-AT.t>60000){try{const r=need(await call('emergLista'));AT.lista=r.emergencias||[];AT.t=Date.now()}catch(e){tab.innerHTML='<tr><td>No se pudo cargar: '+esc(humanErr(e))+'</td></tr>';return}}
+  const q=($('at-q').value||'').trim().toLowerCase(),sin=$('at-sin').checked;
+  const l=AT.lista.filter(x=>(!q||[x.num,x.msg,x.lugar].join(' ').toLowerCase().includes(q))&&(!sin||!x.reporte));
+  tab.innerHTML='<tr><th>Consecutivo</th><th>Fecha</th><th>Emergencia</th><th>Estado</th><th>Comandante</th><th>Reporte</th><th></th></tr>'+(l.length?l.slice(0,80).map(x=>{
+    const rp=x.reporte,ok=rp&&String(rp.cat||x.msg).toUpperCase()===String(x.msg).toUpperCase();
+    const repTxt=rp?'<b>'+esc(rp.num||'')+'</b> '+(rp.estado==='final'?'<span class="pill on">terminado</span>':'<span class="pill warn">en elaboración</span>')+(ok?'':' <span class="pill warn" title="La categoría del reporte no coincide con la de la emergencia">revisar vínculo</span>'):(x.completada?'<span class="pill info">Completada sin reporte</span>':x.vencido?'<span class="pill bad">Pendiente · vencido</span>':x.estado==='activa'?'<span class="derived">en curso</span>':'<span class="pill warn">Pendiente</span>');
+    return '<tr><td class="m">'+esc(x.num||'—')+'</td><td>'+fechaHora(x.cuando)+'</td><td><b>'+esc(x.msg)+'</b>'+(x.lugar?'<br><span class="m">'+esc(x.lugar)+'</span>':'')+'</td><td>'+(x.estado==='activa'?'<span class="pill on">Activa</span>':'<span class="pill off">Terminada</span>')+'</td><td>'+esc(x.cmdn||'—')+'</td><td>'+repTxt+'</td><td><button class="btn alt sm" data-at="'+esc(x.id)+'">Abrir</button>'+(puedeF('pendientes')&&!rp?' <button class="btn alt sm" data-atv="'+esc(x.id)+'">Vincular reporte</button>':'')+'</td></tr>'}).join(''):'<tr><td colspan="7" class="derived">No hay emergencias que coincidan.</td></tr>');
+  $('at-pg').textContent=l.length>80?'Se muestran 80 de '+l.length+'. Use el buscador.':l.length+' emergencia(s).';
+  tab.querySelectorAll('[data-at]').forEach(b=>b.onclick=()=>emergResumen(b.dataset.at));
+  tab.querySelectorAll('[data-atv]').forEach(b=>b.onclick=()=>vincularReporteUI(b.dataset.atv));
+}
+{const dp0=drawPend;drawPend=function(){dp0.apply(this,arguments);try{pintarAtendidas()}catch(e){}}}
+{const q=$('at-q');if(q){q.oninput=()=>pintarAtendidas();$('at-sin').onchange=()=>pintarAtendidas();$('at-rec').onclick=()=>pintarAtendidas(true)}}
+
+/* ---------- repetir llamado: general o solo empleados ---------- */
+repetirLlamado=function(a,btn){
+  dlg('<h3>Repetir llamado</h3><p>«'+esc(a.msg)+'». Se vuelve a avisar sin crear otra emergencia.</p><fieldset class="aud"><legend>¿A quién se repite?</legend><label><input type="radio" name="rp-aud" value="general" '+((a.aud||'general')!=='empleados'?'checked':'')+'> 👥 Llamado general (todo el personal)</label><label><input type="radio" name="rp-aud" value="empleados" '+(a.aud==='empleados'?'checked':'')+'> 🏷 Solo empleados</label></fieldset><div class="derived" id="rp-out" role="status"></div><div class="dl"><button class="btn" id="rp-ok">Repetir llamado</button><button class="btn alt" id="rp-no">Cancelar</button></div>',()=>{
+    $('rp-no').onclick=dlgCerrar;
+    $('rp-ok').onclick=async()=>{const aud=(document.querySelector('input[name=rp-aud]:checked')||{}).value||'general';$('rp-ok').disabled=true;
+      try{const r=need(await call('llamadoRepetir',{id:a.id,aud}));toast('Recordatorio n.º '+r.rep+' enviado'+(aud==='empleados'?' (solo empleados)':' (general)')+'. '+canalTxt(r.canales)+(r.push&&r.push.enviados?'':' Sin aviso push a teléfonos.'));dlgCerrar();pollVivo()}
+      catch(e){$('rp-out').textContent='No se repitió: '+humanErr(e);$('rp-ok').disabled=false}}});
+};
+
+/* ---------- unidades: mover, terminar labores, quitar ---------- */
+async function moverUnidad(despId,val,txt){
+  const x=(VIVO.despachos||[]).find(z=>z.id===despId);
+  const destino=val==='_ninguno'?'«sin grupo»':val==='_nuevo'?'un grupo de intervención nuevo':'«'+String(txt||'').replace(/^Nuevo grupo de intervención.*/,'nuevo grupo')+'»';
+  if(!confirm('¿Unir el recurso '+(x&&x.veh?x.veh+' ':'')+'a '+destino+'? Se avisará a sus integrantes.')){drawGrupos();return}
+  try{
+    if(val==='_nuevo'){need(await call('grupoSet',{id:'',nombre:nuevoGrupoNom(x&&x.emerg),emerg:(x&&x.emerg)||'',unidades:[despId]}))}
+    else need(await call('despGrupo',{id:despId,grupo:val==='_ninguno'?'':val}));
+    toast('Recurso actualizado.');pollVivo();if(RES.id)setTimeout(()=>pintarResumen(),600)
+  }catch(e){toast('No se pudo: '+humanErr(e),1)}
+}
+async function terminarUnidad(id){
+  const x=(VIVO.despachos||[]).find(z=>z.id===id);
+  if(!confirm('¿Terminar labores de '+(x&&x.veh?x.veh:'esta unidad')+'? Sale de la emergencia y queda disponible.'))return;
+  try{need(await call('despTerminar',{id}));toast('Labores terminadas.');pollVivo();if(RES.id)setTimeout(()=>pintarResumen(),600)}catch(e){toast('No se pudo: '+humanErr(e),1)}
+}
+async function quitarUnidad(id){
+  const x=(VIVO.despachos||[]).find(z=>z.id===id);
+  if(!confirm('¿Quitar '+(x&&x.veh?x.veh:'esta unidad')+' de la emergencia? Se cancela su asignación.'))return;
+  try{need(await call('despQuitar',{id}));toast('Asignación cancelada.');ROSTERD=null;pollVivo();if(RES.id)setTimeout(()=>pintarResumen(),600)}catch(e){toast('No se pudo: '+humanErr(e),1)}
+}
+
+/* ---------- ubicación de una persona: copiar coordenadas y SOS manteniendo 3 segundos ---------- */
+function ubicDe(u,n){
+  const us=(VIVO.usuarios||[]).find(z=>z.u===u||z.n===n);if(!us)return null;
+  if(us.pos)return {lat:us.pos.lat,lon:us.pos.lon,vivo:true,t:us.tp};
+  if(us.ult)return {lat:us.ult.lat,lon:us.ult.lon,vivo:false,t:us.ult.t};
+  return null;
+}
+function filaPersona(p,veh){
+  const ub=ubicDe(p.u,p.n);
+  return '<div class="per" style="margin:2px 0 6px 10px">• <b>'+esc(p.n)+'</b>'+(p.rol?' <span class="rol">'+esc(p.rol)+'</span>':'')+
+    (ub?'<br><span class="m">'+(ub.vivo?'📍 en vivo':'📍 última conocida '+fechaHora(ub.t))+' · '+esc(gms(ub.lat,ub.lon))+'</span> <button class="btn alt sm" data-cp="'+esc(gms(ub.lat,ub.lon)+' ('+(+ub.lat).toFixed(6)+', '+(+ub.lon).toFixed(6)+')')+'">Copiar coordenadas</button>':'<br><span class="derived">Sin ubicación</span>')+
+    (puedeF('llamados')||esMaster()?' <button class="btn alt sm danger sos3" data-su="'+esc(p.u||'')+'" data-sn="'+esc(p.n)+'" data-sv="'+esc(veh||'')+'" data-sl="'+(ub?ub.lat:'')+'" data-so="'+(ub?ub.lon:'')+'">Activar SOS (mantener 3 s)</button>':'')+'</div>';
+}
+function ligarPersonas(root){
+  root.querySelectorAll('[data-cp]').forEach(b=>b.onclick=()=>copiarTxt(b.dataset.cp));
+  root.querySelectorAll('.sos3').forEach(b=>{
+    let tm=null,t0=0,iv=null;const txt=b.textContent;
+    const stop=()=>{clearTimeout(tm);clearInterval(iv);tm=null;b.textContent=txt};
+    const go=()=>{b.dataset.hold=1;if(!tm)return;tm=null;clearInterval(iv);b.textContent='Activando SOS…';
+      call('sosPor',{usuario:b.dataset.su,nombre:b.dataset.sn,veh:b.dataset.sv,lat:b.dataset.sl,lon:b.dataset.so}).then(r=>{need(r);toast('SOS activado para '+b.dataset.sn+'. Se avisó a los compañeros.');b.textContent=txt;pollVivo()}).catch(e=>{toast('No se pudo activar el SOS: '+humanErr(e),1);b.textContent=txt})};
+    const ini=e=>{e.preventDefault();if(tm)return;t0=Date.now();b.textContent='Mantenga… 3';iv=setInterval(()=>{const s=Math.max(0,3-Math.floor((Date.now()-t0)/1000));b.textContent='Mantenga… '+s},200);tm=setTimeout(go,3000)};
+    b.addEventListener('pointerdown',ini);['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,()=>{if(tm)stop()}));
+    b.addEventListener('click',e=>e.preventDefault());
+  });
+}
+
+/* ---------- el centro de la emergencia: todo en un solo resumen ---------- */
+const RES={id:null,iv:null,busy:false};
+const FASE_ICO={rojo:'🔴',amarillo:'🟡',verde:'🟢'};
+function evTxt(ev){
+  const f=k=>(FASE_ICO[k]||'')+' '+(FASE_TXT[k]||k);
+  switch(ev.k){
+    case 'fase':return 'Fase: '+f(ev.de||'rojo')+' → '+f(ev.a);
+    case 'rol':return (ev.rol==='lider'?'Líder de equipo ('+esc(ev.grupo||'')+')':ev.rol==='maq'?'Maquinista ('+esc(ev.grupo||'')+')':'Comandante de incidentes / '+esc((SCI_LISTA.find(z=>z[0]===ev.rol)||[0,ev.rol])[1]))+': '+esc(ev.n)+(ev.relevo?' (relevo)':'')+(ev.auto?' (automático)':'');
+    case 'despacho':return 'Despacho: '+esc(ev.veh||'sin vehículo')+' con '+esc(ev.n||'');
+    case 'unidad':return 'Unidad '+esc(ev.veh||'')+' pasó de «'+esc(ev.de||'sin grupo')+'» a «'+esc(ev.a)+'»';
+    case 'salida':return 'Salida de la estación: '+esc(ev.veh||'')+' ('+esc(ev.n||'')+')';
+    case 'estacion':return 'Llegada a la estación: '+esc(ev.veh||'')+' ('+esc(ev.n||'')+')';
+    case 'terminar':return 'Labores terminadas: '+esc(ev.veh||'')+' ('+esc(ev.n||'')+')';
+    case 'edit':return 'Datos del llamado editados ('+esc((ev.c||[]).join(', '))+')';
+    case 'rep':return 'Reporte: '+esc(ev.n||ev.txt||'');
+    case 'atencion':return 'Instantánea de los grupos al cerrar la emergencia';
+    default:return esc(ev.k||'Evento');
+  }
+}
+async function pintarResumen(){
+  const id=RES.id;if(!id||RES.busy)return;RES.busy=true;
+  try{
+    let r;try{r=need(await call('emergDetalle',{id}))}catch(e){if(RES.id===id)dlg('<h3>Emergencia</h3><p>No se pudo cargar: '+esc(humanErr(e))+'</p><div class="dl"><button class="btn alt" id="rs-no">Cerrar</button></div>',()=>{$('rs-no').onclick=cerrarResumen});return}
+    if(RES.id!==id)return;
+    const a=r.alerta,act=String(a.estado)==='activa',ds=r.despachos||[],rp=r.reportes||[],ed=puedeF('despacho')||esMaster(),gs=(VIVO.grupos||[]).filter(g=>g.estado==='activo'&&g.emerg===id);
+    let hist={};if(!act){try{hist=need(await call('emergHistoria',{id}))}catch(e){hist={}}}
+    const sci=a.sci||{};
+    const vehs=[...new Set(ds.map(x=>x.veh).filter(Boolean))];
+    let h='<h3>🚒 '+esc(a.msg)+' '+(a.num?'<span class="pill info">'+esc(a.num)+'</span>':'')+'</h3>'+
+      '<p class="derived">'+(act?'Activa · '+(FASE_ICO[a.fase||'rojo']||'')+' '+esc(FASE_TXT[a.fase||'rojo']||''):'Terminada'+(a.ackcuando?' '+fechaHora(a.ackcuando):''))+' · duración '+minTxt((act?r.ahora:(a.ackcuando||r.ahora))-a.cuando)+' · llamado '+fechaHora(a.cuando)+' por '+esc(a.por)+(a.aud==='empleados'?' · solo empleados':'')+'</p>';
+    h+='<div class="dl" id="rs-top">';
+    if(act){
+      if(puedeF('llamados')||esMaster())['rojo','amarillo','verde'].forEach(k=>{h+='<button class="btn alt sm fase-'+k+((a.fase||'rojo')===k?' on':'')+'" data-fs="'+k+'" '+((a.fase||'rojo')===k?'disabled':'')+'>'+FASE_ICO[k]+' '+esc(FASE_TXT[k])+'</button>'});
+      h+='<button class="btn alt sm" id="rs-rep">Repetir llamado</button><button class="btn alt sm" id="rs-edi">Agregar o actualizar información</button>'+(puedeF('despacho')?'<button class="btn alt sm" id="rs-des">Despachar</button>':'')+'<button class="btn alt sm" id="rs-cer">Cerrar llamado</button>';
+    }
+    h+='</div><div id="rs-ed"></div>';
+    h+='<h4>Datos de la emergencia</h4><p>'+(a.lugar?'<b>Lugar:</b> '+esc(a.lugar)+'<br>':'<b>Sin lugar todavía</b><br>')+(okNum(a.lat)?'<b>Coordenadas:</b> '+esc(gms(a.lat,a.lon))+' <button class="btn alt sm" data-cp="'+esc(gms(a.lat,a.lon))+'">Copiar</button><br>':'')+(a.tel?'<b>Contacto:</b> <a href="tel:'+esc(a.tel)+'">'+esc(a.tel)+'</a><br>':'')+(a.obs?'<b>Observaciones:</b> '+esc(a.obs):'')+'</p><div id="rs-ub"></div>';
+    /* mando */
+    h+='<h4>Mando del incidente (SCI)</h4><table class="mini-t"><tr><th>Función</th><th>Persona</th><th></th></tr>'+SCI_LISTA.map(([k,t])=>{const p=k==='cmd'?{n:a.cmdn||(sci.cmd||{}).n||''}:(sci[k]||{});return '<tr><td>'+esc(t)+'</td><td>'+(p.n?'<b>'+esc(p.n)+'</b>':'<span class="derived">sin asignar</span>')+'</td><td>'+(ed||puedeF('pendientes')?'<button class="btn alt sm" data-rol="'+k+'">'+(p.n?'Relevar':'Asignar')+'</button>':'')+'</td></tr>'}).join('')+'</table>';
+    /* grupos */
+    h+='<h4>Grupos de intervención y personal</h4>';
+    if(act){
+      gs.forEach(g=>{
+        const us=ds.filter(x=>x.grupo===g.id);
+        h+='<div class="gi" style="border-left-color:'+esc(g.color)+'"><h4><span class="dot" style="background:'+esc(g.color)+'"></span>'+esc(g.nombre)+'</h4><div class="derived">Líder de equipo: <b>'+esc(g.cmdn||'sin asignar')+'</b>'+(g.maqn?' · Maquinista: <b>'+esc(g.maqn)+'</b>':'')+'</div>'+
+          (us.length?us.map(x=>unidadHtml(x,gs,ed,g.id)).join(''):'<div class="derived">Sin unidades.</div>')+'</div>';
+      });
+      const sin=ds.filter(x=>!x.grupo||!gs.some(g=>g.id===x.grupo));
+      if(sin.length)h+='<div class="gi" style="border-left-color:#6b7280"><h4>Unidades sin grupo</h4>'+sin.map(x=>unidadHtml(x,gs,ed,'')).join('')+'</div>';
+      if(!gs.length&&!sin.length)h+='<p class="derived">Todavía no hay unidades asignadas. Use «Despachar».</p>';
+      if(ed)h+='<div class="dl"><button class="btn alt sm" id="rs-gnew">+ Crear '+esc(nuevoGrupoNom(id).replace(/^G/,'g'))+'</button></div>';
+      h+='<h4>Vehículos ('+vehs.length+')</h4><p>'+(vehs.length?vehs.map(v=>'<span class="pill on">'+esc(v)+'</span>').join(' '):'<span class="derived">Ningún vehículo asignado.</span>')+'</p>';
+    }else{
+      const snap=(a.hist||[]).filter(x=>x.k==='atencion').slice(-1)[0],gr=(snap?snap.grupos:hist.actuales)||[];
+      h+=gr.length?gr.map(g=>'<div class="gi" style="border-left-color:'+esc(g.color)+'"><h4><span class="dot" style="background:'+esc(g.color)+'"></span>'+esc(g.nombre)+'</h4>'+(g.cmd?'<div>Líder de equipo: <b>'+esc(g.cmd)+'</b></div>':'')+(g.maq?'<div>Maquinista: <b>'+esc(g.maq)+'</b></div>':'')+g.unidades.map(u=>'<div class="un"><b>'+esc(u.veh||'—')+'</b> · '+u.pers.map(p=>esc(p.n)+(p.rol?' <span class="rol">'+esc(p.rol)+'</span>':'')).join(' · ')+'</div>').join('')+'</div>').join(''):'<p class="derived">No quedó registro de grupos para esta emergencia.</p>';
+      const vv=[...new Set(gr.flatMap(g=>g.unidades.map(u=>u.veh)).filter(Boolean))];
+      h+='<h4>Vehículos ('+vv.length+')</h4><p>'+(vv.length?vv.map(v=>'<span class="pill on">'+esc(v)+'</span>').join(' '):'<span class="derived">Sin vehículos registrados.</span>')+'</p>';
+    }
+    h+='<div class="derived">'+((a.conf||[]).length?'Confirmaron el llamado: '+a.conf.map(c=>esc(c.por)+(c.veh?' ('+esc(c.veh)+')':'')+' '+horaTxt(c.t)).join(' · '):'Nadie ha confirmado el llamado todavía.')+'</div>';
+    /* bitácora en vivo */
+    const bit=a.bit||[];
+    h+=(a.cin?'<div class="derived"><b>Comando de incidentes:</b> '+esc(a.cin)+'</div>':'')+'<h4>Bitácora en vivo del comandante'+(a.bitt?' <span class="derived">· actualizada '+horaTxt(a.bitt)+' h'+(a.bitpor?' por '+esc(a.bitpor):'')+'</span>':'')+'</h4>'+(bit.length?'<div class="scroll" style="max-height:220px">'+bit.slice().reverse().map(x=>'<div class="ent"><b>'+esc(hmTxt(x.h))+'</b> '+esc(x.a)+'</div>').join('')+'</div>':'<p class="derived">Todavía no hay anotaciones en vivo. Aparecen aquí a medida que el comandante las registra en la aplicación.</p>');
+    /* reporte */
+    h+='<h4>Reporte de esta emergencia</h4>';
+    if(!rp.length)h+='<p class="derived">Todavía no hay un reporte vinculado.</p>';
+    rp.forEach(o=>{h+='<div class="ntf" style="display:block"><b>'+esc(o.num||o.tmp)+'</b> · '+esc(tc(o.cat||''))+' · '+(o.estado==='final'?'<span class="pill on">Terminado</span>':'<span class="pill warn">En elaboración</span>')+'<br><span class="derived">'+esc(o.por||'')+' · actualizado '+fechaHora(o.actualizado)+'</span><br>'+[o.dir&&'Dirección: '+esc(o.dir),o.hsal&&'Salida: '+esc(o.hsal),o.hlle&&'Llegada al sitio: '+esc(o.hlle),o.hfin&&'Terminación: '+esc(o.hfin),o.uni&&'Unidades: '+esc(o.uni),o.nfotos&&o.nfotos+' foto(s)/video(s)',o.cmd&&o.cmd.n&&'Comandante del incidente: '+esc(o.cmd.n)].filter(Boolean).join(' · ')+(o.desc?'<p style="margin:4px 0">'+esc(o.desc)+'</p>':'')+'<div class="dl"><button class="btn alt sm" data-rv="'+esc(o.tmp)+'">Abrir el reporte</button></div></div>'});
+    if(puedeF('pendientes')&&!rp.length)h+='<div class="dl"><button class="btn alt sm" id="rs-vin">Vincular un reporte ya hecho</button>'+(!act?'<button class="btn alt sm" id="rs-rec">Enviar recordatorio con enlace</button>':'')+'</div>';
+    /* historial */
+    const hs=(a.hist||[]).filter(x=>x.k!=='atencion');
+    h+='<h4>Registros del sistema</h4>'+(hs.length?'<ul style="margin:4px 0 8px 18px;padding:0">'+hs.slice().reverse().map(ev=>'<li>'+fechaHora(ev.t)+' · '+evTxt(ev)+(ev.por?' · <span class="derived">'+esc(ev.por)+'</span>':'')+'</li>').join('')+'</ul>':'<p class="derived">Sin movimientos registrados.</p>')+'<p class="derived">Todo lo anterior también queda anexo al reporte como «registros del sistema».</p>';
+    h+='<div class="dl"><button class="btn alt" id="rs-no">Cerrar</button></div>';
+    const d=$('dlg'),y=d.open?d.scrollTop:0;
+    dlg(h,()=>ligarResumen(a,id,ds,gs,act));d.scrollTop=y;
+  }finally{RES.busy=false}
+}
+function unidadHtml(x,gs,ed,gid){
+  return '<div class="un"><b>'+esc(x.veh||'Sin vehículo')+'</b> · '+esc(EST_DESP[x.estado]||x.estado)+(x.conf&&x.conf.length?' · confirmó '+x.conf.length:'')+x.pers.map(p=>filaPersona(p,x.veh)).join('')+
+    (ed?'<div class="tools"><label class="derived">Unir recurso a grupo de intervención <select data-mv="'+esc(x.id)+'"><option value="">elegir…</option>'+gs.filter(o=>o.id!==gid).map(o=>'<option value="'+esc(o.id)+'">'+esc(o.nombre)+'</option>').join('')+'<option value="_nuevo">Nuevo grupo de intervención</option>'+(gid?'<option value="_ninguno">Sin grupo</option>':'')+'</select></label><button class="btn alt sm" data-term="'+esc(x.id)+'">Terminar labores</button><button class="btn alt sm" data-quit="'+esc(x.id)+'">Quitar de la emergencia</button></div>':'')+'</div>';
+}
+function ligarResumen(a,id,ds,gs,act){
+  const d=$('dlg');
+  $('rs-no').onclick=cerrarResumen;
+  ligarPersonas(d);
+  d.querySelectorAll('[data-fs]').forEach(b=>b.onclick=async()=>{const k=b.dataset.fs;if(k==='verde'&&!confirm('Marcar como ATENDIDA da por terminada la emergencia: el llamado se cierra y los grupos quedan disponibles. ¿Continuar?'))return;b.disabled=true;try{const r=need(await call('faseSet',{id,fase:k}));toast(r.cerrada?'Emergencia atendida y cerrada.':'Fase: '+FASE_TXT[k]);pollVivo();pintarResumen()}catch(e){toast('No se pudo: '+humanErr(e),1);b.disabled=false}});
+  d.querySelectorAll('[data-rol]').forEach(b=>b.onclick=()=>{const k=b.dataset.rol,et=(SCI_LISTA.find(z=>z[0]===k)||[0,k])[1],actual=k==='cmd'?(a.cmdn||''):((a.sci||{})[k]||{}).n||'';clearInterval(RES.iv);asignarRol(id,k,et,actual,()=>emergResumen(id))});
+  d.querySelectorAll('[data-mv]').forEach(s=>s.onchange=()=>{if(s.value)moverUnidad(s.dataset.mv,s.value,s.options[s.selectedIndex].text)});
+  d.querySelectorAll('[data-term]').forEach(b=>b.onclick=()=>terminarUnidad(b.dataset.term));
+  d.querySelectorAll('[data-quit]').forEach(b=>b.onclick=()=>quitarUnidad(b.dataset.quit));
+  d.querySelectorAll('[data-rv]').forEach(b=>b.onclick=()=>{const o=REGS.get(b.dataset.rv);cerrarResumen();if(o){showDetail(toRow(o));const dt=$('detail');if(dt)dt.scrollIntoView()}else toast('Ese reporte todavía no está cargado en esta página.',1)});
+  const q=(i,f)=>{const e=$(i);if(e)e.onclick=f};
+  q('rs-rep',()=>repetirLlamado(a,null));
+  q('rs-edi',()=>{const c=$('rs-ed');if(c.querySelector('.ed')){c.innerHTML='';return}editarUbic(a,c)});
+  q('rs-des',()=>{clearInterval(RES.iv);despachoUI(a)});
+  q('rs-cer',async()=>{if(!confirm('¿Cerrar este llamado? Las asignaciones de vehículos terminan.'))return;try{need(await call('alertAck',{id,nota:'Llamado cerrado'}));toast('Llamado cerrado.');pollVivo();pintarResumen()}catch(e){toast('No se pudo cerrar: '+humanErr(e),1)}});
+  q('rs-gnew',async()=>{try{need(await call('grupoSet',{id:'',nombre:nuevoGrupoNom(id),emerg:id}));toast('Grupo creado.');pollVivo();setTimeout(pintarResumen,600)}catch(e){toast('No se pudo: '+humanErr(e),1)}});
+  q('rs-vin',()=>{clearInterval(RES.iv);vincularReporteUI(id,()=>emergResumen(id))});
+  q('rs-rec',async()=>{try{const r=need(await call('pendRecordar',{tipo:'llamado',id}));toast(r.aviso)}catch(e){toast('No se pudo: '+humanErr(e),1)}});
+  if(okNum(a.lat)&&$('rs-ub')&&!$('rs-ub').children.length)$('rs-ub').append(ubicActs(a.lat,a.lon,'Llamado'));
+}
+function cerrarResumen(){clearInterval(RES.iv);RES.id=null;dlgCerrar()}
+function emergResumen(id){
+  RES.id=id;clearInterval(RES.iv);dlg('<h3>Emergencia</h3><p class="derived">Cargando…</p>');
+  pintarResumen();
+  RES.iv=setInterval(()=>{const d=$('dlg');if(!d||!d.open||RES.id!==id){clearInterval(RES.iv);return}
+    if(d.querySelector('input:focus,select:focus,textarea:focus,.ed')||d.querySelector('.sos3[data-hold],.sos3:active'))return;pintarResumen()},8000);
+}
+detalleEmerg=emergResumen;
+historiaEmerg=function(arg){if(arg&&arg.id)return emergResumen(arg.id);return (async()=>{try{const r=need(await call('emergHistoria',arg));if(r.sinLlamado){toast('Este reporte no está vinculado a una emergencia.',1);return}emergResumen(r.alerta.id)}catch(e){toast('No se pudo: '+humanErr(e),1)}})()};
+
+/* ---------- sesiones de la central: coordenadas y cierre ---------- */
+renderSesiones=async function(){
+  const c=$('ses-card');if(!c)return;if(!esMaster()){c.hidden=true;return}c.hidden=false;
+  c.innerHTML='<h3>Sesiones de la central abiertas</h3><p class="derived expl">Dónde hay sesiones de Central operativa, Central con estadística y superadministrador (no incluye a los bomberos). Una sesión figura como abierta si tuvo actividad en los últimos 2 minutos. Las coordenadas salen del navegador del computador (si dio permiso) o del GPS del teléfono.</p><div id="ses-l" class="scroll"><p class="derived">Cargando…</p></div>';
+  try{
+    const r=need(await call('sesiones'));
+    $('ses-l').innerHTML=r.sesiones.length?'<table><tr><th>Persona</th><th>Rol</th><th>Dónde</th><th>Coordenadas</th><th>Desde</th><th>Última actividad</th><th>Estado</th><th></th></tr>'+r.sesiones.map((s,i)=>'<tr><td>'+esc(s.n||s.u)+'</td><td>'+esc(ROLNOM2(s.rol))+'</td><td>'+(s.canal==='celular'?'📱 Aplicación del celular':'💻 Página en computador')+'<br><span class="m">'+esc(s.ua||'')+'</span></td><td>'+(s.lat!=null&&s.lon!=null?'<span class="m">'+esc(gms(s.lat,s.lon))+'</span><br><span class="derived">'+esc(s.fuente||'')+'</span><br><a href="https://www.google.com/maps?q='+encodeURIComponent(s.lat+','+s.lon)+'" target="_blank" rel="noopener">Ver en el mapa</a>':'<span class="derived">No disponible</span>')+'</td><td>'+fechaHora(s.desde)+'</td><td>'+fechaHora(s.ult)+'</td><td><span class="pill '+(s.abierta?'on':'off')+'">'+(s.abierta?'Abierta':'Inactiva')+'</span></td><td><button class="btn alt sm danger" data-sc="'+i+'">Cerrar sesión</button></td></tr>').join('')+'</table>':'<p class="derived">No hay sesiones registradas.</p>';
+    $('ses-l').querySelectorAll('[data-sc]').forEach(b=>b.onclick=async()=>{const s=r.sesiones[+b.dataset.sc];if(!confirm('¿Cerrar la sesión de '+(s.n||s.u)+'? Ese equipo tendrá que escribir la clave otra vez.'))return;b.disabled=true;try{need(await call('sesionCerrar',{usuario:s.u,canalSes:s.canal}));toast('Sesión cerrada.');renderSesiones()}catch(e){toast('No se pudo: '+humanErr(e),1);b.disabled=false}});
+  }catch(e){$('ses-l').innerHTML='<p class="err">No se pudo cargar: '+esc(humanErr(e))+'</p>'}
+};
+function geoCentral(){if(!navigator.geolocation)return;try{navigator.geolocation.getCurrentPosition(p=>{CENT_GEO={lat:+p.coords.latitude.toFixed(6),lon:+p.coords.longitude.toFixed(6)}},()=>{},{timeout:15000,maximumAge:600000})}catch(e){}}
+{const en0=enter;enter=function(){const r=en0.apply(this,arguments);geoCentral();return r}}
+setInterval(geoCentral,600000);
+
+/* ---------- histórico: se carga solo la primera vez (ya no hay botón en «Cargar información») ---------- */
+renderHisCard=function(){const c=$('his-card');if(c)c.hidden=true};
+const AUTOH={busy:false,fallo:false};
+async function autoHistorico(){
+  if(HISTOK||AUTOH.busy||AUTOH.fallo||!esMaster()||PREVIEW)return;
+  AUTOH.busy=true;const bn=$('histbanner');
+  const m={set textContent(v){if(bn){bn.hidden=false;bn.innerHTML='⏳ '+esc(v)}}};
+  try{
+    m.textContent='Cargando el histórico 2013–2026 por primera vez…';
+    const r=await fetch('historico.json',{cache:'no-store'});if(!r.ok)throw new Error('El archivo historico.json no está publicado junto a la página.');
+    const txt=await r.text();
+    await cargarHistorico({text:async()=>txt},m);
+    if(HISTOK&&bn)bn.hidden=true;else AUTOH.fallo=true;
+  }catch(e){AUTOH.fallo=true;if(bn){bn.hidden=false;bn.textContent='No se pudo cargar el histórico automáticamente: '+humanErr(e)+'. Súbalo desde Administración → Histórico.'}}
+  AUTOH.busy=false;
+}
+{const la0=loadAll;loadAll=async function(){const r=await la0.apply(this,arguments);if(!HISTOK&&esMaster()&&ROL!=='central')setTimeout(autoHistorico,300);return r}}
+
+/* ---------- Cargar información de emergencias: se lee directamente el formato Excel de la institución ---------- */
+const sa=t=>sinAcento(t).toLowerCase();
+const MESES_ES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const decXml=t=>String(t||'').replace(/&#x([0-9a-f]+);/gi,(m,h)=>String.fromCodePoint(parseInt(h,16))).replace(/&#(\d+);/g,(m,d)=>String.fromCodePoint(+d)).replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&amp;/g,'&');
+const colIdx=c=>[...c].reduce((n,ch)=>n*26+ch.charCodeAt(0)-64,0);
+async function xlsxLeer(file){
+  const z=await JSZip.loadAsync(await file.arrayBuffer());
+  const sh=z.file('xl/sharedStrings.xml'),ss=[];
+  if(sh){(await sh.async('string')).replace(/<si>([\s\S]*?)<\/si>/g,(m,b)=>{ss.push(decXml((b.match(/<t[^>]*>[\s\S]*?<\/t>/g)||[]).map(x=>x.replace(/<[^>]+>/g,'')).join('')));return m})}
+  let path='xl/worksheets/sheet1.xml';
+  try{const wb=await z.file('xl/workbook.xml').async('string'),rl=await z.file('xl/_rels/workbook.xml.rels').async('string');const rid=(/<sheet [^>]*r:id="([^"]+)"/.exec(wb)||[])[1];const t=rid&&new RegExp('<Relationship [^>]*Id="'+rid+'"[^>]*Target="([^"]+)"').exec(rl)||new RegExp('<Relationship [^>]*Target="([^"]+)"[^>]*Id="'+rid+'"').exec(rl);if(t)path='xl/'+t[1].replace(/^\/?(xl\/)?/,'')}catch(e){}
+  const f=z.file(path)||z.file('xl/worksheets/sheet1.xml');if(!f)throw new Error('El archivo no tiene hojas.');
+  const xml=await f.async('string'),filas=[];
+  xml.replace(/<row [^>]*?r="(\d+)"[^>]*?(?:\/>|>([\s\S]*?)<\/row>)/g,(m,rn,body)=>{
+    const c={};(body||'').replace(/<c ([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g,(mm,at,inner)=>{
+      const ref=/r="([A-Z]+)\d+"/.exec(at);if(!ref)return mm;const t=(/t="(\w+)"/.exec(at)||[])[1]||'n';let v='';
+      if(t==='s'){const i=/<v>(\d+)<\/v>/.exec(inner||'');v=i?ss[+i[1]]:''}
+      else if(t==='inlineStr'){v=decXml(((inner||'').match(/<t[^>]*>[\s\S]*?<\/t>/g)||[]).map(x=>x.replace(/<[^>]+>/g,'')).join(''))}
+      else{const i=/<v>([\s\S]*?)<\/v>/.exec(inner||'');v=i?decXml(i[1]):''}
+      if(v!=='')c[ref[1]]={v,t};return mm});
+    filas.push({n:+rn,c});return m});
+  return filas;
+}
+function serialAIso(n){return new Date(Math.round((+n-25569)*86400000)).toISOString().slice(0,10)}
+function mesDeTexto(t){
+  const s=sa(t);let m=0;MESES_ES.forEach((x,i)=>{if(s.includes(x))m=i+1});
+  const y=/(20\d\d|19\d\d)/.exec(s);return m||y?{m,y:y?+y[1]:0}:null;
+}
+function durAMin(t){
+  const s=sa(t);if(!s.trim()||/^n\/?a/.test(s.trim()))return '';
+  if(/^\d+([.,]\d+)?$/.test(s.trim()))return String(Math.round(+s.trim().replace(',','.')));
+  let m=0,h=/(\d+)\s*h/.exec(s),mi=/(\d+)\s*m/.exec(s),d=/(\d+)\s*d/.exec(s);
+  if(d)m+=+d[1]*1440;if(h)m+=+h[1]*60;if(mi)m+=+mi[1];return m?String(m):'';
+}
+/* Excel de la institución → CSV con las columnas que el sistema ya sabe revisar */
+async function xlsxACsv(file){
+  const filas=await xlsxLeer(file);
+  let ctx=null;for(const f of filas.slice(0,3)){for(const k of Object.keys(f.c)){const r=mesDeTexto(f.c[k].v);if(r&&r.m){ctx=r;break}}if(ctx)break}
+  if(!ctx)for(const f of filas.slice(0,3)){for(const k of Object.keys(f.c)){const r=mesDeTexto(f.c[k].v);if(r){ctx=r;break}}if(ctx)break}
+  /* fila de encabezados: la que dice «día del evento» */
+  let hi=filas.findIndex(f=>Object.values(f.c).some(x=>/dia del evento/.test(sa(x.v))));if(hi<0)hi=1;
+  const cols={};Object.keys((filas[hi]||{c:{}}).c).forEach(k=>{const h=sa(filas[hi].c[k].v);
+    if(/tipo de incidente/.test(h))cols.tipo=k;else if(/incidentes y actividades|categoria/.test(h))cols.cat=k;else if(/dia del evento|^fecha/.test(h))cols.dia=k;else if(/duracion/.test(h))cols.dur=k;else if(/direccion|lugar/.test(h))cols.dir=k;else if(/barrio|vereda|corregimiento/.test(h))cols.bar=k;else if(/descripcion/.test(h))cols.desc=k;else if(/unidades/.test(h))cols.uni=k;else if(/vehiculo/.test(h))cols.veh=k;else if(/^area/.test(h))cols.area=k;else if(/hora/.test(h))cols.hora=k});
+  if(!cols.cat||!cols.dia)throw new Error('No encuentro las columnas «Incidentes y actividades» y «Día del evento». Use el formato que se descarga con el botón 1.');
+  const out=[],mapa=[];let pedido=false;
+  for(const f of filas.slice(hi+1)){
+    const g=k=>k&&f.c[k]?String(f.c[k].v).trim():'';
+    if(!g(cols.cat)&&!g(cols.dia)&&!g(cols.dir))continue;
+    let fecha='',raw=f.c[cols.dia];
+    if(raw){
+      const v=String(raw.v).trim();
+      if(raw.t==='n'&&+v>=1000)fecha=serialAIso(v);
+      else if(/^\d{1,2}$/.test(v)||(raw.t==='n'&&+v>=1&&+v<=31)){
+        let c=ctx;if(c&&c.m&&!c.y)c=ctx={m:c.m,y:new Date().getFullYear()};if(!c||!c.m||!c.y){if(!pedido){pedido=true;const r=prompt('Las filas traen solo el número del día y el archivo no dice el mes. Escriba el mes y el año de este archivo (por ejemplo 08/2026):','');const mm=/^(\d{1,2})\s*[\/\-]\s*(\d{4})$/.exec((r||'').trim());if(mm)ctx={m:+mm[1],y:+mm[2]}}c=ctx}
+        fecha=c&&c.m&&c.y?c.y+'-'+String(c.m).padStart(2,'0')+'-'+String(+v).padStart(2,'0'):v;
+      }else{
+        const d=/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/.exec(v);
+        if(d)fecha=(d[3].length===2?'20'+d[3]:d[3])+'-'+d[2].padStart(2,'0')+'-'+d[1].padStart(2,'0');
+        else{const dm=/^(\d{1,2})\s*(?:de\s+)?([a-záéíóú]+)(?:\s+(?:de\s+)?(\d{4}))?$/i.exec(sa(v));const mi=dm?MESES_ES.findIndex(x=>sa(x)===dm[2]):-1;fecha=mi>=0?((dm[3]||(ctx&&ctx.y)||new Date().getFullYear())+'-'+String(mi+1).padStart(2,'0')+'-'+String(+dm[1]).padStart(2,'0')):v}
+      }
+    }
+    const veh=g(cols.veh),area=g(cols.area),ar=/([\d]+(?:[.,]\d+)?)/.exec(area);
+    const uni=g(cols.uni);
+    out.push([fecha,cols.hora?g(cols.hora):'',g(cols.cat),g(cols.dir),g(cols.bar),g(cols.desc),/^\d+$/.test(uni)?uni:'',/^n\/?a$/i.test(veh)?'':veh,durAMin(g(cols.dur)),ar&&/ha|hect/i.test(area)?ar[1].replace(',','.'):(ar&&/^[\d.,]+$/.test(area)?ar[1].replace(',','.'):''),'']);
+    mapa.push(f.n);
+  }
+  const q=x=>'"'+String(x).replace(/"/g,'""')+'"';
+  return {csv:CARGA_COLS.join(';')+'\n'+out.map(r=>r.map(q).join(';')).join('\n'),mapa};
+}
+function cargaPlantilla(){
+  const a=document.createElement('a');a.href='plantillas/plantilla_carga.xlsx';a.download='PLANTILLA REGISTRO DE ACTIVIDADES.xlsx';document.body.append(a);a.click();a.remove();
+  toast('Formato descargado. Llénelo en Excel (una fila por emergencia) y cárguelo con el botón 2.');
+}
+{const rc0=renderCarga;renderCarga=function(){
+  rc0();const f=$('cg-f');if(!f)return;
+  f.accept='.xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  const old=f.onchange,fm=$('cg-fmt');
+  const lbl=f.closest('label');if(lbl&&lbl.firstChild)lbl.firstChild.textContent='2. Elegir el archivo llenado (Excel o CSV)';
+  const intro=document.querySelector('#carga-card .expl');if(intro)intro.textContent='Para sumar a la estadística emergencias que no se registraron por la aplicación (años anteriores o reportes en papel). Descargue el formato de Registro de actividades, llénelo en Excel (una fila por emergencia; el día puede ser la fecha completa o solo el número del día si el título dice el mes) y cárguelo tal cual como Excel. El sistema revisa fila por fila y le muestra qué se va a cargar antes de guardar. Nada se duplica.';
+  f.onchange=async()=>{
+    const fl=f.files[0];if(!fl||!/\.xlsx$/i.test(fl.name))return old.apply(f,arguments);
+    const out=$('cg-out');out.textContent='Leyendo el Excel…';
+    try{
+      const r=await xlsxACsv(fl);const dt=new DataTransfer();dt.items.add(new File([r.csv],fl.name.replace(/\.xlsx$/i,'.csv'),{type:'text/csv'}));f.files=dt.files;
+      XL_MAPA=r.mapa;await old.apply(f,arguments);
+      out.querySelectorAll('table td:first-child').forEach(td=>{});
+      /* los números de fila del aviso son los del Excel */
+      out.querySelectorAll('.scroll tr').forEach((tr,i)=>{const c=tr.children[0];if(c&&/^\d+$/.test(c.textContent)&&tr.children.length===2){const k=+c.textContent-2;if(XL_MAPA[k]!=null)c.textContent=XL_MAPA[k]}});
+    }catch(e){out.innerHTML='<p class="err">No se pudo leer el Excel: '+esc(humanErr(e))+'</p>'}
+  };
+}}
+var XL_MAPA=[];
+
+
+/* ---------- Estadística: tiempos promedio de respuesta y de atención ---------- */
+{const re0=renderExtras;renderExtras=function(){
+  re0.apply(this,arguments);
+  const sum=$('tr-sum');if(!sum)return;let box=$('tr-mas');
+  if(!box){box=document.createElement('div');box.id='tr-mas';box.className='derived';sum.parentNode.insertBefore(box,sum.nextSibling)}
+  const sal=[],ate=[],dur=[],tot=[];
+  CUR.forEach(r=>{
+    let d=lapse(r.hora,r.hsal);if(d!=null&&d<=180&&r.src==='app')sal.push(d);
+    d=lapse(r.hlle,r.hfin);if(d!=null&&d<=1440&&r.src==='app')ate.push(d);
+    if(r.durmin>0&&r.durmin<=2880)dur.push(r.durmin);
+    d=lapse(r.hora,r.hfin);if(d!=null&&d<=1440&&r.src==='app')tot.push(d)});
+  const f=(n,a)=>a.length?'<b>'+fmm(avgA(a))+'</b> (con '+a.length+' registro(s))':'sin datos todavía';
+  box.innerHTML='<ul style="margin:6px 0 0 18px;line-height:1.6"><li>Tiempo promedio de <b>salida</b> (alerta → salida de la estación): '+f(0,sal)+'</li><li>Tiempo promedio de <b>atención</b> (llegada al sitio → terminación): '+f(0,ate)+'</li><li>Tiempo promedio <b>total</b> de la emergencia (alerta → terminación): '+f(0,tot)+'</li><li>Duración promedio <b>de todos los registros</b> (incluye el histórico y las cargas): '+f(0,dur)+'</li></ul><p class="derived">Solo cuentan los registros que traen ambas horas; los de la aplicación aportan los tres primeros.</p>';
+}}
+
+
+/* ================= Geocerco de la estación y diseño de menús/pestañas ================= */
+function renderAdm(sub){
+  if(sub)ADMSUB=sub;
+  document.querySelectorAll('#atabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.a===ADMSUB));
+  const f={usr:admUsr,frm:admFrm,app:admComunic,mar:admMar,wha:admComunic,seg:admSeg,gfm:admComunic,dgn:admDgn,perm:admPerm,txt:admTxt,geo:admGeo,dis:admDis}[ADMSUB]||admUsr;
+  $('a-box').innerHTML='<div class="card"><p class="derived">Cargando…</p></div>';f();
+}
+async function admGeo(){
+  const cur=(need(await call('cfgGet')).cfg||{}).geo||{};
+  const box=$('a-box');box.innerHTML='';const c=document.createElement('div');c.className='card';
+  c.innerHTML='<h3>Geocerco de la estación</h3><p class="derived expl">Es el círculo alrededor de la estación. Cuando el teléfono de una persona despachada <b>sale</b> del círculo se registra la salida de la estación; cuando <b>entra</b>, la llegada; y cuando todas las unidades de un grupo de intervención están de vuelta dentro, el grupo se cierra solo. Funciona solo con el teléfono con la aplicación abierta y la ubicación activada; si no hay señal, queda el registro manual.</p>'+
+    '<div class="tools"><label>Latitud<input id="ge-la" inputmode="decimal" value="'+esc(cur.lat!=null?cur.lat:'')+'"></label><label>Longitud<input id="ge-lo" inputmode="decimal" value="'+esc(cur.lon!=null?cur.lon:'')+'"></label><label>Radio (metros, 20 a 1000)<input id="ge-r" inputmode="numeric" value="'+esc(cur.radio||80)+'"></label></div>'+
+    '<div class="dl"><button class="btn alt" id="ge-gps">Usar mi ubicación actual</button><button class="btn" id="ge-ok">Guardar</button><button class="btn alt" id="ge-no">Quitar el geocerco</button></div><div class="derived" id="ge-out" role="status">'+(cur.lat!=null?'Geocerco activo.':'Todavía no hay geocerco: las salidas y llegadas se registran solo a mano.')+'</div>'+
+    '<div id="ge-map" style="height:260px;border-radius:10px;margin-top:8px"></div>';
+  box.append(c);
+  let mp=null,mk=null,ci=null;
+  const dib=()=>{const la=parseFloat($('ge-la').value),lo=parseFloat($('ge-lo').value),r=Math.min(1000,Math.max(20,+$('ge-r').value||80));
+    if(typeof L==='undefined'||!isFinite(la)||!isFinite(lo))return;
+    if(!mp){mp=L.map('ge-map').setView([la,lo],17);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(mp)}
+    if(mk)mk.remove();if(ci)ci.remove();mk=L.marker([la,lo]).addTo(mp);ci=L.circle([la,lo],{radius:r,color:'#c62828'}).addTo(mp);mp.setView([la,lo],17)};
+  ['ge-la','ge-lo','ge-r'].forEach(i=>$(i).oninput=dib);dib();
+  $('ge-gps').onclick=()=>{if(!navigator.geolocation){$('ge-out').textContent='Este navegador no entrega la ubicación.';return}
+    $('ge-out').textContent='Buscando su ubicación… (úselo estando en la estación)';
+    navigator.geolocation.getCurrentPosition(p=>{$('ge-la').value=p.coords.latitude.toFixed(6);$('ge-lo').value=p.coords.longitude.toFixed(6);$('ge-out').textContent='Ubicación tomada (precisión ±'+Math.round(p.coords.accuracy)+' m). Pulse «Guardar».';dib()},e=>{$('ge-out').textContent='No se pudo obtener la ubicación: permita el acceso o escriba las coordenadas.'},{enableHighAccuracy:true,timeout:15000})};
+  $('ge-ok').onclick=async()=>{try{const la=parseFloat($('ge-la').value.replace(',','.')),lo=parseFloat($('ge-lo').value.replace(',','.'));if(!isFinite(la)||!isFinite(lo)){$('ge-out').textContent='Escriba latitud y longitud, o use «Usar mi ubicación actual».';return}
+    need(await call('cfgSet',{clave:'geo',valor:{lat:la,lon:lo,radio:+$('ge-r').value||80}}));$('ge-out').textContent='Guardado. Desde ahora las salidas y llegadas de la estación se detectan con ese círculo.'}catch(e){$('ge-out').textContent='No se pudo guardar: '+humanErr(e)}};
+  $('ge-no').onclick=async()=>{if(!confirm('¿Quitar el geocerco? Las salidas y llegadas volverán a registrarse solo a mano.'))return;try{need(await call('cfgSet',{clave:'geo',valor:{lat:'',lon:'',radio:80}}));$('ge-la').value=$('ge-lo').value='';$('ge-out').textContent='Geocerco quitado.'}catch(e){$('ge-out').textContent='No se pudo: '+humanErr(e)}};
+}
+const LY_MENU=[['reg','Realizar registro'],['emg','Emergencias activas'],['mis','Mis registros'],['apo','Apoyos para emergencias'],['map','Mapa'],['cen','Panel de la central (solo personal de la central)'],['cfg','Configuración (siempre visible)']];
+const LY_TABS=[['est','Estadística'],['reg','Registros'],['vivo','Operación'],['calor','Mapa de calor'],['per','Personal'],['aud','Auditoría'],['cfg','Conexión'],['adm','Administración (siempre visible)'],['ser','Histórico']];
+async function admDis(){
+  if(!esMaster()){$('a-box').innerHTML='<div class="card"><p>Solo el superadministrador puede cambiar el diseño.</p></div>';return}
+  const cur=(need(await call('cfgGet')).cfg||{}).layout||{};
+  const orden=(base,ord)=>{const o=Array.isArray(ord)?ord:[];return base.slice().sort((a,b)=>{const x=o.indexOf(a[0]),y=o.indexOf(b[0]);return (x<0?99:x)-(y<0?99:y)})};
+  const S={menu:orden(LY_MENU,cur.menu).map(x=>x[0]),hm:new Set(cur.hideMenu||[]),tabs:orden(LY_TABS,cur.tabs).map(x=>x[0]),ht:new Set(cur.hideTabs||[])};
+  const box=$('a-box');box.innerHTML='';const c=document.createElement('div');c.className='card';
+  c.innerHTML='<h3>Diseño de los menús y las pestañas</h3><p class="derived expl">Cambie el orden y esconda botones del <b>menú del celular</b> y las <b>pestañas de esta plataforma</b>. Esconder un botón no borra datos ni quita el permiso: solo no se muestra. «Configuración» y «Administración» no se pueden esconder para que nadie quede sin acceso. El teléfono recibe el cambio al sincronizar; esta plataforma, al volver a entrar. Para cambiar los nombres de los botones use la sección «Textos».</p><div class="g2"><div id="di-m"></div><div id="di-t"></div></div><div class="dl"><button class="btn" id="di-ok">Guardar diseño</button><button class="btn alt" id="di-no">Volver al diseño original</button></div><div class="derived" id="di-out" role="status"></div><h4>Vista previa del menú del celular (esquema)</h4><div id="di-pv" class="gi" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;max-width:340px"></div>';
+  box.append(c);
+  const nom=(L,k)=>(L.find(x=>x[0]===k)||[0,k])[1];
+  const lista=(el,key,L,hid,fijos)=>{el.innerHTML='<h4>'+(key==='menu'?'Menú del celular':'Pestañas de la plataforma')+'</h4>'+S[key].map((k,i)=>'<div class="row" style="display:flex;gap:6px;align-items:center;padding:3px 0"><label style="flex:1"><input type="checkbox" data-k="'+k+'" '+(hid.has(k)&&!fijos.includes(k)?'':'checked')+(fijos.includes(k)?' disabled':'')+'> '+esc(nom(L,k))+'</label><button class="btn alt" data-up="'+k+'" '+(i?'':'disabled')+' aria-label="Subir">▲</button><button class="btn alt" data-dn="'+k+'" '+(i<S[key].length-1?'':'disabled')+' aria-label="Bajar">▼</button></div>').join('');
+    el.querySelectorAll('[data-k]').forEach(i=>i.onchange=()=>{i.checked?hid.delete(i.dataset.k):hid.add(i.dataset.k);pv()});
+    el.querySelectorAll('[data-up]').forEach(b=>b.onclick=()=>{const a=S[key],i=a.indexOf(b.dataset.up);[a[i-1],a[i]]=[a[i],a[i-1]];dib()});
+    el.querySelectorAll('[data-dn]').forEach(b=>b.onclick=()=>{const a=S[key],i=a.indexOf(b.dataset.dn);[a[i+1],a[i]]=[a[i],a[i+1]];dib()})};
+  const pv=()=>{$('di-pv').innerHTML=S.menu.filter(k=>k==='cfg'||!S.hm.has(k)).map(k=>'<div style="border:1px solid var(--line,#ccc);border-radius:10px;padding:10px;font-weight:600;font-size:.85rem">'+esc(nom(LY_MENU,k).replace(/ \(.*\)/,''))+'</div>').join('')};
+  const dib=()=>{lista($('di-m'),'menu',LY_MENU,S.hm,['cfg']);lista($('di-t'),'tabs',LY_TABS,S.ht,['adm','cfg']);pv()};dib();
+  const val=()=>({menu:S.menu,hideMenu:[...S.hm].filter(k=>k!=='cfg'),tabs:S.tabs,hideTabs:[...S.ht].filter(k=>k!=='adm'&&k!=='cfg')});
+  $('di-ok').onclick=async()=>{try{const v=val();need(await call('cfgSet',{clave:'layout',valor:v}));CFGP.layout=v;tabsPorRol();$('di-out').textContent='Guardado. El celular lo recibe al sincronizar y esta plataforma ya lo aplicó.'}catch(e){$('di-out').textContent='No se pudo guardar: '+humanErr(e)}};
+  $('di-no').onclick=async()=>{if(!confirm('¿Volver al orden y a los botones originales?'))return;try{need(await call('cfgSet',{clave:'layout',valor:{}}));CFGP.layout=null;tabsPorRol();S.menu=LY_MENU.map(x=>x[0]);S.tabs=LY_TABS.map(x=>x[0]);S.hm.clear();S.ht.clear();dib();$('di-out').textContent='Diseño original restaurado.'}catch(e){$('di-out').textContent='No se pudo: '+humanErr(e)}};
+}
+function aplicarLayoutTabs(){
+  const L=(typeof CFGP!=='undefined'&&CFGP&&CFGP.layout)||{},bar=$('ptabs');if(!bar)return;
+  const bs=[...bar.querySelectorAll('button')];
+  if(Array.isArray(L.tabs)&&L.tabs.length){const o=k=>{const i=L.tabs.indexOf(k);return i<0?99:i};bs.sort((a,b)=>o(a.dataset.p)-o(b.dataset.p)).forEach(b=>bar.append(b))}
+  else{const base=TABS;bs.sort((a,b)=>base.indexOf(a.dataset.p)-base.indexOf(b.dataset.p)).forEach(b=>bar.append(b))}
+}
+{const tp0=tabsPorRol;tabsPorRol=function(){tp0.apply(this,arguments);const L=(CFGP&&CFGP.layout)||{};
+  document.querySelectorAll('#ptabs button').forEach(b=>{const p=b.dataset.p;if(p!=='adm'&&p!=='cfg'&&(L.hideTabs||[]).includes(p)&&ROL!=='master-preview')b.hidden=true});aplicarLayoutTabs();document.querySelectorAll('#atabs [data-solo=master]').forEach(b=>b.hidden=ROL!=='master')}}
 
 $('flogin').onsubmit=login;$('docs-bulk').onclick=docsBulk;
 $('atabs').onclick=e=>{const b=e.target.closest('button');if(b)renderAdm(b.dataset.a)};

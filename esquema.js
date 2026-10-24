@@ -37,6 +37,11 @@
   const RANGOS_ORDEN = ['comandante','subcomandante','inspector','capitán','capitan','mayor','teniente coronel','coronel','teniente','subteniente','sargento','cabo','bombero','brigadista','aspirante','oficial'];
   const F = (p, l, t, x) => Object.assign({ p, l, t }, x || {});
   const STEPS = [
+    { id: 'r_prop', t: 'Propiedad afectada y propietario', f: [
+      F('rpt.prop.tipo', 'Tipo de propiedad', 'sel', { o: PTIPO }),
+      F('rpt.prop.nom', 'Nombre del propietario', 'text'),
+      F('rpt.prop.doc', 'Documento del propietario', 'text'),
+      F('rpt.prop.tel', 'Teléfono de contacto', 'text') ] },
     { id: 'esencial', t: '1 · Identificación y localización del evento', f: [
       F('cat', 'Incidente o actividad', 'cat', { naOk: false }),
       F('extra._modo', '¿Fue acompañamiento/prevención o atención de una emergencia?', 'chip1', { o: [MODO_SIMPLE, MODO_EMERG], naOk: false, when: 'ask', hint: 'Si fue acompañamiento o prevención se habilita el formulario simplificado; si fue una emergencia, el completo.' }),
@@ -68,17 +73,13 @@
       F('uni', 'N° de unidades que asistieron', 'auto', { naOk: false, hint: 'Se calcula solo con las personas seleccionadas arriba.' }),
       F('veh', 'Vehículo(s)', 'chipsN', { hint: VEH_INFO }) ] },
     { id: 'fotos', t: '5 · Registro fotográfico', f: [ F('fotos', 'Registro fotográfico del evento', 'photos', { hint: 'Recomendado: mínimo 3 fotografías: 1) la situación al llegar, 2) el personal trabajando y 3) los vehículos en la escena.' }) ] },
-    { id: 'r_prop', t: '6a · Propiedad afectada y propietario', f: [
-      F('rpt.prop.tipo', 'Tipo de propiedad', 'sel', { o: PTIPO }),
-      F('rpt.prop.nom', 'Nombre del propietario', 'text'),
-      F('rpt.prop.doc', 'Documento del propietario', 'text'),
-      F('rpt.prop.tel', 'Teléfono de contacto', 'text') ] },
     { id: 'r_pc', t: '6b · Puesto de comando y áreas operativas', f: [
       F('rpt.pc', 'Ubicación del puesto de comando', 'text'),
       F('rpt.pcid', 'Identificación del puesto', 'text'),
       F('rpt.ae', 'Área de espera', 'text'),
       F('rpt.acv', 'A.C.V.', 'text') ] },
     { id: 'r_eval', t: '6c · Evaluación inicial de la situación', f: [
+      F('rpt.dinc', 'Descripción del incidente', 'area', { hint: 'Qué encuentra el comandante de incidentes al llegar. No es el resumen de las acciones: ese va en la descripción de los hechos.' }),
       F('rpt.amen', 'Amenazas del incidente', 'area'),
       F('rpt.obj', 'Objetivos iniciales', 'area') ] },
     { id: 'r_esc', t: '6d · Condición de la escena', f: [
@@ -91,8 +92,9 @@
     { id: 'r_inst', t: '6e · Instituciones de apoyo', f: INST.map(([k, n]) => F('rpt.inst.' + k, n, 'pair', { hint: 'Unidades y vehículos que enviaron' })) },
     { id: 'r_les', t: '6f · Personas lesionadas', f: [ F('rpt.les', 'Lesionados', 'list', { lista: 'les' }) ] },
     { id: 'r_vimp', t: '6g · Vehículos implicados', f: [ F('rpt.vimp', 'Vehículos implicados', 'list', { lista: 'vimp' }) ] },
-    { id: 'r_cmd', t: '6h · Comandante del incidente', f: [
-      F('rpt.cmd.n', 'Nombres y apellidos', 'cmdn', { naOk: false, hint: 'Es la misma persona que figura como Comandante del incidente en el organigrama.' }),
+    { id: 'r_cmd', t: '6h · Comando de incidentes y comandante', f: [
+      F('rpt.cmd.nom', 'Nombre del comando de incidentes', 'text', { naOk: false, hint: 'Nombre o referencia con que se identificó el comando de incidentes de esta emergencia (ej.: «Comando Incendio Vereda El Retiro» o «PMU Vía Panorama»). No es el nombre de la persona.' }),
+      F('rpt.cmd.n', 'Comandante del incidente: nombres y apellidos', 'cmdn', { naOk: false, hint: 'Es la misma persona que figura como Comandante del incidente en el organigrama.' }),
       F('rpt.cmd.g', 'Grado', 'text'),
       F('rpt.cmd.c', 'Cargo', 'text') ] },
     { id: 'r_sci', t: '6i · Estructura organizacional del incidente (SCI)', f: [ F('rpt.sci', 'Funciones activadas', 'sci', { naOk: false, hint: 'Es opcional: marque solo las funciones que se activaron. Las que no se marquen las asume el Comandante del incidente.' }) ] },
