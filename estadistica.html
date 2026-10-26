@@ -382,7 +382,7 @@ fieldset.aud label{display:flex;align-items:center;gap:6px;font-weight:600}
 'use strict';
 const CFG=window.CBV_CONFIG||{};
 const E=window.CBV_ESQ;
-const VERSION_ESPERADA='2.3';
+const VERSION_ESPERADA='1.0';
 const TIPO_CAT={"CAÍDA / CORTES DE ARBOL": "OTROS", "CONTROL DE ABEJAS": "OTROS", "CONTROL DE AVISPAS": "OTROS", "CAÍDA DE CUERDAS": "OTROS", "CORTO CIRCUITO": "INCENDIOS", "COLAPSO DE ESTRUCTURAS": "OTROS", "CAPACITACIONES": "OTROS", "EXTRICACIÓN VEHICULAR": "RESCATES", "FUGA DE GAS NATURAL": "OTROS", "FUGA DE GAS GLP": "MATERIALES PELIGROSOS", "INCENDIO FORESTAL": "INCENDIOS", "INCENDIO ESTRUCTURAL": "INCENDIOS", "INCENDIO VEHICULAR": "INCENDIOS", "INUNDACIÓN": "OTROS", "LABORES DE PREVENCION O ACOMPAÑAMIENTO EN GESTION DEL RIESGO": "OTROS", "MATERIALES PELIGROSOS / DERRAMES": "MATERIALES PELIGROSOS", "PRIMEROS AUXILIOS": "OTROS", "RESCATE DE PERSONA / PARAPENTE": "RESCATES", "RESCATE DE ANIMAL": "RESCATES", "REUNIÓN EN LA ALCALDÍA": "OTROS", "REUNIONES DE SERVICIO SOCIAL": "OTROS", "SUMINISTROS DE AGUA": "OTROS", "VISITAS DE SEGURIDAD": "INSPECCIONES DE SEGURIDAD"};
 let CATS=GEN.CATS.slice();
 const TIPOS=['INCENDIOS','RESCATES','MATERIALES PELIGROSOS','INSPECCIONES DE SEGURIDAD','FALSA ALARMA','BUSQUEDA Y RESCATE','OTROS'];
@@ -2166,12 +2166,12 @@ async function pollPend(){
 function drawPend(){
   const box=$('v-pend');if(!box)return;
   if(!PEND){box.innerHTML='';return}
-  const f=PEND,fila=(x,tag,acc)=>'<div class="ntf"><div>'+tag+' <b>'+esc(x.num||x.tmp)+'</b> · '+esc(tc(x.cat||''))+'<br><span class="derived">Responsable: '+esc(x.por||x.usuario||'—')+' · '+fechaHora(x.t)+'</span>'+(acc&&puedeF('pendientes')?'<div class="dl"><button class="btn alt sm pa" data-k="rec" data-t="'+esc(x.tmp)+'">Avisar al responsable</button>'+(acc==='bor'?'<button class="btn alt sm pa" data-k="del" data-t="'+esc(x.tmp)+'">Eliminar borrador</button>':'')+'</div>':'')+'</div></div>';
+  const f=PEND,fila=(x,tag,acc)=>'<div class="ntf"><div>'+tag+' <b>'+esc(x.num||x.tmp)+'</b> · '+esc(tc(x.cat||''))+'<br><span class="derived">Responsable: '+esc(x.por||x.usuario||'—')+' · '+fechaHora(x.t)+'</span>'+(acc&&puedeF('pendientes')?'<div class="dl"><button class="btn alt sm pa" data-k="rec" data-t="'+esc(x.tmp)+'">Avisar al responsable</button>'+(acc==='bor'?'<button class="btn alt sm pa" data-k="del" data-t="'+esc(x.tmp)+'">Eliminar borrador</button>':'')+'</div>':'')+(esMaster()&&!PREVIEW&&acc!=='bor'?'<div class="dl"><button class="btn alt sm danger pa" data-k="delrep" data-t="'+esc(x.tmp)+'">Eliminar reporte</button></div>':'')+'</div></div>';
   const b=[];
   f.borradores.forEach(x=>b.push(fila(x,x.completo?'<span class="pill warn">Completo, no enviado</span>':'<span class="pill off">Borrador incompleto</span>','bor')));
   (f.llamSinReporte||[]).forEach(x=>b.push(pendFilaLlamado(x)));
   f.sinDrive.forEach(x=>b.push(fila(x,'<span class="pill info">Esperando carga a Drive</span>')));
-  (f.sinUbic||[]).forEach(x=>b.push('<div class="ntf"><div><span class="pill bad">Falta registrar la ubicación del evento</span> <b>'+esc(x.num||x.tmp)+'</b> · '+esc(tc(x.cat||''))+'<br><span class="derived">Responsable: '+esc(x.por||x.usuario||'—')+' · '+fechaHora(x.t)+'</span><div class="dl">'+(puedeF('ubicacion')?'<button class="btn alt sm ub-add" data-t="'+esc(x.tmp)+'">Agregar ubicación en el mapa</button>':'')+(ROL==='master'?'<button class="btn alt sm ub-his" data-t="'+esc(x.tmp)+'">Recuperar ubicación histórica</button>':'')+'</div></div></div>'));
+  (f.sinUbic||[]).forEach(x=>b.push('<div class="ntf"><div><span class="pill bad">Falta registrar la ubicación del evento</span> <b>'+esc(x.num||x.tmp)+'</b> · '+esc(tc(x.cat||''))+'<br><span class="derived">Responsable: '+esc(x.por||x.usuario||'—')+' · '+fechaHora(x.t)+'</span><div class="dl">'+(puedeF('ubicacion')?'<button class="btn alt sm ub-add" data-t="'+esc(x.tmp)+'">Agregar ubicación en el mapa</button>':'')+(ROL==='master'?'<button class="btn alt sm ub-his" data-t="'+esc(x.tmp)+'">Recuperar ubicación histórica</button>':'')+(esMaster()&&!PREVIEW?'<button class="btn alt sm danger pa" data-k="delrep" data-t="'+esc(x.tmp)+'">Eliminar reporte</button>':'')+'</div></div></div>'));
   f.colas.forEach(x=>b.push('<div class="ntf"><div><span class="pill '+(x.cola.err?'bad':'info')+'">'+(x.cola.err?'Error de sincronización':'Esperando sincronizar')+'</span> <b>'+esc(x.n)+'</b>'+(x.enLinea?'':' <span class="derived">(sin conexión)</span>')+'<br><span class="derived">'+[x.cola.borr&&x.cola.borr+' borrador(es)',x.cola.pend&&x.cola.pend+' por enviar',x.cola.err&&x.cola.err+' con error'].filter(Boolean).join(' · ')+' · '+fechaHora(x.t)+'</span></div></div>'));
   box.innerHTML='<h4 style="margin:12px 0 4px">Pendientes ('+b.length+')</h4>'+(b.length?b.slice(0,40).join(''):'<p class="derived">Nada pendiente.</p>')+(f.sinDrive.length&&puedeF('conexion')?'<div class="dl"><button class="btn alt sm" id="pd-drive">Cargar a Drive los '+f.sinDrive.length+' pendientes</button><span class="derived" id="pd-msg"></span></div>':'');
   box.querySelectorAll('.pa').forEach(x=>x.onclick=async()=>{
@@ -2182,6 +2182,8 @@ function drawPend(){
       else if(k==='asig'){x.disabled=false;asignarComandante(t);return}
       else if(k==='vinc'){x.disabled=false;vincularReporteUI(t);return}
       else if(k==='abrir'){x.disabled=false;emergResumen(t);return}
+      else if(k==='emel'){x.disabled=false;eliminarEmergenciaUI(t);return}
+      else if(k==='delrep'){x.disabled=false;eliminarReporteUI(t);return}
       else if(k==='comp'){const m=prompt('¿Por qué se completa sin reporte? (queda anotado)','Sin reporte necesario');if(m===null){x.disabled=false;return}need(await call('pendCompletar',{tipo:'llamado',id:t,motivo:m}));toast('Marcado como completado.');pollPend()}
       else if(k==='del'){if(!confirm('¿Eliminar este borrador? Desaparece también del teléfono de quien lo hizo cuando se conecte.')){x.disabled=false;return}need(await call('pendEliminar',{tmp:t}));toast('Borrador eliminado.');pollPend()}
     }catch(e){toast('No se pudo: '+humanErr(e),1)}
@@ -3022,7 +3024,7 @@ function pendFilaLlamado(x){
   return '<div class="ntf"><div><span class="pill '+(vence?'bad':'warn')+'">'+(act?'Emergencia activa, aún sin reporte':vence?'Reporte vencido (más de 48 h)':'Reporte pendiente')+'</span> <b>'+esc(x.msg)+'</b>'+(x.lugar?' · '+esc(x.lugar):'')+
     '<br><span class="derived">'+fechaHora(x.t)+' · '+(act?'emergencia activa':'terminada '+(x.cierre?fechaHora(x.cierre):''))+(act?'':' · plazo: hasta '+fechaHora(lim))+'</span>'+
     (x.num?'<br><span class="derived">Consecutivo: <b>'+esc(x.num)+'</b> · Comandante de incidentes: <b>'+esc(x.resp||'sin asignar')+'</b></span>':'')+
-    '<div class="dl"><button class="btn alt sm pa" data-k="abrir" data-t="'+esc(x.id)+'">Abrir la emergencia</button>'+(can?'<button class="btn alt sm pa" data-k="asig" data-t="'+esc(x.id)+'">'+(x.resp?'Cambiar comandante de incidentes':'Asignar comandante de incidentes')+'</button>'+(x.resp?'<button class="btn alt sm pa" data-k="recll" data-t="'+esc(x.id)+'">Enviar recordatorio con enlace</button>':'')+'<button class="btn alt sm pa" data-k="vinc" data-t="'+esc(x.id)+'">Vincular un reporte ya hecho</button><button class="btn alt sm pa" data-k="comp" data-t="'+esc(x.id)+'">Marcar como completada</button>':'')+'</div></div></div>';
+    '<div class="dl"><button class="btn alt sm pa" data-k="abrir" data-t="'+esc(x.id)+'">Abrir la emergencia</button>'+(can?'<button class="btn alt sm pa" data-k="asig" data-t="'+esc(x.id)+'">'+(x.resp?'Cambiar comandante de incidentes':'Asignar comandante de incidentes')+'</button>'+(x.resp?'<button class="btn alt sm pa" data-k="recll" data-t="'+esc(x.id)+'">Enviar recordatorio con enlace</button>':'')+'<button class="btn alt sm pa" data-k="vinc" data-t="'+esc(x.id)+'">Vincular un reporte ya hecho</button><button class="btn alt sm pa" data-k="comp" data-t="'+esc(x.id)+'">Marcar como completada</button>':'')+(esMaster()&&!PREVIEW?'<button class="btn alt sm danger pa" data-k="emel" data-t="'+esc(x.id)+'">Eliminar emergencia</button>':'')+'</div></div></div>';
 }
 
 /* ---------- emergencias atendidas ---------- */
@@ -3035,12 +3037,13 @@ async function pintarAtendidas(forzar){
   tab.innerHTML='<tr><th>Consecutivo</th><th>Fecha</th><th>Emergencia</th><th>Estado</th><th>Comandante</th><th>Reporte</th><th></th></tr>'+(l.length?l.slice(AT.pg*10,AT.pg*10+10).map(x=>{
     const rp=x.reporte,ok=rp&&String(rp.cat||x.msg).toUpperCase()===String(x.msg).toUpperCase();
     const repTxt=rp?'<b>'+esc(rp.num||'')+'</b> '+(rp.estado==='final'?'<span class="pill on">terminado</span>':'<span class="pill warn">en elaboración</span>')+(ok?'':' <span class="pill warn" title="La categoría del reporte no coincide con la de la emergencia">revisar vínculo</span>'):(x.completada?'<span class="pill info">Completada sin reporte</span>':x.vencido?'<span class="pill bad">Pendiente · vencido</span>':x.estado==='activa'?'<span class="derived">en curso</span>':'<span class="pill warn">Pendiente</span>');
-    return '<tr><td class="m">'+esc(x.num||'—')+'</td><td>'+fechaHora(x.cuando)+'</td><td><b>'+esc(x.msg)+'</b>'+(x.lugar?'<br><span class="m">'+esc(x.lugar)+'</span>':'')+'</td><td>'+(x.estado==='activa'?'<span class="pill on">Activa</span>':'<span class="pill off">Terminada</span>')+'</td><td>'+esc(x.cmdn||'—')+'</td><td>'+repTxt+'</td><td><button class="btn alt sm" data-at="'+esc(x.id)+'">Abrir</button>'+(puedeF('pendientes')&&!rp?' <button class="btn alt sm" data-atv="'+esc(x.id)+'">Vincular reporte</button>':'')+'</td></tr>'}).join(''):'<tr><td colspan="7" class="derived">No hay emergencias que coincidan.</td></tr>');
+    return '<tr><td class="m">'+esc(x.num||'—')+'</td><td>'+fechaHora(x.cuando)+'</td><td><b>'+esc(x.msg)+'</b>'+(x.lugar?'<br><span class="m">'+esc(x.lugar)+'</span>':'')+'</td><td>'+(x.estado==='activa'?'<span class="pill on">Activa</span>':'<span class="pill off">Terminada</span>')+'</td><td>'+esc(x.cmdn||'—')+'</td><td>'+repTxt+'</td><td><button class="btn alt sm" data-at="'+esc(x.id)+'">Abrir</button>'+(puedeF('pendientes')&&!rp?' <button class="btn alt sm" data-atv="'+esc(x.id)+'">Vincular reporte</button>':'')+(esMaster()&&!PREVIEW?' <button class="btn alt sm danger" data-atd="'+esc(x.id)+'">Eliminar</button>':'')+'</td></tr>'}).join(''):'<tr><td colspan="7" class="derived">No hay emergencias que coincidan.</td></tr>');
   const pgs=Math.max(1,Math.ceil(l.length/10));
   $('at-pg').innerHTML='<div class="tools"><button class="btn alt sm" id="at-ant" '+(AT.pg<=0?'disabled':'')+'>Anterior</button><span>Página '+(AT.pg+1)+' de '+pgs+' · '+l.length+' emergencia(s)</span><button class="btn alt sm" id="at-sig" '+(AT.pg>=pgs-1?'disabled':'')+'>Siguiente</button></div>';
   $('at-ant').onclick=()=>{AT.pg--;pintarAtendidas()};$('at-sig').onclick=()=>{AT.pg++;pintarAtendidas()};
   tab.querySelectorAll('[data-at]').forEach(b=>b.onclick=()=>emergResumen(b.dataset.at));
   tab.querySelectorAll('[data-atv]').forEach(b=>b.onclick=()=>vincularReporteUI(b.dataset.atv));
+  tab.querySelectorAll('[data-atd]').forEach(b=>b.onclick=()=>eliminarEmergenciaUI(b.dataset.atd));
 }
 {const dp0=drawPend;drawPend=function(){dp0.apply(this,arguments);try{pintarAtendidas()}catch(e){}}}
 {const q=$('at-q');if(q){q.oninput=()=>pintarAtendidas();$('at-sin').onchange=()=>pintarAtendidas();$('at-rec').onclick=()=>pintarAtendidas(true)}}
@@ -3440,6 +3443,31 @@ function aplicarLayoutTabs(){
       toast('Sistema limpio y listo para trabajar.');try{CARGAS_RAW={};HISTROWS=null;await loadAll();renderPanel()}catch(e){}
     }catch(e){o.textContent='No se pudo: '+humanErr(e);$('lp-ok').disabled=false}};
 }}
+
+
+/* ---------- eliminar emergencias y reportes (solo superadministrador) ---------- */
+function eliminarEmergenciaUI(id){
+  const x=(AT.lista||[]).find(z=>z.id===id)||(PEND&&(PEND.llamSinReporte||[]).find(z=>z.id===id))||{id,msg:'Emergencia'};
+  const tiene=!!(x.reporte);
+  dlg('<h3>Eliminar emergencia</h3><p><b>'+esc(x.num||'')+'</b> · '+esc(x.msg||'')+(x.lugar?' · '+esc(x.lugar):'')+'</p><p class="derived">Se quita el llamado, se liberan sus unidades y grupos y deja de aparecer en Pendientes y en Emergencias atendidas. Queda anotado en Auditoría y se guarda una copia de seguridad. No se puede deshacer desde el sistema.</p>'+
+    '<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="ee-rep"> <span>Eliminar también el reporte vinculado'+(tiene?' ('+esc((x.reporte||{}).num||'')+')':' (si lo hay)')+' con sus fotos de Drive</span></label>'+
+    '<label>Motivo (obligatorio)<input id="ee-mot" maxlength="200" placeholder="Ej.: llamado de prueba, duplicado…"></label><div class="derived" id="ee-out" role="status"></div><div class="dl"><button class="btn danger" id="ee-ok">Eliminar emergencia</button><button class="btn alt" id="ee-no">Cancelar</button></div>',()=>{
+    $('ee-no').onclick=dlgCerrar;
+    $('ee-ok').onclick=async()=>{const mot=$('ee-mot').value.trim();if(!mot){$('ee-out').textContent='Escriba el motivo.';return}
+      $('ee-ok').disabled=true;$('ee-out').textContent='Eliminando…';
+      try{const r=need(await call('emergEliminar',{id,motivo:mot,reportes:$('ee-rep').checked}));dlgCerrar();
+        toast('Emergencia '+(r.num||'')+' eliminada'+(r.reportes?' y '+r.reportes+' reporte(s)':'')+(r.conservados?'. Se conservaron '+r.conservados+' reporte(s) vinculado(s)':'')+'.');
+        AT.t=0;try{await loadAll()}catch(e){}pollPend();pintarAtendidas(true);pollVivo();renderPanel()}
+      catch(e){$('ee-out').textContent='No se pudo eliminar: '+humanErr(e);$('ee-ok').disabled=false}};
+  });
+}
+async function eliminarReporteUI(tmp){
+  const o=REGS.get(tmp),mot=prompt('Motivo para ELIMINAR el reporte '+((o&&o.num)||tmp)+' (queda anotado en Auditoría):','');
+  if(!mot||!mot.trim())return;
+  if(!confirm('Se elimina el reporte, sus fotos y su carpeta de Drive. ¿Continuar?'))return;
+  try{need(await call('eliminar',{tmp,motivo:mot.trim()}));toast('Reporte eliminado.');try{await loadAll()}catch(e){}pollPend();AT.t=0;pintarAtendidas(true);renderPanel()}
+  catch(e){toast('No se pudo eliminar: '+humanErr(e),1)}
+}
 
 $('flogin').onsubmit=login;$('docs-bulk').onclick=docsBulk;
 $('atabs').onclick=e=>{const b=e.target.closest('button');if(b)renderAdm(b.dataset.a)};
