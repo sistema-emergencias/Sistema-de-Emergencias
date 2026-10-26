@@ -256,6 +256,9 @@ html,body{overflow-x:hidden}
 .emggrp{padding:6px 10px;margin:6px 0;background:var(--surface);border-radius:8px;display:grid;gap:2px}
 .fasebtns .fb.on{outline:3px solid currentColor}.fasebtns .fb.f-rojo{color:#b91c1c}.fasebtns .fb.f-amarillo{color:#92400e}.fasebtns .fb.f-verde{color:#166534}
 .t-emg svg .fillacc{fill:#dc2626;stroke:#dc2626}
+#bl-st{font-weight:600;padding:6px 8px;border-radius:8px;border:1px solid var(--line)}
+#bl-st.bl-ok{color:var(--ok,#1b7f3b)}
+#bl-st.bl-warn{color:var(--warn,#b45309)}
 
 </style>
 </head>
@@ -2567,7 +2570,8 @@ pintarEmerg=async function(silencio){
   res.innerHTML='<div class="emgnums"><div><b>'+l.length+'</b><span>emergencia'+(l.length===1?'':'s')+'</span></div><div><b>'+per.size+'</b><span>persona'+(per.size===1?'':'s')+' activada'+(per.size===1?'':'s')+'</span></div><div><b>'+veh.size+'</b><span>vehículo'+(veh.size===1?'':'s')+'</span></div></div>';
   box.append(res);
   if(!l.length){const nc=el('section','card');nc.append(el('p','','No hay emergencias activas en este momento.'));box.append(nc);return}
-  l.forEach(e=>{
+  /* primero la emergencia en la que está asignado el usuario; luego las más recientes */
+  l.slice().sort((a,b)=>(b.mia?1:0)-(a.mia?1:0)||(b.cuando||0)-(a.cuando||0)).forEach(e=>{
     const c=el('section','card emgc f-'+e.fase);c.style.cursor='pointer';
     const h=el('h3','');h.append(el('span','faseb f-'+e.fase,FASE_TXT[e.fase]||''),document.createTextNode(' '+(e.num?e.num+' · ':'')+e.msg));c.append(h);
     if(e.mia)c.append(el('p','derived','✅ Usted está asignado a esta emergencia.'));
@@ -2640,17 +2644,62 @@ setTimeout(()=>{if(loggedIn()&&online)repPendPoll()},7000);
 
 /* ---------- bitácora en vivo: llega a la central mientras se escribe y mueve la fase de la emergencia ---------- */
 const FASE_POR_ENTRADA={'Llegada al sitio':'amarillo','Reconocimiento de la escena':'amarillo','Inicio del ataque / atención':'amarillo','Situación controlada':'amarillo','Desmovilización hacia el cuartel':'amarillo','Terminación de la emergencia':'verde'};
-const BL={tm:null,fase:{}};
-function bitacoraLive(txt){
-  const id=D&&D.extra&&D.extra._llam;if(!id)return;
-  clearTimeout(BL.tm);
-  BL.tm=setTimeout(async()=>{if(!online||!loggedIn())return;try{await call('bitLive',{id,items:accList(),cin:String(getP(D,'rpt.cmd.nom')||'')})}catch(e){}},700);
-  const q=txt&&QUICK.find(z=>(z[2]||z[0])===txt),f=q&&FASE_POR_ENTRADA[q[0]];
-  if(f&&BL.fase[id]!==f&&online&&loggedIn()){
-    call('faseSet',{id,fase:f}).then(r=>{if(r&&r.ok){BL.fase[id]=f;toast(f==='verde'?'La emergencia pasó a «Atendida» y se cerró en la central.':'La central ve la emergencia como «'+(f==='amarillo'?'Atendiendo':'Requiere atención')+'».');try{pollAlerts();asigPoll()}catch(e){}}}).catch(()=>{});
-  }
+const BL={tm:null,fase:{},txt:'',cls:''};
+function blEstado(t,cls){BL.txt=t;BL.cls=cls||'';const e=$('bl-st');if(e){e.textContent=t;e.className='derived bl-'+(cls||'info')}}
+/* la bitácora se vincula sola a la emergencia en la que el usuario está asignado; si no hay, se elige a mano */
+async function blEnlazar(){
+  const id=D&&D.extra&&D.extra._llam;if(id)return id;
+  if(!online||!loggedIn())return '';
+  try{const r=await call('emergActivas');if(r&&r.ok){EMG.lista=r.emergencias;EMG.t=Date.now()}}catch(e){}
+  const e=(EMG.lista||[]).filter(x=>x.mia).sort((a,b)=>(b.cuando||0)-(a.cuando||0))[0];
+  if(!e)return '';
+  D.extra=D.extra||{};D.extra._llam=e.id;autosave();
+  toast('Esta bitácora quedó vinculada a '+(e.num?e.num+' · ':'')+e.msg+' y la central la ve en vivo.');
+  return e.id;
 }
-{const la0=logAdd;logAdd=function(h,a){const ok=la0.apply(this,arguments);if(ok)bitacoraLive(String(a||'').trim());return ok}}
+function blSel(){
+  const box=$('bl-box');if(!box)return;let s=$('bl-sel');
+  const l=(EMG.lista||[]);
+  if(!l.length){box.querySelector('.bl-pick').hidden=true;return}
+  box.querySelector('.bl-pick').hidden=false;
+  s.innerHTML='<option value="">Elegir la emergencia…</option>'+l.map(e=>'<option value="'+esc(e.id)+'">'+esc((e.num?e.num+' · ':'')+e.msg+(e.mia?' (asignado)':''))+'</option>').join('');
+}
+async function blEnviar(){
+  if(!D)return;
+  if(!online||!loggedIn()){blEstado('Sin conexión: la bitácora se enviará a la central cuando recupere la señal.','warn');return}
+  const id=await blEnlazar();
+  if(!id){blEstado('Este reporte no está vinculado a una emergencia: la central todavía no ve su bitácora. Elija la emergencia en la lista de abajo.','warn');blSel();return}
+  try{
+    const r=await call('bitLive',{id,items:accList(),cin:String(getP(D,'rpt.cmd.nom')||'')});
+    if(r&&r.ok)blEstado('✔ La central ve su bitácora en vivo (enviada a las '+hh12(Date.now())+').'+(BL.faseErr?' '+BL.faseErr:''),BL.faseErr?'warn':'ok');
+    else blEstado('⚠ La central no recibió la bitácora: '+((r&&r.error)||'error del servidor')+'.','warn');
+  }catch(e){blEstado('⚠ No se pudo enviar a la central ('+String((e&&e.message)||e).slice(0,80)+'). Se reintenta al seguir escribiendo.','warn')}
+}
+async function blFase(txt){
+  const q=txt&&QUICK.find(z=>(z[2]||z[0])===txt),f=q&&FASE_POR_ENTRADA[q[0]];if(!f)return;
+  if(!online||!loggedIn())return;
+  const id=await blEnlazar();if(!id)return;
+  if(BL.fase[id]===f||(BL.fase[id]==='verde'&&f!=='verde'))return;
+  try{
+    const r=await call('faseSet',{id,fase:f});
+    if(r&&r.ok){BL.fase[id]=f;BL.faseErr='';toast(f==='verde'?'La emergencia pasó a «Atendida» y se cerró en la central.':'La central ve la emergencia como «'+(f==='amarillo'?'Atendiendo':'Requiere atención')+'».');try{pollAlerts();if(VISTA==='emerg')pintarEmerg(true)}catch(e){}}
+    else{BL.faseErr='El estado de la emergencia no cambió: '+((r&&r.error)||'error')+' Pida a la central que lo asigne como comandante de incidentes.';blEstado('✔ La central ve su bitácora. '+BL.faseErr,'warn')}
+  }catch(e){}
+}
+function bitacoraLive(txt){
+  if(!D)return;
+  clearTimeout(BL.tm);BL.tm=setTimeout(blEnviar,700);
+  if(txt)blFase(txt);
+}
+{const ol0=openLog;openLog=async function(){
+  await ol0.apply(this,arguments);
+  try{
+    if(!$('bl-box')){const b=document.createElement('div');b.id='bl-box';b.innerHTML='<p id="bl-st" class="derived"></p><div class="bl-pick" hidden><label class="derived">Vincular esta bitácora a una emergencia activa <select id="bl-sel"></select></label></div>';$('log_list').parentNode.insertBefore(b,$('log_list'));
+      $('bl-sel').onchange=()=>{const v=$('bl-sel').value;if(!v)return;D.extra=D.extra||{};D.extra._llam=v;autosave();toast('Bitácora vinculada a la emergencia.');bitacoraLive('')}}
+    blEstado(BL.txt||'Comprobando la conexión con la central…',BL.cls||'info');bitacoraLive('')
+  }catch(e){}
+}}
+{const lg0=logAdd;logAdd=function(h,a){const ok=lg0.apply(this,arguments);if(ok)bitacoraLive(String(a||'').trim());return ok}}
 {const dl0=drawLog;drawLog=function(){dl0.apply(this,arguments);bitacoraLive('')}}
 window.addEventListener('online',()=>bitacoraLive(''));
 /* el comandante que la central ya asignó aparece escrito en el reporte */
@@ -2664,6 +2713,12 @@ window.addEventListener('online',()=>bitacoraLive(''));
 
 /* el nombre del comando de incidentes también viaja a la central apenas se escribe */
 {const sv0=setV;setV=function(p,v){const r=sv0.apply(this,arguments);if(p==='rpt.cmd.nom')bitacoraLive('');return r}}
+
+/* el panel se actualiza solo cuando llega o termina una emergencia (sin esperar el ciclo de 15 s) */
+{let ids0=null;const ha0=handleAlerts;handleAlerts=function(list){
+  ha0.apply(this,arguments);
+  try{const ids=(Array.isArray(list)?list:[]).filter(a=>a.tipo==='llamado').map(a=>a.id).sort().join(',');
+    if(ids0!==null&&ids!==ids0&&VISTA==='emerg')pintarEmerg(true);ids0=ids}catch(e){}}}
 
 
 /* ================= MIS REGISTROS ================= */

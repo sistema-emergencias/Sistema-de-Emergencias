@@ -189,7 +189,7 @@ body.simple dialog p.derived{display:block}
 fieldset.aud{border:1px solid var(--line,#ccc);border-radius:8px;margin:8px 0;padding:6px 10px;display:flex;gap:16px;flex-wrap:wrap}
 fieldset.aud legend{font-weight:700;padding:0 6px}
 fieldset.aud label{display:flex;align-items:center;gap:6px;font-weight:600}
-.ruta-llamado{font-weight:600;background:var(--surface-2,#f3f4f6);border-radius:6px;padding:6px 10px}
+.ruta-llamado{font-weight:600;background:var(--surface);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:6px 10px}
 .aud-chip{font-weight:700}
 
 .emgnums{display:flex;gap:10px;justify-content:space-around;text-align:center;margin:6px 0}.emgnums b{display:block;font-size:1.8em;line-height:1.1}.emgnums span{font-size:.85em}
@@ -644,7 +644,7 @@ function drawMonths(){
 
 function renderRecs(){
   const q=$('q').value.trim().toLowerCase(),base=CUR.concat([...REGS.values()].filter(o=>o.cat&&o.fecha&&!o.anulado&&o.estado!=='final').map(toRow),$('showanul')&&$('showanul').checked?[...REGS.values()].filter(o=>o.anulado&&o.cat).map(toRow).concat(typeof ELIMROWS!=='undefined'?ELIMROWS:[]):[]),rows=base.filter(r=>!q||[r.id,r.cat,r.dir,r.bar,r.desc].join(' ').toLowerCase().includes(q)).slice().reverse();
-  const PS=40,pages=Math.max(1,Math.ceil(rows.length/PS));if(page>=pages)page=pages-1;
+  const PS=10,pages=Math.max(1,Math.ceil(rows.length/PS));if(page>=pages)page=pages-1;
   const sl=rows.slice(page*PS,page*PS+PS);
   $('rtab').innerHTML='<tr><th>N°</th><th>Día</th><th>Categoría</th><th>Lugar</th><th class="n">Unid.</th><th>Vehículo</th><th>Origen</th></tr>'+(sl.length?sl.map(r=>'<tr class="click" data-i="'+rows.indexOf(r)+'"'+(r.anulado||r.eliminado?' style="text-decoration:line-through;opacity:.6"':'')+'><td class="m">'+esc(r.id)+'</td><td>'+GEN.dmy(r.fecha)+' '+esc(r.hora||'')+'</td><td>'+esc(tc(r.cat))+'</td><td>'+esc(r.dir||'—')+'</td><td class="n">'+(r.uni==null?'—':r.uni)+'</td><td>'+esc(r.veh||'—')+'</td><td>'+(r.src==='app'?'App '+estadoPill(r):'Excel')+'</td></tr>').join(''):'<tr><td colspan="7">Sin registros con estos filtros.</td></tr>');
   $('pg').textContent='Página '+(page+1)+' de '+pages+' · '+nf.format(rows.length)+' registros';
@@ -2095,10 +2095,11 @@ async function despachoUI(a){
   const ocup=new Set((VIVO.despachos||[]).flatMap(x=>x.pers.map(p=>p.u)));
   dlg('<h3>Despachar · '+esc(a.msg)+'</h3><div id="ds-lst">'+(ds.length?ds.map(x=>'<div class="ntf"><div><b>'+esc(x.veh)+'</b> · '+esc(EST_DESP[x.estado]||x.estado)+' · '+x.pers.length+' persona(s)<br><span class="derived">'+x.pers.map(p=>esc(p.n)+(p.rol?' ('+esc(p.rol)+')':'')).join(', ')+' · confirmaron '+(x.conf||[]).length+'</span></div><button class="btn alt sm" data-q="'+esc(x.id)+'">Quitar</button></div>').join(''):'<p class="derived">Aún no hay vehículos asignados.</p>')+'</div>'+
     '<label>Vehículo<select id="ds-veh">'+veh.map(v=>'<option>'+esc(v)+'</option>').join('')+'</select></label>'+
-    '<label>Grupo de intervención<select id="ds-grp">'+(()=>{const gs=(VIVO.grupos||[]).filter(g=>g.estado==='activo'&&(g.emerg===a.id||!g.emerg));return (gs.some(g=>g.emerg===a.id)?'':'<option value="">Crear el primer grupo de esta emergencia</option>')+gs.map(g=>'<option value="'+esc(g.id)+'"'+(g.emerg===a.id?' selected':'')+'>'+esc(g.nombre)+(g.emerg===a.id?' (ya atiende esta emergencia)':' (disponible)')+'</option>').join('')+'<option value="_nuevo">+ Crear otro grupo nuevo</option>'})()+'</select></label>'+
+    '<label>Grupo de intervención<select id="ds-grp">'+(()=>{const gs=(VIVO.grupos||[]).filter(g=>g.estado==='activo'&&(g.emerg===a.id||!g.emerg));return (gs.some(g=>g.emerg===a.id)?'':'')+gs.map(g=>'<option value="'+esc(g.id)+'"'+(g.emerg===a.id?' selected':'')+'>'+esc(g.nombre)+(g.emerg===a.id?' (ya atiende esta emergencia)':' (disponible)')+'</option>').join('')+'<option value="_nuevo"'+((VIVO.grupos||[]).filter(g=>g.estado==='activo'&&(g.emerg===a.id||!g.emerg)).length?'':' selected')+'>➕ Crear un grupo de intervención nuevo</option>'})()+'</select></label><label id="ds-gn-l" hidden>Nombre del grupo nuevo<input id="ds-gnom" maxlength="60" placeholder="Grupo de intervención '+(((VIVO.grupos||[]).filter(g=>g.estado==='activo').length)+1)+'"></label>'+
     '<p class="derived" style="margin:6px 0 2px">Personal que va en el vehículo (los ya asignados a una emergencia aparecen marcados):</p><div class="chk" id="ds-per">'+ROSTERD.personal.map(p=>'<label><input type="checkbox" value="'+esc(p.usuario)+'" data-n="'+esc(p.nombre)+'" '+(ocup.has(p.usuario)?'disabled':'')+'>'+esc(p.nombre)+(ocup.has(p.usuario)?' · ocupado':'')+'</label>').join('')+'</div>'+
     '<div class="tools"><label>Comandante de incidentes<select id="ds-cmd"><option value="">— sin asignar —</option></select></label><label>Maquinista (conductor del vehículo)<select id="ds-maq"><option value="">— sin asignar —</option></select></label></div>'+'<label>Nota (opcional)<input id="ds-nota"></label><div class="derived" id="ds-out" role="status"></div><div class="dl"><button class="btn" id="ds-ok">Asignar</button><button class="btn alt" id="ds-no">Cerrar</button></div>',d=>{
       $('ds-no').onclick=dlgCerrar;
+      {const gs=$('ds-grp'),gl=$('ds-gn-l'),tg=()=>{gl.hidden=gs.value!=='_nuevo'};gs.onchange=tg;tg()}
       const roles=()=>{const ps=[...d.querySelectorAll('#ds-per input:checked')],c0=$('ds-cmd').value,m0=$('ds-maq').value;
         ['ds-cmd','ds-maq'].forEach(id=>{const sel=$(id),v=id==='ds-cmd'?c0:m0;sel.innerHTML='<option value="">— sin asignar —</option>'+ps.map(i=>'<option value="'+esc(i.value)+'"'+(i.value===v?' selected':'')+'>'+esc(i.dataset.n)+'</option>').join('')})};
       d.querySelectorAll('#ds-per input').forEach(i=>i.addEventListener('change',roles));
@@ -2135,9 +2136,11 @@ function drawUnidades(){
     const la=vivo?vivo.lat:ult?ult.lat:null,lo=vivo?vivo.lon:ult?ult.lon:null;
     if(la!=null){const z=document.createElement('button');z.className='btn alt sm';z.textContent='Ver en mapa';z.onclick=()=>{if(MV)MV.setView([la,lo],17);$('map-vivo').scrollIntoView({behavior:'smooth',block:'center'})};td.append(z,' ')}
     if(puedeF('perfiles')){const p=document.createElement('button');p.className='btn alt sm';p.textContent='Perfil';p.onclick=()=>perfilUI(u.u,u.n);td.append(p)}
-    if(esMaster()&&!PREVIEW&&(u.estado==='compartiendo'||u.estado==='ubic-antigua')){const ap=document.createElement('button');ap.className='btn alt sm danger';ap.textContent='Apagar ubicación';ap.onclick=async()=>{if(!confirm('¿Apagar la ubicación de '+u.n+'? Su teléfono dejará de compartirla.'))return;ap.disabled=true;try{need(await call('ubicApagar',{usuario:u.u}));toast('Orden enviada: su teléfono apagará la ubicación al conectarse.');pollVivo()}catch(e){toast('No se pudo: '+humanErr(e),1);ap.disabled=false}};td.append(' ',ap)}
+    if((esMaster()||puedeF('llamados'))&&!PREVIEW&&!u.sinSenal){const ap=document.createElement('button');ap.className='btn alt sm danger';ap.textContent='Apagar ubicación';ap.onclick=async()=>{if(!confirm('¿Apagar la ubicación de '+u.n+'? Quedará como «Sin señal» en el panel y su teléfono dejará de compartirla al conectarse.'))return;ap.disabled=true;try{need(await call('ubicApagar',{usuario:u.u}));toast('Ubicación apagada: la unidad figura sin señal. Su teléfono recibirá la orden al conectarse.');pollVivo()}catch(e){toast('No se pudo: '+humanErr(e),1);ap.disabled=false}};td.append(' ',ap)}
+    if(puedeF('llamados')||esMaster()){const sb=document.createElement('button');sb.className='btn alt sm danger sos3';sb.textContent='Activar SOS (mantener 3 s)';sb.dataset.su=u.u||'';sb.dataset.sn=u.n;sb.dataset.sv=(dsp&&dsp.veh)||'';sb.dataset.sl=la!=null?la:'';sb.dataset.so=lo!=null?lo:'';td.append(' ',sb)}
     tr.append(td);t.append(tr);
   });
+  if(typeof ligarPersonas==='function')ligarPersonas(t);
 }
 async function perfilUI(u,n){
   dlg('<h3>'+esc(n||u)+'</h3><p class="derived">Cargando…</p>');
@@ -2635,7 +2638,7 @@ function verEnMapa(lat,lon,z,rotulo){
 
 /* ================= V2.2 · llamado con observaciones/silencioso, fases por colores, grupos de intervención, atención de la emergencia ================= */
 const FASE_TXT={rojo:'Requiere atención',amarillo:'Atendiendo',verde:'Atendida'};
-function grpArg(){const v=($('ds-grp')||{}).value;return v==='_nuevo'?{grupoNuevo:'Grupo de intervención '+(((VIVO.grupos||[]).filter(g=>g.estado==='activo').length)+1)}:(v?{grupo:v}:{})}
+function grpArg(){const v=($('ds-grp')||{}).value;return v==='_nuevo'?{grupoNuevo:(($('ds-gnom')||{}).value||'').trim()||'Grupo de intervención '+(((VIVO.grupos||[]).filter(g=>g.estado==='activo').length)+1)}:(v?{grupo:v}:{})}
 async function roster(){if(!ROSTERD){try{ROSTERD=need(await call('roster'))}catch(e){return null}}return ROSTERD}
 
 /* enviar llamado: ahora lleva observaciones y puede ser silencioso; desde el botón flotante termina en el panel de operación */
@@ -2704,9 +2707,9 @@ function drawGrupos(){
     const us=ds.filter(x=>x.grupo===g.id),miembros=us.flatMap(x=>x.pers.map(p=>({u:p.u,n:p.n,veh:x.veh})));
     const rol=p=>p.rol?'<span class="rol">'+esc(p.rol)+'</span>':'';
     h+='<div class="gi" data-g="'+esc(g.id)+'" style="border-left-color:'+esc(g.color)+'"><h4><span class="dot" style="background:'+esc(g.color)+'"></span>'+esc(g.nombre)+'<span class="derived">'+(g.emerg?'→ '+esc(nomE(g.emerg)||'emergencia'):'Disponible')+'</span></h4>'+
-      (us.length?us.map(x=>'<div class="un"><b>'+esc(x.veh||'Sin vehículo')+'</b> · '+esc(EST_DESP[x.estado]||x.estado)+(x.conf&&x.conf.length?' · confirmó '+x.conf.length:'')+'<br>'+x.pers.map(p=>esc(p.n)+' '+rol(p)).join(' · ')+(ed?'<br><label class="derived">Unir recurso a grupo de intervención: <select data-mv="'+esc(x.id)+'"><option value="">elegir grupo…</option>'+gs.filter(o=>o.id!==g.id).map(o=>'<option value="'+esc(o.id)+'">'+esc(o.nombre)+'</option>').join('')+'<option value="_nuevo">Nuevo grupo de intervención '+(gs.length+1)+'</option><option value="_ninguno">Sin grupo</option></select></label> <button class="btn alt sm" data-term="'+esc(x.id)+'">Terminar labores</button> <button class="btn alt sm" data-quit="'+esc(x.id)+'">Quitar de la emergencia</button>':'')+'</div>').join(''):'<p class="derived">Sin unidades. Asígnelas desde «Despachar» en una emergencia.</p>')+
+      (us.length?us.map(x=>'<div class="un"><b>'+esc(x.veh||'Sin vehículo')+'</b> · '+esc(EST_DESP[x.estado]||x.estado)+(x.conf&&x.conf.length?' · confirmó '+x.conf.length:'')+'<br>'+x.pers.map(p=>esc(p.n)+' '+rol(p)).join(' · ')+(ed?'<br><label class="derived">Unir recurso a grupo de intervención: <select data-mv="'+esc(x.id)+'"><option value="">elegir grupo…</option>'+gs.filter(o=>o.id!==g.id).map(o=>'<option value="'+esc(o.id)+'">'+esc(o.nombre)+'</option>').join('')+'<option value="_nuevo">Nuevo grupo de intervención '+(gs.length+1)+'</option><option value="_ninguno">Sin grupo</option></select></label>':'')+'</div>').join(''):'<p class="derived">Sin unidades. Asígnelas desde «Despachar» en una emergencia.</p>')+
       (g.pre&&g.pre.length?'<div class="derived">En cola: '+g.pre.map(id=>'<span class="pill info">'+esc(nomE(id)||id)+(ed?' <a href="#" data-prx="'+esc(id)+'">✕</a>':'')+'</span>').join(' ')+'</div>':'')+
-      (ed?'<div class="tools" style="margin-top:6px"><label>Emergencia<select data-em>'+optE(g.emerg)+'</select></label><label>Líder de equipo<select data-cmd><option value="">— sin asignar —</option>'+miembros.map(p=>'<option value="'+esc(p.u)+'"'+(p.u===g.cmd?' selected':'')+'>'+esc(p.n)+'</option>').join('')+'</select></label><label>Maquinista<select data-maq><option value="">— sin asignar —</option>'+miembros.map(p=>'<option value="'+esc(p.u)+'"'+(p.u===g.maq?' selected':'')+'>'+esc(p.n)+'</option>').join('')+'</select></label><label>Pre-asignar<select data-pre><option value="">emergencia siguiente…</option>'+al.filter(a=>a.id!==g.emerg&&!(g.pre||[]).includes(a.id)).map(a=>'<option value="'+esc(a.id)+'">'+esc(nomE(a.id))+'</option>').join('')+'</select></label></div><div class="dl"><button class="btn alt sm" data-ren="1">Nombre y color</button><button class="btn alt sm danger" data-dis="1">Disolver grupo</button></div>':'')+'</div>';
+      (ed?'<div class="tools" style="margin-top:6px"><label>Emergencia<select data-em>'+optE(g.emerg)+'</select></label><label>Líder de equipo<select data-cmd><option value="">— sin asignar —</option>'+miembros.map(p=>'<option value="'+esc(p.u)+'"'+(p.u===g.cmd?' selected':'')+'>'+esc(p.n)+'</option>').join('')+'</select></label><label>Maquinista<select data-maq><option value="">— sin asignar —</option>'+miembros.map(p=>'<option value="'+esc(p.u)+'"'+(p.u===g.maq?' selected':'')+'>'+esc(p.n)+'</option>').join('')+'</select></label><label>Pre-asignar<select data-pre><option value="">emergencia siguiente…</option>'+al.filter(a=>a.id!==g.emerg&&!(g.pre||[]).includes(a.id)).map(a=>'<option value="'+esc(a.id)+'">'+esc(nomE(a.id))+'</option>').join('')+'</select></label></div><div class="dl"><button class="btn alt sm" data-ren="1">Nombre y color</button><button class="btn alt sm" data-gterm="1">Terminar labores</button><button class="btn alt sm danger" data-dis="1">Disolver grupo</button></div>':'')+'</div>';
   });
   const sin=ds.filter(x=>!x.grupo||!gs.some(g=>g.id===x.grupo));
   if(sin.length)h+='<div class="gi" style="border-left-color:#6b7280"><h4>Unidades sin grupo</h4>'+sin.map(x=>'<div class="un"><b>'+esc(x.veh||'—')+'</b> · '+x.pers.map(p=>esc(p.n)).join(' · ')+(ed&&gs.length?' <label class="derived">Pasar a: <select data-mv="'+esc(x.id)+'"><option value="">elegir grupo…</option>'+gs.map(o=>'<option value="'+esc(o.id)+'">'+esc(o.nombre)+'</option>').join('')+'</select></label>':'')+'</div>').join('')+'</div>';
@@ -2721,6 +2724,7 @@ function drawGrupos(){
     const pr=c.querySelector('[data-pre]');if(pr)pr.onchange=async()=>{if(!pr.value)return;try{need(await call('grupoPre',{id:g,emerg:pr.value}));toast('Emergencia pre-asignada al grupo.');pollVivo()}catch(e){toast('No se pudo: '+humanErr(e),1)}};
     c.querySelectorAll('[data-prx]').forEach(x=>x.onclick=async ev=>{ev.preventDefault();try{need(await call('grupoPre',{id:g,emerg:x.dataset.prx,op:'del'}));pollVivo()}catch(e){toast('No se pudo: '+humanErr(e),1)}});
     const rn=c.querySelector('[data-ren]');if(rn)rn.onclick=()=>{const gg=gs.find(x=>x.id===g);dlg('<h3>Grupo de intervención</h3><label>Nombre<input id="gr-n" value="'+esc(gg.nombre)+'"></label><label>Color<input type="color" id="gr-c" value="'+esc(gg.color)+'"></label><div class="dl"><button class="btn" id="gr-ok">Guardar</button><button class="btn alt" id="gr-no">Cancelar</button></div>',()=>{$('gr-no').onclick=dlgCerrar;$('gr-ok').onclick=()=>{dlgCerrar();act(g,{nombre:$('gr-n').value,color:$('gr-c').value})}})};
+    const gt_=c.querySelector('[data-gterm]');if(gt_)gt_.onclick=()=>terminarGrupo(g);
     const ds_=c.querySelector('[data-dis]');if(ds_)ds_.onclick=async()=>{if(!confirm('¿Disolver este grupo? Las unidades siguen asignadas pero quedan sin grupo.'))return;try{need(await call('grupoDel',{id:g}));toast('Grupo disuelto.');pollVivo()}catch(e){toast('No se pudo: '+humanErr(e),1)}};
   });
   box.querySelectorAll('[data-mv]').forEach(s=>s.onchange=()=>{if(!s.value)return;moverUnidad(s.dataset.mv,s.value,s.options[s.selectedIndex].text)});
@@ -3022,17 +3026,19 @@ function pendFilaLlamado(x){
 }
 
 /* ---------- emergencias atendidas ---------- */
-const AT={lista:[],t:0};
+const AT={lista:[],t:0,pg:0,fk:''};
 async function pintarAtendidas(forzar){
   const tab=$('at-tab');if(!tab||!puedeF('pendientes')&&!puedeF('llamados')&&!esMaster())return;
   if(forzar||Date.now()-AT.t>60000){try{const r=need(await call('emergLista'));AT.lista=r.emergencias||[];AT.t=Date.now()}catch(e){tab.innerHTML='<tr><td>No se pudo cargar: '+esc(humanErr(e))+'</td></tr>';return}}
-  const q=($('at-q').value||'').trim().toLowerCase(),sin=$('at-sin').checked;
-  const l=AT.lista.filter(x=>(!q||[x.num,x.msg,x.lugar].join(' ').toLowerCase().includes(q))&&(!sin||!x.reporte));
-  tab.innerHTML='<tr><th>Consecutivo</th><th>Fecha</th><th>Emergencia</th><th>Estado</th><th>Comandante</th><th>Reporte</th><th></th></tr>'+(l.length?l.slice(0,80).map(x=>{
+  const q=($('at-q').value||'').trim().toLowerCase(),sin=$('at-sin').checked;{const fk=q+'|'+sin;if(fk!==AT.fk){AT.fk=fk;AT.pg=0}}
+  const l=AT.lista.filter(x=>(!q||[x.num,x.msg,x.lugar].join(' ').toLowerCase().includes(q))&&(!sin||!x.reporte));if(AT.pg>=Math.max(1,Math.ceil(l.length/10)))AT.pg=Math.max(0,Math.ceil(l.length/10)-1);
+  tab.innerHTML='<tr><th>Consecutivo</th><th>Fecha</th><th>Emergencia</th><th>Estado</th><th>Comandante</th><th>Reporte</th><th></th></tr>'+(l.length?l.slice(AT.pg*10,AT.pg*10+10).map(x=>{
     const rp=x.reporte,ok=rp&&String(rp.cat||x.msg).toUpperCase()===String(x.msg).toUpperCase();
     const repTxt=rp?'<b>'+esc(rp.num||'')+'</b> '+(rp.estado==='final'?'<span class="pill on">terminado</span>':'<span class="pill warn">en elaboración</span>')+(ok?'':' <span class="pill warn" title="La categoría del reporte no coincide con la de la emergencia">revisar vínculo</span>'):(x.completada?'<span class="pill info">Completada sin reporte</span>':x.vencido?'<span class="pill bad">Pendiente · vencido</span>':x.estado==='activa'?'<span class="derived">en curso</span>':'<span class="pill warn">Pendiente</span>');
     return '<tr><td class="m">'+esc(x.num||'—')+'</td><td>'+fechaHora(x.cuando)+'</td><td><b>'+esc(x.msg)+'</b>'+(x.lugar?'<br><span class="m">'+esc(x.lugar)+'</span>':'')+'</td><td>'+(x.estado==='activa'?'<span class="pill on">Activa</span>':'<span class="pill off">Terminada</span>')+'</td><td>'+esc(x.cmdn||'—')+'</td><td>'+repTxt+'</td><td><button class="btn alt sm" data-at="'+esc(x.id)+'">Abrir</button>'+(puedeF('pendientes')&&!rp?' <button class="btn alt sm" data-atv="'+esc(x.id)+'">Vincular reporte</button>':'')+'</td></tr>'}).join(''):'<tr><td colspan="7" class="derived">No hay emergencias que coincidan.</td></tr>');
-  $('at-pg').textContent=l.length>80?'Se muestran 80 de '+l.length+'. Use el buscador.':l.length+' emergencia(s).';
+  const pgs=Math.max(1,Math.ceil(l.length/10));
+  $('at-pg').innerHTML='<div class="tools"><button class="btn alt sm" id="at-ant" '+(AT.pg<=0?'disabled':'')+'>Anterior</button><span>Página '+(AT.pg+1)+' de '+pgs+' · '+l.length+' emergencia(s)</span><button class="btn alt sm" id="at-sig" '+(AT.pg>=pgs-1?'disabled':'')+'>Siguiente</button></div>';
+  $('at-ant').onclick=()=>{AT.pg--;pintarAtendidas()};$('at-sig').onclick=()=>{AT.pg++;pintarAtendidas()};
   tab.querySelectorAll('[data-at]').forEach(b=>b.onclick=()=>emergResumen(b.dataset.at));
   tab.querySelectorAll('[data-atv]').forEach(b=>b.onclick=()=>vincularReporteUI(b.dataset.atv));
 }
@@ -3063,6 +3069,13 @@ async function terminarUnidad(id){
   const x=(VIVO.despachos||[]).find(z=>z.id===id);
   if(!confirm('¿Terminar labores de '+(x&&x.veh?x.veh:'esta unidad')+'? Sale de la emergencia y queda disponible.'))return;
   try{need(await call('despTerminar',{id}));toast('Labores terminadas.');pollVivo();if(RES.id)setTimeout(()=>pintarResumen(),600)}catch(e){toast('No se pudo: '+humanErr(e),1)}
+}
+/* terminar labores de todo el grupo: todas sus unidades salen de la emergencia y quedan disponibles */
+async function terminarGrupo(gid){
+  const us=(VIVO.despachos||[]).filter(x=>x.grupo===gid&&x.emerg),g=(VIVO.grupos||[]).find(z=>z.id===gid);
+  if(!us.length){toast('Este grupo no tiene unidades asignadas.',1);return}
+  if(!confirm('¿Terminar labores de '+(g?g.nombre:'este grupo')+'? Sus '+us.length+' unidad(es) salen de la emergencia y quedan disponibles.'))return;
+  try{for(const x of us)need(await call('despTerminar',{id:x.id}));toast('Labores del grupo terminadas.');pollVivo();if(RES.id)setTimeout(()=>pintarResumen(),600)}catch(e){toast('No se pudo: '+humanErr(e),1)}
 }
 async function quitarUnidad(id){
   const x=(VIVO.despachos||[]).find(z=>z.id===id);
@@ -3141,7 +3154,7 @@ async function pintarResumen(){
       gs.forEach(g=>{
         const us=ds.filter(x=>x.grupo===g.id);
         h+='<div class="gi" style="border-left-color:'+esc(g.color)+'"><h4><span class="dot" style="background:'+esc(g.color)+'"></span>'+esc(g.nombre)+'</h4><div class="derived">Líder de equipo: <b>'+esc(g.cmdn||'sin asignar')+'</b>'+(g.maqn?' · Maquinista: <b>'+esc(g.maqn)+'</b>':'')+'</div>'+
-          (us.length?us.map(x=>unidadHtml(x,gs,ed,g.id)).join(''):'<div class="derived">Sin unidades.</div>')+'</div>';
+          (us.length?us.map(x=>unidadHtml(x,gs,ed,g.id)).join(''):'<div class="derived">Sin unidades.</div>')+(ed?'<div class="dl"><button class="btn alt sm" data-gren="'+esc(g.id)+'">Nombre y color</button><button class="btn alt sm" data-gterm="'+esc(g.id)+'">Terminar labores</button><button class="btn alt sm danger" data-gdis="'+esc(g.id)+'">Disolver grupo</button></div>':'')+'</div>';
       });
       const sin=ds.filter(x=>!x.grupo||!gs.some(g=>g.id===x.grupo));
       if(sin.length)h+='<div class="gi" style="border-left-color:#6b7280"><h4>Unidades sin grupo</h4>'+sin.map(x=>unidadHtml(x,gs,ed,'')).join('')+'</div>';
@@ -3173,7 +3186,7 @@ async function pintarResumen(){
 }
 function unidadHtml(x,gs,ed,gid){
   return '<div class="un"><b>'+esc(x.veh||'Sin vehículo')+'</b> · '+esc(EST_DESP[x.estado]||x.estado)+(x.conf&&x.conf.length?' · confirmó '+x.conf.length:'')+x.pers.map(p=>filaPersona(p,x.veh)).join('')+
-    (ed?'<div class="tools"><label class="derived">Unir recurso a grupo de intervención <select data-mv="'+esc(x.id)+'"><option value="">elegir…</option>'+gs.filter(o=>o.id!==gid).map(o=>'<option value="'+esc(o.id)+'">'+esc(o.nombre)+'</option>').join('')+'<option value="_nuevo">Nuevo grupo de intervención</option>'+(gid?'<option value="_ninguno">Sin grupo</option>':'')+'</select></label><button class="btn alt sm" data-term="'+esc(x.id)+'">Terminar labores</button><button class="btn alt sm" data-quit="'+esc(x.id)+'">Quitar de la emergencia</button></div>':'')+'</div>';
+    (ed?'<div class="tools"><label class="derived">Unir recurso a grupo de intervención <select data-mv="'+esc(x.id)+'"><option value="">elegir…</option>'+gs.filter(o=>o.id!==gid).map(o=>'<option value="'+esc(o.id)+'">'+esc(o.nombre)+'</option>').join('')+'<option value="_nuevo">Nuevo grupo de intervención</option>'+(gid?'<option value="_ninguno">Sin grupo</option>':'')+'</select></label>'+(gid?'':'<button class="btn alt sm" data-term="'+esc(x.id)+'">Terminar labores</button>')+'</div>':'')+'</div>';
 }
 function ligarResumen(a,id,ds,gs,act){
   const d=$('dlg');
@@ -3183,6 +3196,9 @@ function ligarResumen(a,id,ds,gs,act){
   d.querySelectorAll('[data-rol]').forEach(b=>b.onclick=()=>{const k=b.dataset.rol,et=(SCI_LISTA.find(z=>z[0]===k)||[0,k])[1],actual=k==='cmd'?(a.cmdn||''):((a.sci||{})[k]||{}).n||'';clearInterval(RES.iv);asignarRol(id,k,et,actual,()=>emergResumen(id))});
   d.querySelectorAll('[data-mv]').forEach(s=>s.onchange=()=>{if(s.value)moverUnidad(s.dataset.mv,s.value,s.options[s.selectedIndex].text)});
   d.querySelectorAll('[data-term]').forEach(b=>b.onclick=()=>terminarUnidad(b.dataset.term));
+  d.querySelectorAll('[data-gterm]').forEach(b=>b.onclick=()=>terminarGrupo(b.dataset.gterm));
+  d.querySelectorAll('[data-gdis]').forEach(b=>b.onclick=async()=>{if(!confirm('¿Disolver este grupo? Las unidades siguen asignadas pero quedan sin grupo.'))return;try{need(await call('grupoDel',{id:b.dataset.gdis}));toast('Grupo disuelto.');pollVivo();if(RES.id)setTimeout(()=>pintarResumen(),600)}catch(e){toast('No se pudo: '+humanErr(e),1)}});
+  d.querySelectorAll('[data-gren]').forEach(b=>b.onclick=()=>{const gg=gs.find(x=>x.id===b.dataset.gren);if(!gg)return;clearInterval(RES.iv);dlg('<h3>Grupo de intervención</h3><label>Nombre<input id="gr-n" value="'+esc(gg.nombre)+'"></label><label>Color<input type="color" id="gr-c" value="'+esc(gg.color)+'"></label><div class="dl"><button class="btn" id="gr-ok">Guardar</button><button class="btn alt" id="gr-no">Cancelar</button></div>',()=>{$('gr-no').onclick=()=>emergResumen(id);$('gr-ok').onclick=async()=>{try{need(await call('grupoSet',{id:gg.id,nombre:$('gr-n').value,color:$('gr-c').value}));toast('Grupo actualizado.');pollVivo()}catch(e){toast('No se pudo: '+humanErr(e),1)}emergResumen(id)}})});
   d.querySelectorAll('[data-quit]').forEach(b=>b.onclick=()=>quitarUnidad(b.dataset.quit));
   d.querySelectorAll('[data-rv]').forEach(b=>b.onclick=()=>{const o=REGS.get(b.dataset.rv);cerrarResumen();if(o){showDetail(toRow(o));const dt=$('detail');if(dt)dt.scrollIntoView()}else toast('Ese reporte todavía no está cargado en esta página.',1)});
   const q=(i,f)=>{const e=$(i);if(e)e.onclick=f};
@@ -3404,6 +3420,26 @@ function aplicarLayoutTabs(){
 }
 {const tp0=tabsPorRol;tabsPorRol=function(){tp0.apply(this,arguments);const L=(CFGP&&CFGP.layout)||{};
   document.querySelectorAll('#ptabs button').forEach(b=>{const p=b.dataset.p;if(p!=='adm'&&p!=='cfg'&&(L.hideTabs||[]).includes(p)&&ROL!=='master-preview')b.hidden=true});aplicarLayoutTabs();document.querySelectorAll('#atabs [data-solo=master]').forEach(b=>b.hidden=ROL!=='master')}}
+
+
+/* ---------- preparar para producción: borrar lo hecho en las pruebas ---------- */
+{const as0=admSeg;admSeg=async function(){
+  await as0.apply(this,arguments);
+  if(!esMaster()||PREVIEW)return;
+  const box=$('a-box');if(!box||box.querySelector('#lp-card'))return;
+  const c=document.createElement('div');c.className='card';c.id='lp-card';
+  c.innerHTML='<h3>Preparar el sistema para empezar a trabajar</h3><p class="derived expl">Borra <b>todo lo que se hizo durante las pruebas</b>: reportes y sus fotos, llamados y emergencias, grupos de intervención, unidades asignadas, chat, avisos y ubicaciones. El consecutivo vuelve a <b>EM-AAAA-00001</b>. <b>No se borra</b>: el personal y los usuarios, la configuración, el histórico, las cargas de estadística, la auditoría ni las suscripciones de avisos de los teléfonos.</p><p class="derived expl">Antes de borrar se guarda una copia completa en Drive (carpeta «Copias de seguridad»), y las carpetas y fotos de Drive de los reportes se mandan a la papelera (se pueden recuperar 30 días). Las respuestas del Formulario de Google se intentan borrar igual que al eliminar un reporte. No se puede deshacer desde el sistema; para volver atrás hay que usar la copia de Drive.</p><label>Para confirmar escriba <b>BORRAR PRUEBAS</b><input id="lp-f" autocomplete="off" placeholder="BORRAR PRUEBAS"></label><div class="dl"><button class="btn danger" id="lp-ok" disabled>Borrar las pruebas y dejar el sistema en limpio</button></div><div class="derived" id="lp-out" role="status"></div>';
+  box.append(c);
+  $('lp-f').oninput=()=>{$('lp-ok').disabled=$('lp-f').value.trim()!=='BORRAR PRUEBAS'};
+  $('lp-ok').onclick=async()=>{
+    if(!confirm('Última confirmación: se borrarán TODOS los reportes y llamados del sistema. ¿Continuar?'))return;
+    const o=$('lp-out');$('lp-ok').disabled=true;o.textContent='Guardando la copia y borrando… puede tardar unos minutos. No cierre esta página.';
+    try{const r=need(await call('limpiarPruebas',{frase:$('lp-f').value.trim()}));
+      if(r.parcial){o.innerHTML='Se purgaron '+r.purgados+' de '+r.total+' reportes. '+esc(r.mensaje);$('lp-ok').disabled=false;return}
+      o.innerHTML='Listo. Copia guardada en Drive: <a href="'+esc(r.respaldo)+'" target="_blank" rel="noopener">abrir</a>. Se limpiaron '+Object.values(r.filas).filter(x=>typeof x==='number').reduce((a,b)=>a+b,0)+' filas. El próximo reporte será <b>'+esc(r.siguiente)+'</b>.';
+      toast('Sistema limpio y listo para trabajar.');try{CARGAS_RAW={};HISTROWS=null;await loadAll();renderPanel()}catch(e){}
+    }catch(e){o.textContent='No se pudo: '+humanErr(e);$('lp-ok').disabled=false}};
+}}
 
 $('flogin').onsubmit=login;$('docs-bulk').onclick=docsBulk;
 $('atabs').onclick=e=>{const b=e.target.closest('button');if(b)renderAdm(b.dataset.a)};
