@@ -2567,7 +2567,7 @@ pintarEmerg=async function(silencio){
   const per=new Set(),veh=new Set();
   l.forEach(e=>{[].concat(e.grupos.flatMap(g=>g.unidades),e.sueltas).forEach(u=>{if(u.veh)veh.add(u.veh);(u.pers||[]).forEach(p=>per.add(p.n))})});
   const res=el('section','card emgres');
-  res.innerHTML='<div class="emgnums"><div><b>'+l.length+'</b><span>emergencia'+(l.length===1?'':'s')+'</span></div><div><b>'+per.size+'</b><span>persona'+(per.size===1?'':'s')+' activada'+(per.size===1?'':'s')+'</span></div><div><b>'+veh.size+'</b><span>vehículo'+(veh.size===1?'':'s')+'</span></div></div>';
+  res.innerHTML='<div class="emgnums"><div><b>'+l.length+'</b><span>emergencia'+(l.length===1?'':'s')+'</span></div><div><b>'+per.size+'</b><span>persona'+(per.size===1?'':'s')+' activada'+(per.size===1?'':'s')+'</span></div><div><b>'+veh.size+'</b><span>vehículo'+(veh.size===1?'':'s')+'</span></div></div>'+(veh.size?'<div class="emgveh"><b>Vehículos activos:</b> '+[...veh].sort().map(v=>'<span class="pill on">'+esc(v)+'</span>').join(' ')+'</div>':'');
   box.append(res);
   if(!l.length){const nc=el('section','card');nc.append(el('p','','No hay emergencias activas en este momento.'));box.append(nc);return}
   /* primero la emergencia en la que está asignado el usuario; luego las más recientes */
@@ -2614,20 +2614,28 @@ function avisarPend(){
   box.prepend(w);
 }}
 /* al pulsar «Realizar registro»: ¿es el reporte de una emergencia pendiente o asignada? (consecutivo, fecha, categoría) */
-preguntarVinculo=async function(){
+preguntarVinculo=async function(actual){
   if(online)await repPendPoll();
   const cand=PEND.lista.map(p=>({id:p.id,num:p.num,msg:p.msg,lugar:p.lugar,fecha:p.cierre||p.cuando,p}));
   (ASIG.lista||[]).filter(x=>x.estado!=='asignado'&&x.emerg&&debeReportar(x)&&!cand.some(c=>c.id===x.emerg)).forEach(x=>{const e=x.emergencia||{};cand.push({id:x.emerg,num:e.num,msg:e.msg,lugar:e.lugar,fecha:e.cuando||Date.now(),x})});
   if(!cand.length)return false;
   return new Promise(res=>{
     let h='<h3>¿Es el reporte de una emergencia?</h3><p class="derived">Tiene emergencias a su cargo sin reporte. Elija a cuál corresponde este registro.</p>';
-    cand.forEach((c,i)=>{h+='<div class="fnrow" style="display:block"><b>'+esc((c.num||'Sin consecutivo')+' · '+(c.msg||'Emergencia'))+'</b><br><span class="derived">'+esc(fhTxt(c.fecha))+(c.lugar?' · '+esc(c.lugar):'')+'</span><br><button class="btn" type="button" data-vq="'+i+'" style="margin-top:6px">Sí, es el reporte de esta</button></div>'});
-    h+='<div class="chips"><button class="btn alt" type="button" id="vq-no">No, es otro evento</button></div>';
+    cand.forEach((c,i)=>{h+='<div class="fnrow" style="display:block"><b>'+esc((c.num||'Sin consecutivo')+' · '+(c.msg||'Emergencia'))+'</b><br><span class="derived">'+esc(fhTxt(c.fecha))+(c.lugar?' · '+esc(c.lugar):'')+'</span><br><button class="btn" type="button" data-vq="'+i+'" style="margin-top:6px">'+(actual?'Hacer el reporte de esta':'Sí, es el reporte de esta')+'</button>'+(actual?' <button class="btn alt" type="button" data-vqa="'+i+'" style="margin-top:6px">Vincular mi borrador actual a esta</button>':'')+'</div>'});
+    h+='<div class="chips"><button class="btn alt" type="button" id="vq-no">'+(actual?'No, seguir con mi borrador':'No, es otro evento')+'</button></div>';
     dlgA(h,d=>{
       d.querySelectorAll('[data-vq]').forEach(b=>b.onclick=()=>{dlgC();const c=cand[+b.dataset.vq];if(c.p)hacerReportePend(c.p);else reporteDeLlamado(c.x);res(true)});
+      d.querySelectorAll('[data-vqa]').forEach(b=>b.onclick=()=>{dlgC();const c=cand[+b.dataset.vqa];D.extra=D.extra||{};D.extra._llam=c.id;try{const e=c.p||{};if(!D.dir&&e.lugar)D.dir=e.lugar}catch(er){}autosave();toast('Su borrador quedó vinculado a la emergencia.');show('form');renderStep();res(true)});
       $('vq-no').onclick=()=>{dlgC();res(false)}});
   });
 };
+/* al entrar a «Realizar registro» con un borrador sin vincular y con reportes pendientes, se pregunta antes de seguir */
+{const ar0=abrirRegistro;abrirRegistro=async function(){
+  const enCurso=(REG&&REG.estado!=='final')||(!REG&&D&&D.fecha&&hasContent({datos:D}));
+  const ligado=D&&D.extra&&D.extra._llam;
+  if(enCurso&&!ligado){if(await preguntarVinculo(true))return;show('form');renderStep();return}
+  return ar0.apply(this,arguments);
+}}
 /* enlace directo ?reporte=<id> */
 async function reporteDesdeAviso(id){
   await repPendPoll();
@@ -2645,7 +2653,7 @@ setTimeout(()=>{if(loggedIn()&&online)repPendPoll()},7000);
 /* ---------- bitácora en vivo: llega a la central mientras se escribe y mueve la fase de la emergencia ---------- */
 const FASE_POR_ENTRADA={'Llegada al sitio':'amarillo','Reconocimiento de la escena':'amarillo','Inicio del ataque / atención':'amarillo','Situación controlada':'amarillo','Desmovilización hacia el cuartel':'amarillo','Terminación de la emergencia':'verde'};
 const BL={tm:null,fase:{},txt:'',cls:''};
-function blEstado(t,cls){BL.txt=t;BL.cls=cls||'';const e=$('bl-st');if(e){e.textContent=t;e.className='derived bl-'+(cls||'info')}}
+function blEstado(t,cls){BL.txt=t;BL.cls=cls||'';const e=$('bl-st');if(e){const vinc=cls==='warn'&&/vincul/i.test(t);e.hidden=vinc&&BL.vistoV&&Date.now()-BL.vistoV<60000;if(vinc&&!e.hidden)BL.vistoV=Date.now();e.textContent=t;e.className='derived bl-'+(cls||'info');clearTimeout(BL.hideTm);if(cls==='warn'&&/vincul/i.test(t))BL.hideTm=setTimeout(()=>{e.hidden=true},7000)}}
 /* la bitácora se vincula sola a la emergencia en la que el usuario está asignado; si no hay, se elige a mano */
 async function blEnlazar(){
   const id=D&&D.extra&&D.extra._llam;if(id)return id;
@@ -2668,7 +2676,7 @@ async function blEnviar(){
   if(!D)return;
   if(!online||!loggedIn()){blEstado('Sin conexión: la bitácora se enviará a la central cuando recupere la señal.','warn');return}
   const id=await blEnlazar();
-  if(!id){blEstado('Este reporte no está vinculado a una emergencia: la central todavía no ve su bitácora. Elija la emergencia en la lista de abajo.','warn');blSel();return}
+  if(!id){blEstado('Sin vincular: la central aún no ve esta bitácora. Elija la emergencia abajo.','warn');blSel();return}
   try{
     const r=await call('bitLive',{id,items:accList(),cin:String(getP(D,'rpt.cmd.nom')||'')});
     if(r&&r.ok)blEstado('✔ La central ve su bitácora en vivo (enviada a las '+hh12(Date.now())+').'+(BL.faseErr?' '+BL.faseErr:''),BL.faseErr?'warn':'ok');
@@ -2694,7 +2702,8 @@ function bitacoraLive(txt){
 {const ol0=openLog;openLog=async function(){
   await ol0.apply(this,arguments);
   try{
-    if(!$('bl-box')){const b=document.createElement('div');b.id='bl-box';b.innerHTML='<p id="bl-st" class="derived"></p><div class="bl-pick" hidden><label class="derived">Vincular esta bitácora a una emergencia activa <select id="bl-sel"></select></label></div>';$('log_list').parentNode.insertBefore(b,$('log_list'));
+    if(!$('bl-box')){const b=document.createElement('div');b.id='bl-box';b.innerHTML='<div style="display:flex;gap:6px;align-items:flex-start"><p id="bl-st" class="derived" style="flex:1;margin:0"></p><button type="button" class="btn alt sm" id="bl-x" aria-label="Cerrar el aviso">✕</button></div><div class="bl-pick" hidden><label class="derived">Vincular esta bitácora a una emergencia activa <select id="bl-sel"></select></label></div>';$('log_list').parentNode.insertBefore(b,$('log_list'));
+      $('bl-x').onclick=()=>{$('bl-st').hidden=true};
       $('bl-sel').onchange=()=>{const v=$('bl-sel').value;if(!v)return;D.extra=D.extra||{};D.extra._llam=v;autosave();toast('Bitácora vinculada a la emergencia.');bitacoraLive('')}}
     blEstado(BL.txt||'Comprobando la conexión con la central…',BL.cls||'info');bitacoraLive('')
   }catch(e){}
@@ -2711,6 +2720,17 @@ window.addEventListener('online',()=>bitacoraLive(''));
   }catch(er){}
 }}
 
+/* un borrador por emergencia: si ya existe uno vinculado a ese llamado se reabre; no se crea otro cada vez que se entra */
+{const rd1=reporteDeLlamado;reporteDeLlamado=async function(x){
+  const id=x&&x.emerg;
+  if(id){try{
+    const regs=await DB.all('regs');
+    const m=regs.filter(r=>r&&!r.eliminado&&r.estado!=='final'&&r.datos&&r.datos.extra&&r.datos.extra._llam===id).sort((p,q)=>(q.touch||q.creado||0)-(p.touch||p.creado||0))[0];
+    if(m){await abrir(m.tmp);if(REG&&REG.tmp===m.tmp){toast('Se abrió el borrador que ya tenía de esta emergencia.');return}}
+  }catch(er){}}
+  return rd1.apply(this,arguments);
+}}
+
 /* el nombre del comando de incidentes también viaja a la central apenas se escribe */
 {const sv0=setV;setV=function(p,v){const r=sv0.apply(this,arguments);if(p==='rpt.cmd.nom')bitacoraLive('');return r}}
 
@@ -2719,6 +2739,64 @@ window.addEventListener('online',()=>bitacoraLive(''));
   ha0.apply(this,arguments);
   try{const ids=(Array.isArray(list)?list:[]).filter(a=>a.tipo==='llamado').map(a=>a.id).sort().join(',');
     if(ids0!==null&&ids!==ids0&&VISTA==='emerg')pintarEmerg(true);ids0=ids}catch(e){}}}
+
+/* ---------- ¿Olvidó su clave? ---------- */
+{
+  const go=document.getElementById('s_go');
+  if(go&&!document.getElementById('olv-lnk')){
+    const p=document.createElement('p');p.className='derived';p.innerHTML='<a href="#" id="olv-lnk">¿Olvidó su clave?</a>';go.insertAdjacentElement('afterend',p);
+    document.getElementById('olv-lnk').onclick=ev=>{ev.preventDefault();recuperarClaveUI(document.getElementById('s_user').value.trim())};
+  }
+}
+function recuperarClaveUI(u0){
+  const d=document.getElementById('dlg');
+  const mostrar=h=>{d.innerHTML=h;if(!d.open)d.showModal()};
+  const paso1=()=>{mostrar('<h3>Recuperar la clave</h3><p class="derived">Si es el <b>superadministrador</b>, se envía un código al correo de recuperación. Los demás usuarios deben pedirle al superadministrador que les restablezca la clave.</p><label>Usuario<input id="rc-u" value="'+esc(u0||'')+'" autocapitalize="off" autocomplete="username"></label><div class="derived" id="rc-out" role="status"></div><div class="dl"><button class="btn" id="rc-ok" type="button">Continuar</button><button class="btn alt" id="rc-no" type="button">Cancelar</button></div>');
+    document.getElementById('rc-no').onclick=()=>d.close();
+    document.getElementById('rc-ok').onclick=async()=>{const u=document.getElementById('rc-u').value.trim(),o=document.getElementById('rc-out');if(!u){o.textContent='Escriba su usuario.';return}
+      o.textContent='Enviando…';try{const r=await callPublic({a:'recuperarPedir',u});
+        if(!r.ok){o.textContent=r.error||'No se pudo.';return}
+        if(r.rol==='otro'){o.textContent=r.mensaje;document.getElementById('rc-ok').hidden=true;return}
+        paso2(u,r.mensaje)}catch(e){o.textContent='No se pudo conectar. Revise su internet.'}}};
+  const paso2=(u,msg)=>{mostrar('<h3>Escriba el código</h3><p class="derived">'+esc(msg||'')+'</p><label>Código de 6 dígitos<input id="rc-c" inputmode="numeric" maxlength="6" autocomplete="one-time-code"></label><label>Clave nueva (mínimo 6 caracteres)<input id="rc-n" type="password" autocomplete="new-password"></label><div class="derived" id="rc-out" role="status"></div><div class="dl"><button class="btn" id="rc-ok" type="button">Cambiar la clave</button><button class="btn alt" id="rc-no" type="button">Cancelar</button></div>');
+    document.getElementById('rc-no').onclick=()=>d.close();
+    document.getElementById('rc-ok').onclick=async()=>{const o=document.getElementById('rc-out');o.textContent='Guardando…';
+      try{const r=await callPublic({a:'recuperarConfirmar',u,codigo:document.getElementById('rc-c').value.trim(),nueva:document.getElementById('rc-n').value});
+        if(!r.ok){o.textContent=r.error||'No se pudo.';return}
+        o.textContent='Listo. Ya puede entrar con la clave nueva.';document.getElementById('rc-ok').hidden=true;document.getElementById('s_user').value=u;document.getElementById('s_pass').value=''}catch(e){o.textContent='No se pudo conectar.'}}};
+  paso1();
+}
+
+
+/* ---------- bitácora en vivo configurable (la define el superadministrador) ---------- */
+const QUICK0=QUICK.map(x=>x.slice()),FASE0=Object.assign({},FASE_POR_ENTRADA);
+function aplicarBitacora(c){
+  const b=c&&c.bitacora&&Array.isArray(c.bitacora.acciones)&&c.bitacora.acciones.length?c.bitacora:null;
+  QUICK.length=0;Object.keys(FASE_POR_ENTRADA).forEach(k=>delete FASE_POR_ENTRADA[k]);
+  if(b){b.acciones.forEach(a=>{QUICK.push([a.t,a.k||null,a.tx||a.t]);if(a.f)FASE_POR_ENTRADA[a.t]=a.f})}
+  else{QUICK0.forEach(x=>QUICK.push(x.slice()));Object.assign(FASE_POR_ENTRADA,FASE0)}
+  try{const h=document.querySelector('#logsheet .hd h2');if(h)h.textContent=(b&&b.titulo)||'Bitácora en vivo';const l=document.querySelector('#logsheet label small');if(l)l.textContent=(b&&b.pregunta)||'¿Qué está haciendo o qué ocurre ahora?'}catch(e){}
+}
+{const ac0=applyCfg;applyCfg=function(c){ac0.apply(this,arguments);try{aplicarBitacora(c)}catch(e){}}}
+try{aplicarBitacora(CF)}catch(e){}
+
+/* ---------- vista previa dentro de la plataforma (Administración → Diseño y funcionamiento) ---------- */
+async function vistaPrevia(){
+  AJ={u:'demo',usuario:'demo',t:'vp',nombre:'Vista previa',rol:'campo',yo:{grado:'Bombero',cedula:'0'},roster:['Ana López','Luis Gómez'],plantilla:[],clave:''};
+  call=async function(){return {ok:false,error:'vista previa'}};callPublic=call;
+  autosave=function(){};flushSave=async function(){};
+  online=false;
+  document.body.classList.add('vp');
+  bindAll();bindForm();
+  await nuevaEmergencia(true);
+  show('menu');pintarMenu();
+  window.addEventListener('message',ev=>{const m=ev.data||{};
+    try{
+      if(m.tipo==='cfg'){applyCfg(m.cfg);pintarMenu();if(VISTA==='form'||$('v-form')&&!$('v-form').hidden)renderStep()}
+      if(m.tipo==='ir'){if(m.vista==='menu'){show('menu');pintarMenu()}else if(m.vista==='form'){show('form');stepIdx=Math.max(0,Math.min(nSteps()-1,m.paso|0));renderStep()}else if(m.vista==='bitacora'){show('form');openLog()}}
+    }catch(e){}});
+  try{parent.postMessage({tipo:'vp-listo',pasos:nSteps()},'*')}catch(e){}
+}
 
 
 /* ================= MIS REGISTROS ================= */
@@ -2995,6 +3073,7 @@ function pintarMarca(){
   const i2=$('mn_logo2');if(i2){i2.hidden=!g.e2;if(g.e2)i2.src=g.e2}
 }
 async function main(){
+  if(new URLSearchParams(location.search).has('vistaprevia')){applyCfg(CF);pintarMarca();await vistaPrevia();return}
   bindAll();applyCfg(CF);pintarMarca();
   try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
   if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
