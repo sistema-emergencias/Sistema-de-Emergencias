@@ -201,9 +201,14 @@ fieldset.aud label{display:flex;align-items:center;gap:6px;font-weight:600}
 .dz-pv{position:sticky;top:8px}
 .dz-fr-cel{width:390px;max-width:100%;height:760px;border:10px solid #222;border-radius:34px;overflow:hidden;background:#fff;margin:0 auto}
 .dz-fr-cel iframe{width:100%;height:100%;border:0}
-.dz-fr-est{width:100%;height:290px;border:2px solid var(--line,#ccc);border-radius:10px;overflow:hidden;position:relative;background:#fff}
-.dz-fr-est iframe{width:1300px;height:820px;border:0;transform:scale(.31);transform-origin:0 0;pointer-events:none}
+.dz-fr-est{width:100%;height:520px;border:2px solid var(--line,#ccc);border-radius:10px;overflow:hidden;position:relative;background:#fff}
+.dz-fr-est iframe{border:0;pointer-events:none}
 @media (max-width:1100px){.dz-grid{grid-template-columns:1fr}.dz-pv{position:static}}
+
+.dz-est .dz-grid{grid-template-columns:1fr}
+.dz-est .dz-pv{position:static}
+.dz-fr-est iframe{transform-origin:0 0;width:1280px;height:800px}
+body.vp .only-master.bar,body.vp #logout{display:none}
 
 .mini{display:inline-block;height:10px;background:var(--s25)}
 </style></head><body>
@@ -335,7 +340,7 @@ fieldset.aud label{display:flex;align-items:center;gap:6px;font-weight:600}
         </div>
         <div class="card" id="op-act"><h3>Emergencias activas</h3><div id="v-alerts"></div><div id="v-llam"></div></div>
         <div class="card" id="op-gi"><h3>Grupos de intervención</h3><p class="derived" id="gi-ayuda">Cada grupo reúne las unidades que atienden una emergencia. Muévalo completo a otra emergencia, relevé al comandante de incidentes o al maquinista, y pre-asigne las emergencias que le siguen.</p><div id="gi-box"></div></div>
-        <div class="card" id="op-uni"><h3>Unidades y conexión</h3><label class="derived">Buscar por nombre <input id="uni-q" type="search" placeholder="Escriba el nombre…" autocomplete="off"></label><details class="derived" id="as-det"><summary>Excel de horas de la estación (entradas y salidas manuales)</summary><p>Cargue el Excel con macros donde se registra el ingreso y la salida (<b>HORAS UNIDADES</b>). El sistema lee las hojas de cada persona y muestra quién está <b>adentro</b> (tiene entrada de hoy sin salida) y quién ya <b>salió</b>. Es una foto del archivo en el momento de cargarlo: vuelva a cargarlo para actualizar.</p><input type="file" id="as-file" accept=".xlsx,.xlsm"><div id="as-msg" role="status"></div></details><div class="scroll"><table id="uni-tab"></table></div></div>
+        <div class="card" id="op-uni"><h3>Unidades y conexión</h3><label class="derived">Buscar por nombre o código <input id="uni-q" type="search" placeholder="Nombre o código…" autocomplete="off"></label><div class="scroll"><table id="uni-tab"></table></div></div>
         <div class="card"><h3>Chat</h3><div id="chat-box"></div></div>
         <div id="map-vivo" class="map"></div>
         <div class="scroll"><table id="vivo-tab"></table></div>
@@ -1044,8 +1049,7 @@ async function repData(r){
   const out=[];
   try{for(const f of await fotosBajadas(r))out.push(await reducir(f.d,f.desc))}catch(e){}
   const grados={};try{const ro=typeof roster==='function'?await roster():null;((ro&&ro.personal)||[]).forEach(x=>{grados[x.nombre]=x.grado})}catch(e){}
-  let sistema=[];try{sistema=await sistemaLineas(r)}catch(e){}
-  return {...repArg(r),grados,fotos:out,sistema};
+  return {...repArg(r),grados,fotos:out,sistema:[]};   /* los registros del sistema ya no van en el reporte: se ven en la información de la emergencia */
 }
 /* anexo «Registros del sistema»: lo que la plataforma registró de esta emergencia (llamado, fases, mando, grupos, salidas y llegadas) */
 async function sistemaLineas(r){
@@ -1216,6 +1220,7 @@ function editForm(r){
   const mot=document.createElement('input');card.append(lab('Motivo de la corrección (obligatorio)',mot));
   const err=document.createElement('div');err.className='err';err.id='e-err';card.append(err);
   const sv=document.createElement('button');sv.className='btn sm';sv.textContent='Guardar corrección';card.append(sv);
+  const cn=document.createElement('button');cn.className='btn alt sm';cn.id='d-edit-no';cn.type='button';cn.textContent='Cancelar';cn.style.marginLeft='8px';cn.onclick=()=>{box.innerHTML='';const b0=$('d-edit');if(b0)b0.focus()};card.append(cn);
   sv.onclick=async()=>{
     if(!mot.value.trim()){err.textContent='Escriba el motivo.';return}
     const nv=clone(base);
@@ -1421,7 +1426,7 @@ function partDe(nombre){const n=String(nombre||'').trim().toLowerCase();let c=0,
 function drawPers(){
   const box=$('p-per');box.innerHTML='';
   const msg=H('div',{className:'derived',role:'status'},PMSG);PMSG='';
-  const q=H('input',{placeholder:'Buscar por nombre, grado o cédula',value:PFILT});
+  const q=H('input',{placeholder:'Buscar por nombre, código, grado o cédula',value:PFILT});
   const info=H('p',{className:'derived'},'Cada persona entra a la aplicación con su cédula como usuario y como clave inicial; después puede cambiarla desde «Ajustes» del celular. Si alguien la olvida, use «Restablecer clave»: queda otra vez igual a su cédula (o la que usted escriba) y la persona puede cambiarla. Solo desde el grado de bombero hacia arriba atienden emergencias (columna «Atiende»). Las participaciones y horas se cuentan con el periodo y los filtros de arriba.');
   const t=H('table');
   const head='<tr><th>#</th>'+PCOLS.map(c=>'<th>'+esc(c[1])+'</th>').join('')+'<th>Atiende emergencias</th><th>Activo</th><th title="Reciben los llamados «solo empleados»">Empleado</th>'+(esMaster()?'<th>Acceso a Estadística</th><th>Clave</th>':'')+'<th class="n">Participaciones '+PYEAR+'</th><th class="n">Horas '+PYEAR+'</th><th></th></tr>';
@@ -1430,7 +1435,7 @@ function drawPers(){
     PFILT=q.value;const f=PFILT.trim().toLowerCase();
     body.innerHTML='';
     PLIST.forEach((p,i)=>{
-      if(f&&![p.nombre,p.grado,p.cedula].some(x=>String(x||'').toLowerCase().includes(f)))return;
+      if(f&&![p.nombre,p.grado,p.cedula,p.codigo].some(x=>String(x||'').toLowerCase().includes(f)))return;
       const tr=H('tr');tr.append(H('td',{className:'m'},String(i+1)));
       PCOLS.forEach(c=>{const inp=H('input',{value:p[c[0]]||'',size:c[2]});inp.setAttribute('aria-label',c[1]+' de '+(p.nombre||'persona nueva'));inp.oninput=()=>{p[c[0]]=inp.value;marcar()};const td=H('td');td.append(inp);tr.append(td)});
       const op=H('select');[['auto','Automático por grado'],['si','Sí'],['no','No']].forEach(x=>op.append(new Option(x[1],x[0])));op.value=p.operativo==='si'||p.operativo==='no'?p.operativo:'auto';op.onchange=()=>{p.operativo=op.value;marcar()};
@@ -1804,6 +1809,16 @@ const MARCA=()=>(CFGP&&CFGP.marca)||{};
 const ORG_NOM=()=>MARCA().nombre||'Cuerpo de Bomberos Voluntarios de La Unión, Valle del Cauca';
 const lista=t=>String(t||'').split(/\n|;|\u2022/).map(x=>x.trim()).filter(Boolean);
 function diaLargo(iso){const [y,m,d]=String(iso).split('-').map(Number);return String(d).padStart(2,'0')+' de '+MES_L[m-1]+' de '+y}
+function personalConCargo(r){
+  const rp=r.rpt||{},sci=rp.sci||{},cargos={},add=(n,c)=>{if(!n||!c)return;n=String(n).trim();(cargos[n]=cargos[n]||[]);if(cargos[n].indexOf(c)<0)cargos[n].push(c)};
+  const ROL={ci:'Comandante del incidente (CI)',seg:'Oficial de seguridad',inf:'Oficial de información pública',enl:'Oficial de enlace',ops:'Jefe de operaciones',pla:'Jefe de planificación',log:'Jefe de logística',adm:'Jefe administrativo y financiero'};
+  Object.keys(ROL).forEach(k=>add(sci[k],ROL[k]));
+  if(rp.cmd&&rp.cmd.n)add(rp.cmd.n,ROL.ci);
+  (sci.grupos||[]).forEach(g=>{if(g&&g.n)add(g.n,'A cargo de la unidad '+g.u+(g.f?' ('+g.f+')':''))});
+  const lista=(r.pers||[]).slice();Object.keys(cargos).forEach(n=>{if(lista.indexOf(n)<0)lista.push(n)});
+  if(!lista.length)return [];
+  return lista.map(n=>n+(cargos[n]?' – '+cargos[n].join('; '):' – Personal operativo')+'.');
+}
 async function constanciaDatos(r){
   const rp=r.rpt||{},prop=rp.prop||{},hh=GEN.h24,dir=[r.dir,r.bar&&r.bar!=='N/A'?r.bar:''].filter(Boolean).join(', ');
   const seq=String(r.id||'').split('-').pop(),anio=String(r.fecha||'').slice(0,4);
@@ -1827,7 +1842,7 @@ async function constanciaDatos(r){
   for(const f of fs.slice(0,8)){try{fotos.push(await reducir(f.d,f.desc||(tc(r.cat)+' del '+GEN.dmy(r.fecha))))}catch(e){}}
   const M=MARCA();
   return {num:String(+seq||0).padStart(3,'0')+'-'+anio,org:ORG_NOM(),orgNombre:ORG_NOM(),info,desc,crono:acc,predio,amen:lista(rp.amen),obj:lista(rp.obj),
-    unidades:[(vehs.length?'Vehículos '+vehs.join(', ')+'.':'Vehículos: no aplica.'),(r.uni?r.uni+' unidad(es) operativa(s).':'Unidades: no aplica.')].concat((r.pers||[]).length?['Personal: '+r.pers.join(', ')+'.']:[]),recomend:lista(rp.recom),
+    unidades:[(vehs.length?'Vehículos '+vehs.join(', ')+'.':'Vehículos: no aplica.'),(r.uni?r.uni+' unidad(es) operativa(s).':'Unidades: no aplica.')].concat(personalConCargo(r)),recomend:lista(rp.recom),
     expide:'Se expide en La Unión, Valle del Cauca, a los '+hoy.getDate()+' días del mes de '+MES_L[hoy.getMonth()]+' del '+hoy.getFullYear()+'.',
     firma:firmaConstancia(M),fotos,nit:M.nit||'',orgHeader:(M.nombre&&!/La Unión/i.test(M.nombre))?M.nombre.replace(/^Cuerpo de Bomberos /i,''):'',direccion:(M.direccion&&M.direccion!=='Calle 14 # 6-01 Barrio Las Lajas')?M.direccion:'',telefono:(M.telefono&&M.telefono!=='3117694047')?M.telefono:'',correo:(M.correo&&M.correo!=='cbvlaunionv@gmail.com')?M.correo:'',autor:'Sistema CBV · Cristhian Steven Blandón Henao'};
 }
@@ -2051,7 +2066,7 @@ function drawLlamados(){
     d.innerHTML='<h4>🚒 '+esc(a.msg)+(a.rep?' <span class="pill info">repetido '+a.rep+' vez/veces</span>':'')+(a.v?' <span class="pill info">actualizado '+a.v+'×</span>':'')+'</h4>'+
       '<div class="derived">'+(a.lugar?'Lugar: '+esc(a.lugar)+' · ':'<b>Sin lugar todavía</b> · ')+(okNum(a.lat)?esc(gms(a.lat,a.lon))+' · ':'sin coordenadas · ')+(a.tel?'Contacto: <a href="tel:'+esc(a.tel)+'">'+esc(a.tel)+'</a> · ':'')+'enviado '+horaTxt(a.cuando)+' h por '+esc(a.por)+'</div>'+
       '<div><b>'+cf.length+'</b> unidad(es) confirmaron: '+(cf.length?cf.map(c=>esc(c.por)+(c.veh?' ('+esc(c.veh)+')':'')+' '+horaTxt(c.t)).join(' · '):'ninguna todavía')+'</div>'+
-      (ds.length?'<div>'+ds.map(x=>'<span class="pill on">'+esc(x.veh||'Sin vehículo')+' · '+x.pers.length+' persona(s) · '+esc(EST_DESP[x.estado]||x.estado)+'</span>').join(' ')+'</div>':'<div class="derived">Sin vehículos asignados.</div>');
+      (ds.length?'<div><b>Vehículos activos ('+ds.filter(x=>x.veh).length+'):</b> '+ds.map(x=>'<span class="pill on">'+esc(x.veh||'Sin vehículo')+' · '+x.pers.length+' persona(s) · '+esc(EST_DESP[x.estado]||x.estado)+'</span>').join(' ')+'</div>':'<div class="derived"><b>Vehículos activos (0):</b> sin vehículos asignados.</div>')+(()=>{const pg=(VIVO.grupos||[]).filter(g=>g.estado==='activo'&&(g.pre||[]).includes(a.id));return pg.length?'<div>📌 <b>Preasignada a:</b> '+pg.map(g=>'<span class="pill" style="background:'+esc(g.color)+';color:#fff">'+esc(g.nombre)+'</span>').join(' ')+'</div>':''})();
     const b=document.createElement('div');b.className='dl';
     const mk=(t,f,cl)=>{const x=document.createElement('button');x.className='btn '+(cl||'alt')+' sm';x.textContent=t;x.onclick=()=>f(x);return x};
     b.append(mk('Ver toda la información',()=>emergResumen(a.id),''),mk('Repetir llamado',x=>repetirLlamado(a,x)),mk('Agregar o actualizar información',()=>editarUbic(a,d)));
@@ -2122,11 +2137,11 @@ async function despachoUI(a){
   const ocup=new Set((VIVO.despachos||[]).flatMap(x=>x.pers.map(p=>p.u)));
   dlg('<h3>Despachar · '+esc(a.msg)+'</h3><div id="ds-lst">'+(ds.length?ds.map(x=>'<div class="ntf"><div><b>'+esc(x.veh)+'</b> · '+esc(EST_DESP[x.estado]||x.estado)+' · '+x.pers.length+' persona(s)<br><span class="derived">'+x.pers.map(p=>esc(p.n)+(p.rol?' ('+esc(p.rol)+')':'')).join(', ')+' · confirmaron '+(x.conf||[]).length+'</span></div><button class="btn alt sm" data-q="'+esc(x.id)+'">Quitar</button></div>').join(''):'<p class="derived">Aún no hay vehículos asignados.</p>')+'</div>'+
     '<label>Vehículo<select id="ds-veh">'+veh.map(v=>'<option>'+esc(v)+'</option>').join('')+'</select></label>'+
-    '<label>Grupo de intervención<select id="ds-grp">'+(()=>{const gs=(VIVO.grupos||[]).filter(g=>g.estado==='activo'&&(g.emerg===a.id||!g.emerg));return (gs.some(g=>g.emerg===a.id)?'':'')+gs.map(g=>'<option value="'+esc(g.id)+'"'+(g.emerg===a.id?' selected':'')+'>'+esc(g.nombre)+(g.emerg===a.id?' (ya atiende esta emergencia)':' (disponible)')+'</option>').join('')+'<option value="_nuevo"'+((VIVO.grupos||[]).filter(g=>g.estado==='activo'&&(g.emerg===a.id||!g.emerg)).length?'':' selected')+'>➕ Crear un grupo de intervención nuevo</option>'})()+'</select></label><label id="ds-gn-l" hidden>Nombre del grupo nuevo<input id="ds-gnom" maxlength="60" placeholder="Grupo de intervención '+(((VIVO.grupos||[]).filter(g=>g.estado==='activo').length)+1)+'"></label>'+
-    '<p class="derived" style="margin:6px 0 2px">Personal que va en el vehículo (los ya asignados a una emergencia aparecen marcados):</p><div class="chk" id="ds-per">'+ROSTERD.personal.map(p=>'<label><input type="checkbox" value="'+esc(p.usuario)+'" data-n="'+esc(p.nombre)+'" '+(ocup.has(p.usuario)?'disabled':'')+'>'+(p.codigo?esc(p.codigo)+' · ':'')+esc(p.nombre)+(ocup.has(p.usuario)?' · ocupado':'')+'</label>').join('')+'</div>'+
+    '<label>Grupo de intervención<select id="ds-grp">'+(()=>{const gs=(VIVO.grupos||[]).filter(g=>g.estado==='activo'&&(g.emerg===a.id||!g.emerg));return (gs.some(g=>g.emerg===a.id)?'':'')+gs.map(g=>'<option value="'+esc(g.id)+'"'+(g.emerg===a.id?' selected':'')+'>'+esc(g.nombre)+(g.emerg===a.id?' (ya atiende esta emergencia)':' (disponible)')+'</option>').join('')+'<option value="_nuevo"'+((VIVO.grupos||[]).filter(g=>g.estado==='activo'&&(g.emerg===a.id||!g.emerg)).length?'':' selected')+'>➕ Crear un grupo de intervención nuevo</option>'})()+'</select></label>'+
+    '<label>Buscar unidad (nombre o código)<input id="ds-bq" type="search" placeholder="Nombre o código…" autocomplete="off"></label><p class="derived" style="margin:6px 0 2px">Personal que va en el vehículo (los ya asignados a una emergencia aparecen marcados):</p><div class="chk" id="ds-per">'+ROSTERD.personal.map(p=>'<label><input type="checkbox" value="'+esc(p.usuario)+'" data-n="'+esc(p.nombre)+'" '+(ocup.has(p.usuario)?'disabled':'')+'>'+(p.codigo?esc(p.codigo)+' · ':'')+esc(p.nombre)+(ocup.has(p.usuario)?' · ocupado':'')+'</label>').join('')+'</div>'+
     '<div class="tools"><label>Comandante de incidentes<select id="ds-cmd"><option value="">— sin asignar —</option></select></label><label>Maquinista (conductor del vehículo)<select id="ds-maq"><option value="">— sin asignar —</option></select></label></div>'+'<label>Nota (opcional)<input id="ds-nota"></label><div class="derived" id="ds-out" role="status"></div><div class="dl"><button class="btn" id="ds-ok">Asignar</button><button class="btn alt" id="ds-no">Cerrar</button></div>',d=>{
       $('ds-no').onclick=dlgCerrar;
-      {const gs=$('ds-grp'),gl=$('ds-gn-l'),tg=()=>{gl.hidden=gs.value!=='_nuevo'};gs.onchange=tg;tg()}
+      {const sin=z=>String(z||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''),bq=$('ds-bq');if(bq)bq.oninput=()=>{const q=sin(bq.value.trim());d.querySelectorAll('#ds-per label').forEach(l=>{const i=l.querySelector('input');l.hidden=!!q&&!i.checked&&!sin(l.textContent).includes(q)})}}
       const roles=()=>{const ps=[...d.querySelectorAll('#ds-per input:checked')],c0=$('ds-cmd').value,m0=$('ds-maq').value;
         ['ds-cmd','ds-maq'].forEach(id=>{const sel=$(id),v=id==='ds-cmd'?c0:m0;sel.innerHTML='<option value="">— sin asignar —</option>'+ps.map(i=>'<option value="'+esc(i.value)+'"'+(i.value===v?' selected':'')+'>'+esc(i.dataset.n)+'</option>').join('')})};
       d.querySelectorAll('#ds-per input').forEach(i=>i.addEventListener('change',roles));
@@ -2152,20 +2167,20 @@ function estTxt(u){const g=u.geo;if(!g||!g.e)return '<span class="derived">—</
 function drawGeoResumen(){
   const t=$('uni-tab');if(!t)return;const card=t.closest('.card');if(!card)return;
   let d=$('uni-geo');if(!d){d=document.createElement('div');d.id='uni-geo';card.insertBefore(d,card.querySelector('.scroll'))}
-  if(VIVO.geoOn&&!VIVO.geoMostrar){d.innerHTML=(typeof asistenciaHtml==='function'?asistenciaHtml():'');return}
-  if(!VIVO.geoOn){d.innerHTML='<p class="derived">El geocerco de la estación no está configurado (Administración → Geocerco), por eso no se sabe quién está dentro o fuera por ubicación.</p>'+(typeof asistenciaHtml==='function'?asistenciaHtml():'');return}
+  if(VIVO.geoOn&&!VIVO.geoMostrar){d.innerHTML='';return}
+  if(!VIVO.geoOn){d.innerHTML='<p class="derived">El geocerco de la estación no está configurado (Administración → Geocerco), por eso no se sabe quién está dentro o fuera por ubicación.</p>';return}
   const us=VIVO.usuarios||[],den=us.filter(u=>u.geo&&u.geo.e==='dentro'),fue=us.filter(u=>u.geo&&u.geo.e==='fuera');
   const lg=VIVO.geoLog||[];
   d.innerHTML='<p><b>En la estación ('+den.length+'):</b> '+(den.map(u=>esc(u.n)).join(', ')||'<span class="derived">nadie</span>')+'<br><b>Fuera de la estación ('+fue.length+'):</b> '+(fue.map(u=>esc(u.n)).join(', ')||'<span class="derived">nadie</span>')+'</p>'+
     (lg.length?'<details><summary class="derived">Últimas entradas y salidas ('+lg.length+')</summary><ul style="margin:4px 0 8px 18px;padding:0">'+lg.map(x=>'<li>'+hmGeo(x.t)+' · '+esc(x.n)+' '+(x.e==='entro'?'<b>entró</b> a la estación':'<b>salió</b> de la estación')+'</li>').join('')+'</ul></details>':'')+
-    '<p class="derived">Sólo se conoce la posición de quienes tienen la aplicación abierta y comparten su ubicación.</p>'+(typeof asistenciaHtml==='function'?asistenciaHtml():'');
+    '<p class="derived">Sólo se conoce la posición de quienes tienen la aplicación abierta y comparten su ubicación.</p>';
 }
 function drawUnidades(){
   const t=$('uni-tab');if(!t)return;drawGeoResumen();const qs=(($('uni-q')||{}).value||'').trim().toLowerCase(),sinAc=z=>String(z||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   const GR=(VIVO.grupos||[]).filter(g=>g.estado==='activo'),dOf=u=>(VIVO.despachos||[]).find(x=>x.pers.some(p=>(p.u&&p.u===u.u)||p.n===u.n)),gOf=u=>{const d=dOf(u);return d&&d.grupo?GR.find(g=>g.id===d.grupo):null};
   const rango=u=>{const g=gOf(u);if(g)return GR.indexOf(g);return dOf(u)?900:999};
-  const us=(VIVO.usuarios||[]).filter(u=>!qs||sinAc(u.n).includes(sinAc(qs))).sort((a,b)=>rango(a)-rango(b)||(b.tp||b.tc||0)-(a.tp||a.tc||0)),ahora=VIVO.ahora||Date.now();
-  if(!us.length){t.innerHTML='<tr><td>'+(qs?'Ninguna unidad coincide con «'+esc(qs)+'».':'Ninguna unidad ha abierto la aplicación hoy.')+'</td></tr>';return}
+  const us=(VIVO.usuarios||[]).filter(u=>!(u.sinSenal||u.estado==='detenido')).filter(u=>!qs||sinAc(u.n).includes(sinAc(qs))||String(u.cod||'').toLowerCase()===qs||(u.cod&&String(u.cod).toLowerCase().startsWith(qs))).sort((a,b)=>rango(a)-rango(b)||(b.tp||b.tc||0)-(a.tp||a.tc||0)),ahora=VIVO.ahora||Date.now();
+  if(!us.length){t.innerHTML='<tr><td>'+(qs?'Ninguna unidad coincide con «'+esc(qs)+'».':'Ninguna unidad está compartiendo su ubicación ahora.')+'</td></tr>';return}
   t.innerHTML='<tr><th>Persona</th><th>Estado</th><th>Ubicación</th><th>Estación</th><th>Emergencia asignada</th><th>Pendientes en su teléfono</th><th></th></tr>';
   let secAnt=null;
   us.forEach(u=>{
@@ -2176,14 +2191,16 @@ function drawUnidades(){
     const ub=vivo?'<b>En vivo</b> · hace '+Math.max(0,Math.round((ahora-u.tp)/1000))+' s<br><span class="m">'+esc(gms(vivo.lat,vivo.lon))+'</span>':ult?'<b>Última conocida</b> · '+fechaHora(ult.t)+'<br><span class="m">'+esc(gms(ult.lat,ult.lon))+'</span>':'—';
     const c=u.cola||{},pend=[c.borr?c.borr+' borrador(es)':'',c.pend?c.pend+' por enviar':'',c.err?'<span class="pill bad">'+c.err+' con error</span>':''].filter(Boolean).join(' · ')||'—';
     const dsp=dOf(u),al=dsp&&llamList().find(a=>a.id===dsp.emerg);
-    const emer=dsp?'<b>'+esc(al?al.msg:'Emergencia')+'</b>'+(al&&al.lugar?'<br><span class="m">'+esc(al.lugar)+'</span>':'')+(dsp.veh?'<br><span class="m">'+esc(dsp.veh)+'</span>':'')+(gU?'<br><span class="pill" style="background:'+esc(gU.color)+';color:#fff">'+esc(gU.nombre)+'</span>':''):'<span class="derived">Sin asignar</span>';
+    const preL=(gU&&gU.pre||[]).filter(id=>!(dsp&&dsp.emerg===id)).map(id=>llamList().find(a=>a.id===id)).filter(Boolean);
+    const asig=dsp&&dsp.emerg&&al?'<b>'+esc(al.msg)+'</b>'+(al.lugar?'<br><span class="m">'+esc(al.lugar)+'</span>':'')+(dsp.veh?'<br><span class="m">'+esc(dsp.veh)+'</span>':'')+(gU?'<br><span class="pill" style="background:'+esc(gU.color)+';color:#fff">'+esc(gU.nombre)+'</span>':''):(dsp&&dsp.veh?'<span class="m">'+esc(dsp.veh)+'</span>'+(gU?' <span class="pill" style="background:'+esc(gU.color)+';color:#fff">'+esc(gU.nombre)+'</span>':''):'');
+    const emer=(asig?'<span class="derived">Asignada:</span> '+asig:'')+(preL.length?(asig?'<br>':'')+'<span class="derived">📌 Preasignada:</span> '+preL.map(a=>'<b>'+esc(a.msg)+'</b>'+(a.num?' <span class="m">'+esc(a.num)+'</span>':'')).join(' → '):'')||'<span class="derived">Sin asignar</span>';
     if(gU){tr.style.boxShadow='inset 8px 0 0 '+gU.color;tr.style.background=gU.color+'14'}
-    tr.innerHTML='<td>'+esc(u.n)+'</td><td><span class="pill '+e[0]+'">'+e[1]+'</span></td><td>'+ub+'</td><td>'+estTxt(u)+'</td><td>'+emer+'</td><td>'+pend+'</td>';
+    tr.innerHTML='<td>'+(u.cod?'<b>'+esc(u.cod)+'</b> · ':'')+esc(u.n)+'</td><td><span class="pill '+e[0]+'">'+e[1]+'</span></td><td>'+ub+'</td><td>'+estTxt(u)+'</td><td>'+emer+'</td><td>'+pend+'</td>';
     const td=document.createElement('td');
     const la=vivo?vivo.lat:ult?ult.lat:null,lo=vivo?vivo.lon:ult?ult.lon:null;
     if(la!=null){const z=document.createElement('button');z.className='btn alt sm';z.textContent='Ver en mapa';z.onclick=()=>{if(MV)MV.setView([la,lo],17);$('map-vivo').scrollIntoView({behavior:'smooth',block:'center'})};td.append(z,' ')}
     if(puedeF('perfiles')){const p=document.createElement('button');p.className='btn alt sm';p.textContent='Perfil';p.onclick=()=>perfilUI(u.u,u.n);td.append(p)}
-    if((esMaster()||puedeF('llamados'))&&!PREVIEW&&!u.sinSenal){const ap=document.createElement('button');ap.className='btn alt sm danger';ap.textContent='Apagar ubicación';ap.onclick=async()=>{if(!confirm('¿Apagar la ubicación de '+u.n+'? Quedará como «Sin señal» en el panel y su teléfono dejará de compartirla al conectarse.'))return;ap.disabled=true;try{need(await call('ubicApagar',{usuario:u.u}));toast('Ubicación apagada: la unidad figura sin señal. Su teléfono recibirá la orden al conectarse.');pollVivo()}catch(e){toast('No se pudo: '+humanErr(e),1);ap.disabled=false}};td.append(' ',ap)}
+    if((esMaster()||puedeF('llamados'))&&!PREVIEW){const ap=document.createElement('button');ap.className='btn alt sm danger';ap.textContent='Apagar ubicación';ap.onclick=async()=>{if(!confirm('¿Apagar la ubicación de '+u.n+'? Quedará como «Sin señal» en el panel y su teléfono dejará de compartirla al conectarse.'))return;ap.disabled=true;try{need(await call('ubicApagar',{usuario:u.u}));toast('Ubicación apagada: la unidad figura sin señal. Su teléfono recibirá la orden al conectarse.');pollVivo()}catch(e){toast('No se pudo: '+humanErr(e),1);ap.disabled=false}};td.append(' ',ap)}
     if(puedeF('llamados')||esMaster()){const sb=document.createElement('button');sb.className='btn alt sm danger sos3';sb.textContent='Activar SOS (mantener 3 s)';sb.dataset.su=u.u||'';sb.dataset.sn=u.n;sb.dataset.sv=(dsp&&dsp.veh)||'';sb.dataset.sl=la!=null?la:'';sb.dataset.so=lo!=null?lo:'';td.append(' ',sb)}
     tr.append(td);t.append(tr);
   });
@@ -2688,7 +2705,7 @@ function verEnMapa(lat,lon,z,rotulo){
 
 /* ================= V2.2 · llamado con observaciones/silencioso, fases por colores, grupos de intervención, atención de la emergencia ================= */
 const FASE_TXT={rojo:'Requiere atención',amarillo:'Atendiendo',verde:'Atendida'};
-function grpArg(){const v=($('ds-grp')||{}).value;return v==='_nuevo'?{grupoNuevo:(($('ds-gnom')||{}).value||'').trim()||'Grupo de intervención '+(((VIVO.grupos||[]).filter(g=>g.estado==='activo').length)+1)}:(v?{grupo:v}:{})}
+function grpArg(){const v=($('ds-grp')||{}).value;return v==='_nuevo'?{grupoNuevo:'Grupo de intervención '+(((VIVO.grupos||[]).filter(g=>g.estado==='activo').length)+1)}:(v?{grupo:v}:{})}
 async function roster(){if(!ROSTERD){try{ROSTERD=need(await call('roster'))}catch(e){return null}}return ROSTERD}
 
 /* enviar llamado: ahora lleva observaciones y puede ser silencioso; desde el botón flotante termina en el panel de operación */
@@ -3451,11 +3468,11 @@ async function admGeo(){
   const box=$('a-box');box.innerHTML='';const c=document.createElement('div');c.className='card';
   c.innerHTML='<h3>Geocerco de la estación</h3><p class="derived expl">Es el círculo alrededor de la estación. Cuando el teléfono de una persona despachada <b>sale</b> del círculo se registra la salida de la estación; cuando <b>entra</b>, la llegada; y cuando todas las unidades de un grupo de intervención están de vuelta dentro, el grupo se cierra solo. Funciona solo con el teléfono con la aplicación abierta y la ubicación activada; si no hay señal, queda el registro manual.</p>'+
     '<div class="tools"><label>Latitud<input id="ge-la" inputmode="decimal" value="'+esc(cur.lat!=null?cur.lat:'')+'"></label><label>Longitud<input id="ge-lo" inputmode="decimal" value="'+esc(cur.lon!=null?cur.lon:'')+'"></label><label>Radio (metros, 20 a 1000)<input id="ge-r" inputmode="numeric" value="'+esc(cur.radio||80)+'"></label></div>'+
-    '<h4>¿Para qué usar el geocerco?</h4><label class="chk1"><input type="checkbox" id="ge-reg"> Registrar todas las entradas y salidas de la estación (historial de la emergencia y Auditoría)</label><label class="chk1"><input type="checkbox" id="ge-avi"> Avisar a la central cuando una unidad asignada pasa por la estación</label><label class="chk1"><input type="checkbox" id="ge-mos"> Mostrar en «Unidades y conexión» quién está dentro y quién fuera</label><label class="chk1"><input type="checkbox" id="ge-ter"> Terminar la asignación y el grupo cuando la emergencia ya se cerró (o ya no hay emergencias activas) y la unidad ingresa a la estación. Mientras tanto la unidad figura «Regresando a la estación»</label>'+
+    '<h4>¿Para qué usar el geocerco?</h4><label class="chk1"><input type="checkbox" id="ge-reg"> Registrar todas las entradas y salidas de la estación (historial de la emergencia y Auditoría)</label><label class="chk1"><input type="checkbox" id="ge-avi"> Avisar a la central cuando una unidad asignada pasa por la estación</label><label class="chk1"><input type="checkbox" id="ge-mos"> Mostrar en «Unidades y conexión» quién está dentro y quién fuera</label><label class="chk1"><input type="checkbox" id="ge-ter"> Terminar la asignación y el grupo cuando la emergencia ya se cerró (o ya no hay emergencias activas) y la unidad ingresa a la estación. Mientras tanto la unidad figura «Regresando a la estación»</label><label class="chk1"><input type="checkbox" id="ge-aps"> Apagar sola la ubicación de quien <b>sale de la estación sin estar asignado</b> y sin emergencias activas (deja de aparecer en «Unidades y conexión» hasta que la active de nuevo)</label>'+
     '<div class="dl"><button class="btn alt" id="ge-gps">Usar mi ubicación actual</button><button class="btn" id="ge-ok">Guardar</button><button class="btn alt" id="ge-no">Quitar el geocerco</button></div><div class="derived" id="ge-out" role="status">'+(cur.lat!=null?'Geocerco activo.':'Todavía no hay geocerco: las salidas y llegadas se registran solo a mano.')+'</div>'+
     '<div id="ge-map" style="height:260px;border-radius:10px;margin-top:8px"></div>';
   box.append(c);
-  $('ge-reg').checked=cur.registrar!==false;$('ge-avi').checked=cur.avisar!==false;$('ge-mos').checked=cur.mostrar!==false;$('ge-ter').checked=cur.terminar===true;
+  $('ge-reg').checked=cur.registrar!==false;$('ge-avi').checked=cur.avisar!==false;$('ge-mos').checked=cur.mostrar!==false;$('ge-ter').checked=cur.terminar===true;$('ge-aps').checked=cur.apagarSola!==false;
   let mp=null,mk=null,ci=null;
   const dib=()=>{const la=parseFloat($('ge-la').value),lo=parseFloat($('ge-lo').value),r=Math.min(1000,Math.max(20,+$('ge-r').value||80));
     if(typeof L==='undefined'||!isFinite(la)||!isFinite(lo))return;
@@ -3466,7 +3483,7 @@ async function admGeo(){
     $('ge-out').textContent='Buscando su ubicación… (úselo estando en la estación)';
     navigator.geolocation.getCurrentPosition(p=>{$('ge-la').value=p.coords.latitude.toFixed(6);$('ge-lo').value=p.coords.longitude.toFixed(6);$('ge-out').textContent='Ubicación tomada (precisión ±'+Math.round(p.coords.accuracy)+' m). Pulse «Guardar».';dib()},e=>{$('ge-out').textContent='No se pudo obtener la ubicación: permita el acceso o escriba las coordenadas.'},{enableHighAccuracy:true,timeout:15000})};
   $('ge-ok').onclick=async()=>{try{const la=parseFloat($('ge-la').value.replace(',','.')),lo=parseFloat($('ge-lo').value.replace(',','.'));if(!isFinite(la)||!isFinite(lo)){$('ge-out').textContent='Escriba latitud y longitud, o use «Usar mi ubicación actual».';return}
-    need(await call('cfgSet',{clave:'geo',valor:{lat:la,lon:lo,radio:+$('ge-r').value||80,registrar:$('ge-reg').checked,avisar:$('ge-avi').checked,mostrar:$('ge-mos').checked,terminar:$('ge-ter').checked}}));$('ge-out').textContent='Guardado. Desde ahora las salidas y llegadas de la estación se detectan con ese círculo.'}catch(e){$('ge-out').textContent='No se pudo guardar: '+humanErr(e)}};
+    need(await call('cfgSet',{clave:'geo',valor:{lat:la,lon:lo,radio:+$('ge-r').value||80,registrar:$('ge-reg').checked,avisar:$('ge-avi').checked,mostrar:$('ge-mos').checked,terminar:$('ge-ter').checked,apagarSola:$('ge-aps').checked}}));$('ge-out').textContent='Guardado. Desde ahora las salidas y llegadas de la estación se detectan con ese círculo.'}catch(e){$('ge-out').textContent='No se pudo guardar: '+humanErr(e)}};
   $('ge-no').onclick=async()=>{if(!confirm('¿Quitar el geocerco? Las salidas y llegadas volverán a registrarse solo a mano.'))return;try{need(await call('cfgSet',{clave:'geo',valor:{lat:'',lon:'',radio:80}}));$('ge-la').value=$('ge-lo').value='';$('ge-out').textContent='Geocerco quitado.'}catch(e){$('ge-out').textContent='No se pudo: '+humanErr(e)}};
 }
 const LY_MENU=[['reg','Realizar registro'],['emg','Emergencias activas'],['mis','Mis registros'],['apo','Apoyos para emergencias'],['map','Mapa'],['cen','Panel de la central (solo personal de la central)'],['cfg','Configuración (siempre visible)']];
@@ -3568,7 +3585,7 @@ async function corregirDespacho(id){
   const filas=ROSTERD.personal.map(p=>{const en=mios.some(m=>(m.u&&m.u===p.usuario)||m.n===p.nombre),oc=!en&&(pocu.has(p.usuario)||pocu.has(p.nombre));return '<label><input type="checkbox" value="'+esc(p.usuario)+'" data-n="'+esc(p.nombre)+'" '+(en?'checked ':'')+(oc?'disabled':'')+'>'+(p.codigo?esc(p.codigo)+' · ':'')+esc(p.nombre)+(oc?' · ocupado en otra unidad':'')+'</label>'}).concat(mios.filter(m=>!enRoster.has(m.u)&&!ROSTERD.personal.some(p=>p.nombre===m.n)).map(m=>'<label><input type="checkbox" value="'+esc(m.u||'')+'" data-n="'+esc(m.n)+'" checked>'+esc(m.n)+'</label>'));
   dlg('<h3>Corregir vehículo y personal</h3><p class="derived">Use esto si se equivocó al digitar. Las personas nuevas reciben el aviso; a las que quite se les avisa que salen de la asignación.</p>'+
     '<label>Vehículo<select id="co-veh">'+vl.map(v=>'<option'+(v===x.veh?' selected':'')+(vocu.has(v)?' disabled':'')+'>'+esc(v)+'</option>').join('')+'</select></label>'+
-    '<p class="derived" style="margin:6px 0 2px">Personal que va en el vehículo:</p><div class="chk" id="co-per">'+filas.join('')+'</div><div class="derived" id="co-out" role="status"></div><div class="dl"><button class="btn" id="co-ok">Guardar corrección</button><button class="btn alt" id="co-no">Cancelar</button></div>',()=>{
+    '<label>Buscar (nombre o código)<input type="search" data-filtra="#co-per" autocomplete="off"></label><p class="derived" style="margin:6px 0 2px">Personal que va en el vehículo:</p><div class="chk" id="co-per">'+filas.join('')+'</div><div class="derived" id="co-out" role="status"></div><div class="dl"><button class="btn" id="co-ok">Guardar corrección</button><button class="btn alt" id="co-no">Cancelar</button></div>',()=>{
     const volver=()=>{if(RES.id)emergResumen(RES.id);else dlgCerrar()};
     $('co-no').onclick=volver;
     $('co-ok').onclick=async()=>{const pers=[...document.querySelectorAll('#co-per input:checked')].map(i=>({u:i.value,n:i.dataset.n}));
@@ -3593,7 +3610,7 @@ async function personalGrupoUI(gid){
     const filas=ROSTERD.personal.map(p=>{const en=x.pers.some(m=>(m.u&&m.u===p.usuario)||m.n===p.nombre),o=!en&&(oc.has(p.usuario)||oc.has(p.nombre));return '<label><input type="checkbox" value="'+esc(p.usuario)+'" data-n="'+esc(p.nombre)+'" '+(en?'checked ':'')+(o?'disabled':'')+'>'+(p.codigo?esc(p.codigo)+' · ':'')+esc(p.nombre)+(o?' · ocupado':'')+'</label>'})
       .concat(x.pers.filter(m=>!enR.has(m.u)&&!ROSTERD.personal.some(p=>p.nombre===m.n)).map(m=>'<label><input type="checkbox" value="'+esc(m.u||'')+'" data-n="'+esc(m.n)+'" checked>'+esc(m.n)+'</label>'));
     return '<fieldset data-un="'+esc(x.id)+'"><legend><b>'+esc(x.veh||'Sin vehículo')+'</b></legend><div class="chk">'+filas.join('')+'</div></fieldset>'};
-  dlg('<h3><span class="dot" style="background:'+esc(g.color)+'"></span> Personal de «'+esc(g.nombre)+'»</h3><p class="derived">Marque quién va en cada vehículo del grupo. Quien desmarque sale de la asignación; si una unidad se queda sin personas, se libera. Todo se actualiza en la central, en la emergencia y en los teléfonos.</p>'+us.map(bloque).join('')+'<div class="derived" id="pg-out" role="status"></div><div class="dl"><button class="btn" id="pg-ok">Guardar</button><button class="btn alt" id="pg-no">Cancelar</button></div>',()=>{
+  dlg('<h3><span class="dot" style="background:'+esc(g.color)+'"></span> Personal de «'+esc(g.nombre)+'»</h3><p class="derived">Marque quién va en cada vehículo del grupo. Quien desmarque sale de la asignación; si una unidad se queda sin personas, se libera. Todo se actualiza en la central, en la emergencia y en los teléfonos.</p><label>Buscar (nombre o código)<input type="search" data-filtra="dialog" autocomplete="off"></label>'+us.map(bloque).join('')+'<div class="derived" id="pg-out" role="status"></div><div class="dl"><button class="btn" id="pg-ok">Guardar</button><button class="btn alt" id="pg-no">Cancelar</button></div>',()=>{
     const volver=()=>{if(RES.id)emergResumen(RES.id);else dlgCerrar()};
     $('pg-no').onclick=volver;
     $('pg-ok').onclick=async()=>{$('pg-ok').disabled=true;$('pg-out').textContent='Guardando…';let n=0;
@@ -3726,42 +3743,6 @@ async function importarPersonalExcel(file){
   $('ip-file').onchange=async()=>{const f=$('ip-file').files[0];if(!f)return;$('ip-msg').textContent='Leyendo el archivo…';try{await importarPersonalExcel(f);$('ip-msg').textContent=''}catch(e){$('ip-msg').textContent='No se pudo leer: '+humanErr(e)}$('ip-file').value=''};
 }}
 
-/* ================= ASISTENCIA DE LA ESTACIÓN (Excel de horas) ================= */
-const hmMin=m=>{const h=Math.floor(m/60),mi=m%60;return ((h%12)||12)+':'+String(mi).padStart(2,'0')+(h<12?' a. m.':' p. m.')};
-function hoyBogota(){const d=new Date(Date.now()-5*3600000);return d.toISOString().slice(0,10)}
-async function leerHorasExcel(file){
-  const hoy=hoyBogota(),[Y,Mo,D]=hoy.split('-').map(Number);
-  const libro=await xlsxLibro(file,n=>/^\d+\s+\S/.test(n));
-  const adentro=[],salieron=[];let previas=0,personas=0;
-  Object.keys(libro).forEach(n=>{
-    personas++;const m=/^(\d+)\s+(.*)$/.exec(n.trim()),codigo=m?m[1]:'';
-    const nombre=(m?m[2]:n).replace(/^(CAPITAN|TENIENTE|SUBTENIENTE|SARGENTO|CABO|BOMBEROS?|ASPIRANTE|BRIGADISTA)\s+/i,'').trim();
-    let ult=null;
-    libro[n].forEach(f=>{if(f.n<2)return;const a=+((f.c.A||{}).v),b=+((f.c.B||{}).v),c=+((f.c.C||{}).v),e=f.c.E?+f.c.E.v:NaN,s=f.c.F?+f.c.F.v:NaN;
-      if(!isFinite(e))return;
-      const esHoy=a===D&&b===Mo&&c===Y;
-      if(!esHoy){if(!isFinite(s)&&(c<Y||(c===Y&&(b<Mo||(b===Mo&&a<D)))))previas++;return}
-      const em=Math.round((e%1)*1440),sm=isFinite(s)?Math.round((s%1)*1440):0;
-      if(!ult||em>=ult.e)ult={e:em,s:isFinite(s)?sm:0}});
-    if(ult){const x={c:codigo,n:nombre,e:ult.e,s:ult.s};(ult.s?salieron:adentro).push(x)}
-  });
-  return {fecha:hoy,adentro,salieron,previas,personas};
-}
-function asistenciaHtml(){
-  const a=VIVO.asistencia;if(!a)return '<p class="derived">Todavía no se ha cargado el Excel de horas de la estación.</p>';
-  const viejo=a.fecha!==hoyBogota();
-  const nom=x=>(x.c?'<b>'+esc(x.c)+'</b> ':'')+esc(x.n)+' <span class="derived">('+hmMin(x.e)+(x.s?' → '+hmMin(x.s):'')+')</span>';
-  return '<div class="card" style="margin:8px 0"><h4>Excel de horas · '+esc(a.fecha)+'</h4><p class="derived">Cargado '+esc(fechaHora(a.t))+' por '+esc(a.por||'')+(a.archivo?' · '+esc(a.archivo):'')+'.'+(viejo?' <b>Es de otro día: cárguelo de nuevo para ver el de hoy.</b>':'')+'</p>'+
-    '<p><b>Adentro ('+a.adentro.length+'):</b> '+(a.adentro.length?a.adentro.map(nom).join(' · '):'<span class="derived">nadie</span>')+'</p><p><b>Ya salieron hoy ('+a.salieron.length+'):</b> '+(a.salieron.length?a.salieron.map(nom).join(' · '):'<span class="derived">nadie</span>')+'</p>'+
-    (a.previas?'<p class="derived">'+a.previas+' registro(s) de días anteriores quedaron sin hora de salida en el Excel.</p>':'')+'</div>';
-}
-document.addEventListener('change',async e=>{
-  if(!e.target||e.target.id!=='as-file')return;const f=e.target.files[0];if(!f)return;const m=$('as-msg');
-  m.textContent='Leyendo el Excel… puede tardar unos segundos.';
-  try{const r=await leerHorasExcel(f);need(await call('asistenciaSet',{...r,archivo:f.name}));m.textContent='Cargado: '+r.adentro.length+' adentro, '+r.salieron.length+' ya salieron hoy (de '+r.personas+' hojas de personas).';await pollVivo();try{drawGeoResumen()}catch(x){}}
-  catch(x){m.textContent='No se pudo leer: '+humanErr(x)}
-  e.target.value='';
-});
 
 
 /* ---------- limpiar la auditoría (solo superadministrador, una vez tras las pruebas) ---------- */
@@ -3820,13 +3801,11 @@ function dzPreview(over){
 }
 function dzPlat(over){
   const fr=$('dz-fr');if(!fr||DZS.w!=='est')return;
-  const L=Object.assign({},(CFGP&&CFGP.layout)||{},(over&&over.layout)||{}),T=Object.assign({},(CFGP&&CFGP.textos)||{},(over&&over.textos)||{});
-  const o=k=>{const i=(L.tabs||[]).indexOf(k);return i<0?99:i},tx=s=>T[s]||s;
-  const tabs=LY_TABS.slice().sort((a,b)=>o(a[0])-o(b[0])).filter(t=>t[0]==='adm'||t[0]==='cfg'||!(L.hideTabs||[]).includes(t[0]));
-  fr.innerHTML='<div class="dz-fr-est"><div style="background:#b3261e;color:#fff;padding:8px 12px;font-weight:700">'+esc(tx('Central'))+' · CBV La Unión</div><div style="display:flex;flex-wrap:wrap;gap:4px;padding:6px;border-bottom:1px solid #ddd">'+
-    tabs.map((t,i)=>'<span style="padding:5px 9px;border-radius:8px;font-size:.78rem;font-weight:600;'+(i===0?'background:#b3261e;color:#fff':'background:#eee;color:#222')+'">'+esc(tx(t[1].replace(/ \(.*\)/,'')))+'</span>').join('')+
-    '</div><div style="padding:10px;font-size:.8rem;color:#555">Así se ve la barra de pestañas con sus nombres y su orden. Los datos son de ejemplo.</div></div>';
+  const f=fr.querySelector('iframe');if(!f||!f.contentWindow)return;
+  try{f.contentWindow.postMessage({tipo:'cfg',cfg:Object.assign({},CFGP||{},over||{})},'*')}catch(e){}
 }
+function dzEscala(){const w=document.querySelector('.dz-fr-est');if(!w)return;const f=w.querySelector('iframe');const k=Math.min(1,w.clientWidth/1280);f.style.transform='scale('+k+')';w.style.height=Math.round(800*k)+'px'}
+window.addEventListener('resize',()=>{try{dzEscala()}catch(e){}});
 function dzSecciones(){
   const q=(DZS.q||'').toLowerCase().trim();let L=DZ_SEC[DZS.w];
   const hit=L.filter(s=>!q||(s[1]+' '+s[2]).toLowerCase().includes(q));
@@ -3843,14 +3822,15 @@ async function dzCargar(){
     else if(sec==='dis'){await admDis();const m=$('di-m'),t=$('di-t');(w==='cel'?t:m).hidden=true;(w==='cel'?m:t).hidden=false;
       const pv=$('di-pv');if(pv){pv.hidden=true;if(pv.previousElementSibling)pv.previousElementSibling.hidden=true}}
   }catch(e){$('a-box').innerHTML='<div class="card"><p>No se pudo cargar: '+esc(humanErr(e))+'</p></div>'}
-  const ir=$('dz-ir');ir.innerHTML=w==='cel'?'<option value="menu">Menú</option><option value="form">Formulario (paso 1)</option><option value="bitacora">Bitácora en vivo</option>':'';ir.parentElement.hidden=w!=='cel';
+  const ir=$('dz-ir');ir.innerHTML='';ir.parentElement.hidden=false;
   dzVista();
 }
 function dzVista(){
-  const fr=$('dz-fr'),w=DZS.w;
-  if(w==='est'){dzPlat();return}
+  const fr=$('dz-fr'),w=DZS.w;if(!fr)return;
+  $('dz-root').classList.toggle('dz-est',w==='est');
   if(fr.querySelector('iframe'))return;
-  fr.innerHTML='<div class="dz-fr-cel"><iframe title="Vista previa del celular" src="index.html?vistaprevia=1"></iframe></div>';
+  if(w==='est'){fr.innerHTML='<div class="dz-fr-est"><iframe title="Vista previa de la plataforma" src="estadistica.html?vistaprevia=1"></iframe></div>';dzEscala()}
+  else fr.innerHTML='<div class="dz-fr-cel"><iframe title="Vista previa del celular" src="index.html?vistaprevia=1"></iframe></div>';
 }
 function admDz(){
   const root=$('dz-root');root.hidden=false;const slot=$('dz-slot');if($('a-box').parentNode!==slot)slot.append($('a-box'));
@@ -3858,10 +3838,12 @@ function admDz(){
   $('dz-w').onchange=()=>{DZS.w=$('dz-w').value;DZS.s=DZ_SEC[DZS.w][0][0];$('dz-fr').innerHTML='';dzSecciones();dzCargar()};
   $('dz-q').oninput=()=>{DZS.q=$('dz-q').value;dzSecciones();if(DZS.s==='txt'&&$('tx-q')){$('tx-q').value=DZS.q;$('tx-q').oninput()}};
   $('dz-rf').onclick=()=>{$('dz-fr').innerHTML='';dzVista()};
-  $('dz-ir').onchange=()=>{const f=$('dz-fr').querySelector('iframe');if(f&&f.contentWindow)f.contentWindow.postMessage({tipo:'ir',vista:$('dz-ir').value,paso:0},'*')};
+  $('dz-ir').onchange=()=>{const f=$('dz-fr').querySelector('iframe');if(!f||!f.contentWindow)return;const x=$('dz-ir').value;if(DZS.w==='est')f.contentWindow.postMessage({tipo:'tab',p:x},'*');else if(/^form:/.test(x))f.contentWindow.postMessage({tipo:'ir',vista:'form',paso:+x.slice(5)},'*');else f.contentWindow.postMessage({tipo:'ir',vista:x},'*')};
   dzSecciones();dzCargar();
 }
-window.addEventListener('message',ev=>{const m=ev.data||{};if(m&&m.tipo==='vp-listo'&&DZS&&$('dz-root')&&!$('dz-root').hidden){dzPreview()}});
+window.addEventListener('message',ev=>{const m=ev.data||{};if(!m||!DZS||!$('dz-root')||$('dz-root').hidden)return;
+  if(m.tipo==='vp-listo'){const ir=$('dz-ir');if(ir&&DZS.w==='cel'){ir.innerHTML=(m.vistas||[]).map(x=>'<option value="'+x[0]+'">'+esc(x[1])+'</option>').join('')+'<optgroup label="Pasos del formulario">'+(m.pasos||[]).map((t,i)=>'<option value="form:'+i+'">'+(i+1)+'. '+esc(t)+'</option>').join('')+'<option value="form:'+(m.pasos||[]).length+'">Revisión y envío</option></optgroup>'}dzPreview()}
+  if(m.tipo==='vp-listo-est'){const ir=$('dz-ir');if(ir&&DZS.w==='est'){ir.innerHTML=LY_TABS.map(t=>'<option value="'+t[0]+'">'+esc(t[1].replace(/ \(.*\)/,''))+'</option>').join('')}dzPreview()}});
 {const ra0=renderAdm;renderAdm=function(sub){
   if(sub)ADMSUB=sub;
   const root=$('dz-root');
@@ -3898,7 +3880,7 @@ setInterval(copiaAutoRevisar,60000);
   if(!esMaster()||PREVIEW)return;
   const box=$('a-box');if(!box||box.querySelector('#cp-card'))return;
   const c=document.createElement('div');c.className='card';c.id='cp-card';
-  c.innerHTML='<h3>Copias de seguridad</h3><p class="derived expl"><b>Qué se guarda:</b> reportes (con su detalle), fotos (la lista; las fotos mismas siguen en sus carpetas de Drive), personal con su código, usuarios, emergencias activas y terminadas, despachos, grupos de intervención, la papelera y toda la configuración (formulario, textos, menús, bitácora, geocerco, asistencia). No guarda la licencia ni el acceso de WhatsApp.<br>'+
+  c.innerHTML='<h3>Copias de seguridad</h3><p class="derived expl"><b>Qué se guarda:</b> reportes (con su detalle), fotos (la lista; las fotos mismas siguen en sus carpetas de Drive), personal con su código, usuarios, emergencias activas y terminadas, despachos, grupos de intervención, la papelera y toda la configuración (formulario, textos, menús, bitácora, geocerco). No guarda la licencia ni el acceso de WhatsApp.<br>'+
     '<b>Dónde y cuándo:</b> en Google Drive, carpeta «Copias de seguridad» → una carpeta por año. Se hace una copia sola cada vez que llega o se corrige un reporte y una cada día; las diarias duran 90 días, y se guardan para siempre una por mes y un archivo «anio_AAAA» con solo las emergencias de ese año.</p>'+
     '<div class="dl"><button class="btn" id="cp-now" type="button">Hacer copia ahora (Drive)</button><button class="btn alt" id="cp-pc" type="button">Descargar copia al computador</button><button class="btn alt" id="cp-list" type="button">Ver copias en Drive y restaurar</button></div>'+
     '<label class="chk1"><input type="checkbox" id="cp-auto"> Guardar una copia en <b>este computador</b> cada vez que llegue un reporte nuevo</label>'+
@@ -3934,9 +3916,32 @@ setInterval(copiaAutoRevisar,60000);
     try{const d=JSON.parse(await f.text());restaurar({datos:d,nombre:f.name})}catch(e){$('cp-out').textContent='Ese archivo no se puede leer como copia.'}};
 }}
 
+/* buscador por nombre o código en listas de personas */
+document.addEventListener('input',e=>{const t=e.target;if(!t||!t.dataset||!t.dataset.filtra)return;
+  const sin=z=>String(z||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''),q=sin(t.value.trim()),raiz=t.dataset.filtra==='dialog'?t.closest('dialog'):document.querySelector(t.dataset.filtra);
+  if(raiz)raiz.querySelectorAll('.chk label').forEach(l=>{const i=l.querySelector('input');l.hidden=!!q&&!(i&&i.checked)&&!sin(l.textContent).includes(q)})});
+
+/* ================= vista previa de la plataforma (se abre dentro de «Diseño y funcionamiento») ================= */
+async function vistaPreviaEst(){
+  document.body.classList.add('vp');USER='demo';TOKEN='vp';YO='Vista previa';ROL='master';PERM=[];
+  const vivo={ok:true,pos:[],usuarios:[],alertas:[],despachos:[],grupos:[],nuevos:[],geoLog:[],ahora:Date.now()};
+  const resp={cfgGet:{ok:true,cfg:{}},lista:{ok:true,regs:[],tmps:[],modif:{}},personalGet:{ok:true,personal:[],rangos:[]},histGet:{ok:true,claves:{}},vivo,emergLista:{ok:true,emergencias:[]},aud:{ok:true,aud:[]},pendientes:{ok:true,borradores:[],incompletos:[],sinDrive:[],sinUbic:[],colas:[],llamSinReporte:[]}};
+  rawCall=async()=>({ok:true});call=async function(a){return resp[a]||{ok:true}};
+  const C=GEN.CATS,fr=[];let z=7;const rnd=()=>{z=(z*9301+49297)%233280;return z/233280};
+  for(let i=0;i<140;i++){const y=2024+Math.floor(rnd()*3),m=1+Math.floor(rnd()*12),d=1+Math.floor(rnd()*28);fr.push({src:'hist',id:'HI-'+i,cat:C[Math.floor(rnd()*C.length)],tipo:'EMERGENCIA',fecha:y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0'),hora:String(Math.floor(rnd()*24)).padStart(2,'0')+':10',durmin:20+Math.floor(rnd()*90)})}
+  HISTROWS=fr;HISTOK=true;
+  enter();
+  window.addEventListener('message',ev=>{const m=ev.data||{};try{
+    if(m.tipo==='cfg'){CFGP=m.cfg||{};aplicarCfg(CFGP);tabsPorRol();aplicarLayoutTabs();renderPanel()}
+    if(m.tipo==='tab'){showTab(m.p)}
+  }catch(e){}});
+  try{parent.postMessage({tipo:'vp-listo-est'},'*')}catch(e){}
+}
+
 $('flogin').onsubmit=login;$('docs-bulk').onclick=docsBulk;
 $('atabs').onclick=e=>{const b=e.target.closest('button');if(b)renderAdm(b.dataset.a)};
 (function(){
+  if(/[?&]vistaprevia=1/.test(location.search)){vistaPreviaEst();return}
   if(!TOKEN)return;
   rawCall({u:USER,t:TOKEN,a:'yo'},30000).then(r=>{if(r&&r.ok){ROL=r.rol;PERM=r.perm||[];YO=r.nombre||YO;CFGP=r.cfg||{};enter()}else{try{localStorage.removeItem('cbv_central2')}catch(e){}TOKEN='';$('l_err').textContent='Su sesión venció. Entre de nuevo.'}}).catch(e=>{$('l_err').textContent=humanErr(e);});
 })();

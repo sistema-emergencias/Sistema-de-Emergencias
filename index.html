@@ -260,6 +260,14 @@ html,body{overflow-x:hidden}
 #bl-st.bl-ok{color:var(--ok,#1b7f3b)}
 #bl-st.bl-warn{color:var(--warn,#b45309)}
 
+/* bitácora en vivo: más espacio para ver lo que se va anotando */
+#logsheet{top:2%}
+#logsheet .quick{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px}
+#logsheet .quick .chip{flex:0 0 auto}
+#logsheet #log_list{min-height:45vh}
+#logsheet textarea{min-height:44px}
+#bl-st:empty,#bl-st[hidden]{display:none}
+
 </style>
 </head>
 <body>
@@ -2571,10 +2579,11 @@ pintarEmerg=async function(silencio){
   box.append(res);
   if(!l.length){const nc=el('section','card');nc.append(el('p','','No hay emergencias activas en este momento.'));box.append(nc);return}
   /* primero la emergencia en la que está asignado el usuario; luego las más recientes */
-  l.slice().sort((a,b)=>(b.mia?1:0)-(a.mia?1:0)||(b.cuando||0)-(a.cuando||0)).forEach(e=>{
+  l.slice().sort((a,b)=>(b.mia?2:b.pre?1:0)-(a.mia?2:a.pre?1:0)||(b.cuando||0)-(a.cuando||0)).forEach(e=>{
     const c=el('section','card emgc f-'+e.fase);c.style.cursor='pointer';
     const h=el('h3','');h.append(el('span','faseb f-'+e.fase,FASE_TXT[e.fase]||''),document.createTextNode(' '+(e.num?e.num+' · ':'')+e.msg));c.append(h);
     if(e.mia)c.append(el('p','derived','✅ Usted está asignado a esta emergencia.'));
+    else if(e.pre)c.append(el('p','derived','📌 Preasignada a su grupo: sigue después de la que está atendiendo.'));
     if(e.lugar)c.append(el('p','','📍 '+e.lugar));
     c.append(el('p','derived','Comandante de incidentes: '+(e.cmd||'sin asignar')+' · llamado a las '+hh12(e.cuando)));
     const b=el('button','btn','Abrir la emergencia');b.type='button';b.onclick=ev=>{ev.stopPropagation();EMG.sel=e.id;pintarEmerg()};c.append(b);
@@ -2679,7 +2688,7 @@ async function blEnviar(){
   if(!id){blEstado('Sin vincular: la central aún no ve esta bitácora. Elija la emergencia abajo.','warn');blSel();return}
   try{
     const r=await call('bitLive',{id,items:accList(),cin:String(getP(D,'rpt.cmd.nom')||'')});
-    if(r&&r.ok)blEstado('✔ La central ve su bitácora en vivo (enviada a las '+hh12(Date.now())+').'+(BL.faseErr?' '+BL.faseErr:''),BL.faseErr?'warn':'ok');
+    if(r&&r.ok){if(BL.faseErr)blEstado(BL.faseErr,'warn');else blEstado('','ok')}
     else blEstado('⚠ La central no recibió la bitácora: '+((r&&r.error)||'error del servidor')+'.','warn');
   }catch(e){blEstado('⚠ No se pudo enviar a la central ('+String((e&&e.message)||e).slice(0,80)+'). Se reintenta al seguir escribiendo.','warn')}
 }
@@ -2691,7 +2700,7 @@ async function blFase(txt){
   try{
     const r=await call('faseSet',{id,fase:f});
     if(r&&r.ok){BL.fase[id]=f;BL.faseErr='';toast(f==='verde'?'La emergencia pasó a «Atendida» y se cerró en la central.':'La central ve la emergencia como «'+(f==='amarillo'?'Atendiendo':'Requiere atención')+'».');try{pollAlerts();if(VISTA==='emerg')pintarEmerg(true)}catch(e){}}
-    else{BL.faseErr='El estado de la emergencia no cambió: '+((r&&r.error)||'error')+' Pida a la central que lo asigne como comandante de incidentes.';blEstado('✔ La central ve su bitácora. '+BL.faseErr,'warn')}
+    else{BL.faseErr='El estado de la emergencia no cambió: '+((r&&r.error)||'error')+' Pida a la central que lo asigne como comandante de incidentes.';blEstado(BL.faseErr,'warn')}
   }catch(e){}
 }
 function bitacoraLive(txt){
@@ -2793,10 +2802,110 @@ async function vistaPrevia(){
   window.addEventListener('message',ev=>{const m=ev.data||{};
     try{
       if(m.tipo==='cfg'){applyCfg(m.cfg);pintarMenu();if(VISTA==='form'||$('v-form')&&!$('v-form').hidden)renderStep()}
-      if(m.tipo==='ir'){if(m.vista==='menu'){show('menu');pintarMenu()}else if(m.vista==='form'){show('form');stepIdx=Math.max(0,Math.min(nSteps()-1,m.paso|0));renderStep()}else if(m.vista==='bitacora'){show('form');openLog()}}
+      if(m.tipo==='ir'){
+        const v=m.vista;
+        if(v==='menu'){show('menu');pintarMenu()}
+        else if(v==='form'){show('form');stepIdx=Math.max(0,Math.min(nSteps()-1,m.paso|0));renderStep()}
+        else if(v==='bitacora'){show('form');openLog()}
+        else if(v==='list'){show('list');renderList()}
+        else if(v==='emerg'){show('emerg');try{pintarEmerg()}catch(e){}}
+        else if(v==='tools'){show('tools')}
+        else if(v==='map'){show('map')}
+        else if(v==='chat'){show('chat')}
+        else if(v==='set'){try{fillSettings()}catch(e){}show('set')}
+        window.scrollTo({top:0});
+      }
     }catch(e){}});
-  try{parent.postMessage({tipo:'vp-listo',pasos:nSteps()},'*')}catch(e){}
+  try{parent.postMessage({tipo:'vp-listo',pasos:stepsEff().map(x=>x.t||x.id),vistas:[['menu','Menú principal'],['list','Mis registros'],['emerg','Emergencias activas'],['tools','Apoyos para emergencias'],['map','Mapa'],['chat','Chat en vivo'],['set','Configuración'],['bitacora','Bitácora en vivo']]},'*')}catch(e){}
 }
+
+
+/* ---------- el reporte de una emergencia se llena solo con lo que asignó la central (se puede cambiar) ---------- */
+function atencionDe(x){
+  /* devuelve [{veh,pers:[nombres],cmd,maq}] de los vehículos y el personal que la central asignó a esa emergencia */
+  const id=x&&x.emerg;if(!id)return [];
+  const mk=(gr,u)=>({veh:u.veh||'',pers:(u.pers||[]).map(p=>p.n||p),cmd:(gr&&gr.cmd)||'',maq:(gr&&gr.maq)||''});
+  const g=x.grupo&&x.grupo.unidades&&x.grupo.unidades.length?x.grupo:null;
+  if(g)return g.unidades.map(u=>mk(g,u));
+  const mios=(ASIG.lista||[]).filter(z=>z.emerg===id);
+  if(mios.length){const gu=mios.find(z=>z.grupo&&z.grupo.unidades&&z.grupo.unidades.length);
+    if(gu)return gu.grupo.unidades.map(u=>mk(gu.grupo,u));
+    return mios.map(z=>({veh:z.veh||'',pers:z.companeros||[],cmd:'',maq:''}))}
+  const p=(PEND.lista||[]).find(z=>z.id===id);
+  if(p&&p.atencion)return p.atencion.flatMap(gr=>(gr.unidades||[]).map(u=>mk(gr,u)));
+  return [];
+}
+const aCargoDe=u=>(u.cmd&&u.pers.includes(u.cmd))?u.cmd:(u.maq&&u.pers.includes(u.maq))?u.maq:(u.pers[0]||'');
+function autollenarPersonal(x){
+  if(!D)return;
+  const uni=atencionDe(x);if(!uni.length)return;
+  const pers=[...new Set(uni.flatMap(u=>u.pers))].filter(Boolean),veh=[...new Set(uni.map(u=>u.veh).filter(Boolean))];
+  let hizo=false;
+  if(!(D.pers||[]).length&&pers.length){setV('pers',ordenarPorRango(pers));hizo=true}
+  if(!nonEmpty(D.veh)&&veh.length){setV('veh',veh.join(', '));hizo=true}
+  /* «A cargo de la unidad»: el líder del grupo si va en ese vehículo; si no, el maquinista; si no, el primero de la lista */
+  const o=Object.assign({grupos:[]},getP(D,'rpt.sci')||{});
+  if(!(o.grupos||[]).length){const gs=uni.filter(u=>u.veh&&u.pers.length).map(u=>({u:u.veh,f:'',n:aCargoDe(u)}));if(gs.length){o.grupos=gs;setP(D,'rpt.sci',o);hizo=true}}
+  if(hizo){D.extra=D.extra||{};D.extra._auto=1;autosave();renderStep();toast('Personal, vehículos y unidad a cargo llenados con lo que asignó la central. Puede cambiarlos.')}
+}
+{const rd3=reporteDeLlamado;reporteDeLlamado=async function(x){
+  await rd3.apply(this,arguments);
+  try{if(D&&D.extra&&D.extra._llam===(x&&x.emerg))autollenarPersonal(x)}catch(e){}
+}}
+
+/* ---------- «Realizar registro»: si hay un borrador en curso o reportes pendientes, se pregunta qué es (así no se mezclan) ---------- */
+function etiquetaBorrador(){
+  const t=[(REG&&REG.num)||'',D&&D.cat?D.cat:'',D&&D.dir?D.dir:''].filter(Boolean).join(' · ');
+  return t||'sin título todavía';
+}
+abrirRegistro=async function(){
+  if(online)await repPendPoll();   /* sin internet se usan los pendientes guardados en el teléfono */
+  const enCurso=(REG&&REG.estado!=='final')||(!REG&&D&&D.fecha&&hasContent({datos:D}));
+  const ligado=(D&&D.extra&&D.extra._llam)||'';
+  const cand=(PEND.lista||[]).map(p=>({id:p.id,num:p.num,msg:p.msg,lugar:p.lugar,fecha:p.cierre||p.cuando,p}));
+  (ASIG.lista||[]).filter(x=>x.estado!=='asignado'&&x.emerg&&debeReportar(x)&&!cand.some(c=>c.id===x.emerg)).forEach(x=>{const e=x.emergencia||{};cand.push({id:x.emerg,num:e.num,msg:e.msg,lugar:e.lugar,fecha:e.cuando||Date.now(),x})});
+  const otros=cand.filter(c=>!(enCurso&&ligado===c.id));
+  if(!enCurso&&!otros.length){await nuevaEmergencia();return}
+  if(enCurso&&!otros.length){show('form');renderStep();return}
+  return new Promise(res=>{
+    let h='<h3>¿Qué reporte va a hacer?</h3><p class="derived">'+(enCurso?'Tiene un borrador en curso y ':'')+'tiene reportes de emergencias pendientes. Elija para que la información no se mezcle: cada reporte se guarda por separado.</p>';
+    if(enCurso)h+='<div class="fnrow" style="display:block"><b>Mi borrador en curso</b><br><span class="derived">'+esc(etiquetaBorrador())+(ligado?' · vinculado a una emergencia':'')+'</span><br><button class="btn" type="button" id="rr-cont">Continuar con este borrador</button></div>';
+    otros.forEach((c,i)=>{h+='<div class="fnrow" style="display:block"><b>'+esc((c.num||'Sin consecutivo')+' · '+(c.msg||'Emergencia'))+'</b><br><span class="derived">'+esc(fhTxt(c.fecha))+(c.lugar?' · '+esc(c.lugar):'')+'</span><br><button class="btn" type="button" data-rr="'+i+'">Hacer el reporte de esta emergencia</button>'+(enCurso&&!ligado?' <button class="btn alt" type="button" data-rv="'+i+'">Mi borrador es de esta emergencia</button>':'')+'</div>'});
+    h+='<div class="chips"><button class="btn alt" type="button" id="rr-new">Es otro evento: empezar un reporte nuevo</button><button class="btn alt" type="button" id="rr-no">Cancelar</button></div>';
+    dlgA(h,d=>{
+      const c0=$('rr-cont');if(c0)c0.onclick=()=>{dlgC();show('form');renderStep();res()};
+      d.querySelectorAll('[data-rr]').forEach(b=>b.onclick=async()=>{dlgC();if(enCurso)await flushSave();const c=otros[+b.dataset.rr];if(c.p)hacerReportePend(c.p);else reporteDeLlamado(c.x);res()});
+      d.querySelectorAll('[data-rv]').forEach(b=>b.onclick=()=>{dlgC();const c=otros[+b.dataset.rv];D.extra=D.extra||{};D.extra._llam=c.id;try{if(!D.dir&&c.lugar)D.dir=c.lugar}catch(er){}autosave();toast('Su borrador quedó vinculado a esa emergencia.');show('form');renderStep();res()});
+      $('rr-new').onclick=async()=>{dlgC();if(enCurso)await flushSave();await nuevaEmergencia();toast(enCurso?'Su borrador anterior quedó guardado en «Mis registros». Empezó un reporte nuevo.':'Reporte nuevo.');res()};
+      $('rr-no').onclick=()=>{dlgC();res()}});
+  });
+};
+
+/* ---------- los reportes y borradores son de la persona, no del teléfono: se traen de la central al entrar con su usuario ---------- */
+let MR_T=0;
+async function traerMisRegs(fuerza){
+  if(!online||!loggedIn())return 0;
+  if(!fuerza&&Date.now()-MR_T<60000)return 0;
+  MR_T=Date.now();
+  let n=0;
+  try{
+    const r=await call('misRegs');if(!r||!r.ok)return 0;
+    const borr=new Set(lsGet('cbv_delq',[]));
+    for(const s of (r.regs||[])){
+      if(borr.has(s.tmp))continue;
+      const loc=await DB.get('regs',s.tmp);if(loc)continue;   /* lo que está en este teléfono manda: ya se sincroniza solo */
+      const fin=s.estado==='final';
+      await DB.put('regs',{tmp:s.tmp,num:s.num||null,creado:s.creado,touch:s.actualizado,ver:1,subida:1,estado:s.estado,pedido:false,datos:s.datos||{},sig:1,docVer:1,finAt:fin?s.actualizado:undefined,step:0,deOtro:true});
+      n++;
+    }
+    if(n){try{await pintarBorradores()}catch(e){}if(VISTA==='list')renderList();toast(n+' reporte(s) o borrador(es) suyos se trajeron de la central.')}
+  }catch(e){}
+  return n;
+}
+{const rl9=renderList;renderList=async function(){try{await traerMisRegs()}catch(e){}return rl9.apply(this,arguments)}}
+setTimeout(()=>{if(loggedIn())traerMisRegs(true)},6000);
+setInterval(()=>{if(loggedIn()&&online)traerMisRegs()},3*60000);
+window.addEventListener('online',()=>setTimeout(()=>traerMisRegs(true),2000));
 
 
 /* ================= MIS REGISTROS ================= */
