@@ -268,6 +268,11 @@ html,body{overflow-x:hidden}
 #logsheet textarea{min-height:44px}
 #bl-st:empty,#bl-st[hidden]{display:none}
 
+.tpick{flex-wrap:nowrap!important;gap:6px!important}.tpick label{flex:1;min-width:0!important}.tpick select{width:100%;padding-left:6px;padding-right:6px}
+.lrow.acc{display:grid;grid-template-columns:1fr;gap:8px;padding:10px;border:1px solid var(--line,#ccc);border-radius:10px}
+.lrow.acc textarea{width:100%;min-height:96px;font-size:1.05rem;line-height:1.35;resize:vertical}
+.lrow.acc .btnrow{display:flex;gap:8px}.lrow.acc .btnrow .btn{flex:1}
+
 </style>
 </head>
 <body>
@@ -391,7 +396,7 @@ html,body{overflow-x:hidden}
   </div>
 </div>
 
-<div class="ov sosa" id="ov_sosa" hidden><div class="box" role="alertdialog" aria-labelledby="sa_t"><h2 id="sa_t">SOS ACTIVADO</h2><div id="sa_body"></div>
+<div class="ov sosa" id="ov_sosa" hidden><div class="box" role="alertdialog" aria-label="SOS activo"><div id="sa_body"></div>
   <div class="chips"><button class="btn alt" type="button" id="sa_copy" hidden>Copiar mi ubicación</button><button class="btn alt" type="button" id="sa_min">Ocultar esta pantalla</button></div>
   <button class="btn big off" type="button" id="sa_off">DESACTIVAR SOS (ya estoy a salvo)</button></div></div>
 <div class="ov alarm" id="ov_alarm" hidden><div class="box" role="alertdialog"><div id="al_body"></div></div></div>
@@ -418,7 +423,7 @@ const CFG=window.CBV_CONFIG||{};
 const E=window.CBV_ESQ;
 const VERSION='2.3';
 const AUTOR='Cristhian Steven Blandón Henao';
-const VENTANA_MIN=48*60, IDLE_MS=10*60000, KEEP_MS=3*86400000;
+const VENTANA_MIN=48*60, IDLE_MS=20000, KEEP_MS=3*86400000;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const tc=s=>String(s||'').charAt(0)+String(s||'').slice(1).toLowerCase();
@@ -477,19 +482,23 @@ const SIMPLE_LBL={hora:'Hora de inicio de la actividad',hlle:'Llegada al lugar',
 function rangoIdx(g){let x=String(g||'').toLowerCase().trim();if(x==='comandante'||x.indexOf('comandante ')===0)x='subteniente';const i=E.RANGOS_ORDEN.findIndex(r=>x===r||x.indexOf(r+' ')===0);return i<0?99:i}
 const gradoDe=n=>((AJ.plantilla||[]).find(x=>x.n===n)||{}).g||'';
 function ordenarPorRango(nombres){return nombres.slice().sort((a,b)=>rangoIdx(gradoDe(a))-rangoIdx(gradoDe(b))||String(a).localeCompare(String(b),'es'))}
+/* los pasos se numeran solos según el orden en que salen (1, 2, 3…); un nombre cambiado a mano sin número no se toca */
+function numerarPasos(l){l.forEach((s,i)=>{if(/^\d+[a-z]?\s·\s/.test(s.t))s.t=(i+1)+' · '+s.t.replace(/^\d+[a-z]?\s·\s/,'')})}
 function stepsEff(){
   const base=stepsEff0();
   if(!modoSimple())return base;
-  return base.filter(s=>E.SIMPLE_STEPS.includes(s.id)).map(s=>s.id==='tiempos'?Object.assign({},s,{f:s.f.filter(f=>f.p==='hsal'||f.p==='hreg').map(f=>SIMPLE_LBL[f.p]?Object.assign({},f,{l:SIMPLE_LBL[f.p]}):f)}):s);
+  const sim=base.filter(s=>E.SIMPLE_STEPS.includes(s.id)).map(s=>{const o=Object.assign({},s);return o});numerarPasos(sim);
+  return sim.map(s=>s.id==='tiempos'?Object.assign({},s,{f:s.f.filter(f=>f.p==='hsal'||f.p==='hreg').map(f=>SIMPLE_LBL[f.p]?Object.assign({},f,{l:SIMPLE_LBL[f.p]}):f)}):s);
 }
 function stepsEff0(){
   const fo=CF.form||{},L=fo.labels||{},H=fo.hide||{},N=fo.naOk||{},O=fo.opts||{};
   const HS=fo.hideSteps||{};
-  const out=E.STEPS.filter(s=>!HS[s.id]).map(s=>({id:s.id,t:L['step.'+s.id]||s.t,f:s.f.filter(f=>!H[f.p]).map(f=>Object.assign({},f,{l:L[f.p]||f.l,naOk:N[f.p]!=null?!!N[f.p]:f.naOk!==false,o:O[f.p]||f.o}))}));
+  const out=E.STEPS.filter(s=>!HS[s.id]&&!(s.id==='tiempos'&&!modoSimple())).map(s=>({id:s.id,t:L['step.'+s.id]||s.t,f:s.f.filter(f=>!H[f.p]).map(f=>Object.assign({},f,{l:L[f.p]||f.l,naOk:N[f.p]!=null?!!N[f.p]:f.naOk!==false,o:O[f.p]||f.o}))}));
   (fo.extraSteps||[]).forEach(es=>{if(es&&es.id&&!HS[es.id])out.push({id:es.id,t:L['step.'+es.id]||es.t||'Paso adicional',f:[]})});
   (fo.extras||[]).forEach(x=>{if(!x||!x.id||H['extra.'+x.id])return;const s=out.find(s=>s.id===x.step)||out[out.length-1];s.f.push({p:'extra.'+x.id,l:x.l||x.id,t:x.t||'text',o:x.o,naOk:x.naOk!==false,extra:true})});
   const ord=(arr,lista,key)=>{if(!Array.isArray(lista)||!lista.length)return arr;const ix=x=>{const i=lista.indexOf(key(x));return i<0?1e6:i};return arr.map((x,n)=>[x,n]).sort((a,b)=>ix(a[0])-ix(b[0])||a[1]-b[1]).map(a=>a[0])};
   const ordenados=ord(out,fo.stepOrder,s=>s.id);
+  numerarPasos(ordenados);
   ordenados.forEach(s=>{s.f=ord(s.f,(fo.fieldOrder||{})[s.id],f=>f.p)});
   return ordenados.filter(s=>s.f.length);
 }
@@ -553,6 +562,7 @@ const VISTAS=['setup','menu','set','form','list','tools','map','chat','emerg'];
 const TITULOS={menu:'Menú principal',list:'Mis registros',tools:'Apoyos para emergencias',set:'Configuración',setup:'Bienvenido',map:'Mapa',chat:'Chat en vivo',emerg:'Emergencias activas'};
 let VISTA='';
 function show(v){
+  if(VISTA==='form'&&v!=='form'){try{guardarAlSalirForm()}catch(e){}}
   VISTA=v;
   VISTAS.forEach(k=>{const e=$('v-'+k);if(e)e.hidden=k!==v});
   $('backbar').hidden=v==='menu'||v==='setup';
@@ -627,7 +637,17 @@ function extraTxt(d){
 }
 
 /* ---------- envío (sincronización) ---------- */
-const hasContent=reg=>{const d=reg.datos||{};return !!(d.dir||d.desc||(d.lat&&d.lon)||(d.rpt&&d.rpt.acc&&d.rpt.acc.length))};
+/* hay contenido si se llenó AL MENOS UNA casilla de cualquier parte (se ignoran fecha/hora, el comandante precargado y marcas internas) */
+const hasContent=reg=>{
+  const d=reg.datos||{};
+  const lleno=v=>{if(v==null||v===false||v==='')return false;if(Array.isArray(v))return v.some(lleno);if(typeof v==='object')return Object.keys(v).some(k=>lleno(v[k]));if(typeof v==='number')return true;return String(v).trim()!==''};
+  const IGN={fecha:1,hora:1,na:1,extra:1,completo:1,tipo:1,uni:1,lat:1,lon:1,acc:1};
+  return Object.keys(d).some(k=>{
+    if(IGN[k])return false;
+    if(k==='rpt'){const r=d.rpt||{};return Object.keys(r).some(j=>j==='cmd'?false:lleno(r[j]))}
+    return lleno(d[k]);
+  });
+};
 const needDoc=reg=>reg.estado==='final'&&!!reg.num&&(reg.docVer||0)<reg.ver&&!reg.cerrado;
 let SYNC_CUR='';const ERRREG={};
 async function sync(){
@@ -638,6 +658,7 @@ async function sync(){
     const regs=(await DB.all('regs')).sort((a,b)=>a.creado-b.creado);
     for(let reg of regs){
       SYNC_CUR=reg.tmp;
+      if(reg.estado!=='final'){const lm=(reg.datos&&reg.datos.extra&&reg.datos.extra._llam)||'';if(lm&&regs.some(z=>z.tmp!==reg.tmp&&z.estado==='final'&&z.datos&&z.datos.extra&&z.datos.extra._llam===lm))continue}
       if(!reg.pedido&&reg.ver>reg.subida&&hasContent(reg)&&Date.now()-reg.touch>IDLE_MS){reg=await DB.upd('regs',reg.tmp,r=>{r.pedido=true})}
       if(!reg.pedido&&!needDoc(reg))continue;
       let fotos=await DB.byTmp(reg.tmp);
@@ -647,6 +668,11 @@ async function sync(){
         const r=await call('rec',{tmp:reg.tmp,creado:reg.creado,editado:reg.touch,estado:reg.estado,datos:reg.datos,nfotos:vis,por:AJ.nombre,disp:deviceName()});
         if(!r.ok){
           if(r.error==='clave'){sesionInvalida();return}
+          if(r.error==='transferido'){
+            /* la central pasó este borrador a otro comandante: aquí se quita (lo continúa quien lo recibió) */
+            for(const f of await DB.byTmp(reg.tmp))await DB.del('fotos',f.key);await DB.del('regs',reg.tmp);
+            if(REG&&REG.tmp===reg.tmp){REG=null;lsSet('cbv_actual',null);try{await nuevaEmergencia(true)}catch(e){}if(VISTA==='form')show('menu')}
+            try{toast('La central transfirió su borrador '+(r.num||'')+' a '+(r.a||'el nuevo comandante')+'.')}catch(e){}continue}
           if(r.error==='cerrado'){await DB.upd('regs',reg.tmp,x=>{x.cerrado=true;x.pedido=false;x.subida=x.ver;if(r.num)x.num=r.num});lastErr='Un registro ya estaba cerrado en la central y no se pudo cambiar.';continue}
           throw new Error(r.detalle||r.error||'servidor')}
         reg=await DB.upd('regs',reg.tmp,x=>{x.num=r.num;x.form=r.form;x.carpeta=r.carpeta;x.subida=Math.max(x.subida,v0)});
@@ -735,21 +761,41 @@ async function asegurarReg(){
   await DB.put('regs',REG);lsSet('cbv_actual',REG.tmp);return REG;
 }
 async function patchReg(fn){REG=await DB.upd('regs',REG.tmp,r=>{fn(r);r.touch=Date.now()})||REG}
-let drTimer=null;
+let drTimer=null,upTimer=null;
 function autosave(){
   clearTimeout(drTimer);
   drTimer=setTimeout(async()=>{
     if(REG&&!editable(REG))return;
-    if(!REG&&!(D.cat||D.dir||D.desc||(D.rpt&&D.rpt.acc&&D.rpt.acc.length)))return;
+    if(!REG&&!hasContent({datos:D}))return;
     await asegurarReg();
     await patchReg(r=>{r.datos=clone(D);r.step=stepIdx;r.ver++});setChip();
+    /* a los pocos segundos sin tocar, el borrador sube a la central para verse desde otro equipo */
+    clearTimeout(upTimer);upTimer=setTimeout(()=>{try{if(online&&typeof sync==='function')sync()}catch(e){}},IDLE_MS+1500);
   },500);
+}
+/* al salir del formulario (menú, otra pantalla) el borrador queda guardado si tiene al menos una casilla llena */
+function guardarAlSalirForm(){
+  if(REG&&(REG.estado==='final'||!editable(REG)))return;
+  if(!REG&&!hasContent({datos:D}))return;
+  clearTimeout(drTimer);
+  const snap=clone(D),st=stepIdx,reg0=REG;
+  (async()=>{
+    if(reg0&&REG!==reg0)return;
+    await asegurarReg();
+    await patchReg(r=>{r.datos=snap;r.step=st;r.ver++;if(hasContent({datos:snap}))r.pedido=true});
+    try{await pintarBorradores()}catch(e){}
+    try{if(online&&typeof sync==='function')sync()}catch(e){}
+  })().catch(()=>{});
 }
 async function flushSave(){clearTimeout(drTimer);if(REG&&!editable(REG))return;await asegurarReg();await patchReg(r=>{r.datos=clone(D);r.step=stepIdx;r.ver++})}
 
 /* ---------- borradores pendientes ---------- */
 async function borradores(){
-  return (await DB.all('regs')).filter(r=>r.estado!=='final'&&(hasContent(r)||r.num)&&Date.now()-r.creado<5*86400000).sort((a,b)=>b.touch-a.touch);
+  const todos=await DB.all('regs');
+  const llam=r=>(r.datos&&r.datos.extra&&r.datos.extra._llam)||'';
+  const terminadas=new Set(todos.filter(r=>r.estado==='final').map(llam).filter(Boolean));
+  /* un borrador de una emergencia que ya tiene su reporte terminado no cuenta como pendiente (evita duplicados) */
+  return todos.filter(r=>r.estado!=='final'&&(hasContent(r)||r.num)&&Date.now()-r.creado<5*86400000&&!(llam(r)&&terminadas.has(llam(r)))).sort((a,b)=>b.touch-a.touch);
 }
 async function pintarBorradores(){
   const bs=await borradores();
@@ -763,19 +809,19 @@ async function pintarBorradores(){
 }
 
 /* ================= BITÁCORA EN VIVO (comandante del incidente) ================= */
-const QUICK=[['Salida de la estación','hsal','La unidad salió desde la estación'],['Llegada al sitio','hlle','La unidad llegó al lugar del evento'],['Reconocimiento de la escena',null,'El personal realizó el reconocimiento y la evaluación inicial de la escena'],['Inicio del ataque / atención',null,'El personal inició las labores de ataque y atención del evento'],['Situación controlada',null,'La situación fue controlada'],['Desmovilización hacia el cuartel',null,'La unidad inició la desmovilización hacia el cuartel'],['Terminación de la emergencia','hfin','Se dio por terminada la atención en el sitio'],['Llegada a la estación','hreg','La unidad llegó nuevamente a la estación']];
+const QUICK=[['Alerta recibida','hora','Se recibió el llamado de emergencia'],['Salida de la estación','hsal','La unidad salió desde la estación'],['Llegada al sitio','hlle','La unidad llegó al lugar del evento'],['Reconocimiento de la escena',null,'El personal realizó el reconocimiento y la evaluación inicial de la escena'],['Inicio del ataque / atención',null,'El personal inició las labores de ataque y atención del evento'],['Situación controlada',null,'La situación fue controlada'],['Se dejan recomendaciones de seguridad',null,'Se dejaron recomendaciones de seguridad'],['Terminación de la emergencia','hfin','Se dio por terminada la atención en el sitio'],['Desmovilización hacia el cuartel','hdes','La unidad inició la desmovilización hacia el cuartel'],['Llegada a la estación','hreg','La unidad llegó nuevamente a la estación']];
 function accList(){const a=getP(D,'rpt.acc');return Array.isArray(a)?a:[]}
-function logAdd(h,a){
+function logAdd(h,a,k){
   a=String(a||'').trim();if(!a||!h)return false;
-  const l=accList().slice();l.push({h,a});
+  const l=accList().slice();l.push(k?{h,a,k}:{h,a});
   l.sort((x,y)=>String(x.h).localeCompare(String(y.h)));
-  setV('rpt.acc',l);return true;
+  setV('rpt.acc',l);try{derivarTiempos()}catch(e){}return true;
 }
 let LOGP=null;
 function drawLog(){
   const box=$('log_list');box.innerHTML='';const l=accList();
   if(!l.length)box.append(el('p','derived','Todavía no hay anotaciones. Escriba qué está pasando y toque «Agregar»; la hora se pone sola (puede cambiarla). La bitácora es obligatoria para terminar el reporte.'));
-  l.forEach((x,i)=>{const d=el('div','ent');d.append(el('b','',hmTxt(x.h)||'--'),el('span','',x.a));const q=el('button','btn alt sm','Quitar');q.type='button';q.onclick=()=>{const n=accList().slice();n.splice(i,1);setV('rpt.acc',n);drawLog()};d.append(q);box.append(d)});
+  l.forEach((x,i)=>{const d=el('div','ent');d.append(el('b','',hmTxt(x.h)||'--'),el('span','',x.a));const q=el('button','btn alt sm','Quitar');q.type='button';q.onclick=()=>{const n=accList().slice();n.splice(i,1);setV('rpt.acc',n);try{derivarTiempos()}catch(e){}drawLog()};d.append(q);box.append(d)});
   box.scrollTop=box.scrollHeight;
 }
 async function openLog(){
@@ -783,7 +829,7 @@ async function openLog(){
   if(!LOGP){LOGP=timePick(nowHM(),()=>{},false,{ahora:true});$('log_hwrap').innerHTML='';$('log_hwrap').append(LOGP)}
   LOGP.setVal(nowHM());
   const q=$('log_quick');q.innerHTML='';
-  QUICK.forEach(([t,k,tx])=>{const b=el('button','chip',t);b.type='button';b.onclick=()=>{const h=LOGP.getVal()||nowHM();logAdd(h,tx||t);if(k&&!D[k]){D[k]=h;if(D.na)delete D.na[k]}if(k==='hfin')onChanged('hfin');autosave();drawLog();$('log_msg').textContent='Anotado: '+hmTxt(h)+' · '+t;LOGP.setVal(nowHM());if(currentStep())renderStep()};q.append(b)});
+  QUICK.forEach(([t,k,tx])=>{const b=el('button','chip',t);b.type='button';b.onclick=()=>{const h=LOGP.getVal()||nowHM();logAdd(h,tx||t,k);autosave();drawLog();$('log_msg').textContent='Anotado: '+hmTxt(h)+' · '+t;LOGP.setVal(nowHM());if(currentStep())renderStep()};q.append(b)});
   $('log_t').value='';$('log_msg').textContent='';
   $('logsheet').hidden=false;drawLog();
 }
@@ -870,7 +916,7 @@ function onChanged(p){
   if(p==='hora'||p==='hfin'){const d=lapse(D.hora,D.hfin);if(d!=null&&d>0&&d<1440&&!(D.na&&D.na.durmin)){D.durmin=d;const i=document.querySelector('[data-p="durmin"] input');if(i)i.value=d;fieldMark('durmin')}}
   if(p==='pers'){D.uni=(D.pers||[]).length;const i=document.querySelector('[data-p="uni"] input');if(i)i.value=D.uni}
   if(p==='rpt.cmd.n'){const o=Object.assign({grupos:[]},getP(D,'rpt.sci')||{});o.ci=getP(D,'rpt.cmd.n')||'';setP(D,'rpt.sci',o)}
-  if(p==='rpt.sci'){const ci=(getP(D,'rpt.sci')||{}).ci;if(nonEmpty(ci)&&ci!==getP(D,'rpt.cmd.n'))setP(D,'rpt.cmd.n',ci)}
+  if(p==='rpt.sci'){const ci=(getP(D,'rpt.sci')||{}).ci;if(nonEmpty(ci)&&ci!==getP(D,'rpt.cmd.n')){setP(D,'rpt.cmd.n',ci);const pl=(AJ.plantilla||[]).find(x=>x.n===ci);if(pl&&pl.g)setP(D,'rpt.cmd.g',pl.g);try{autoCargoCmd(ci)}catch(e){}}}
 }
 function setV(p,v,quiet){
   setP(D,p,v);
@@ -951,17 +997,32 @@ function renderField(f){
 function soloDigitos(i){i.type='text';i.inputMode='numeric';i.pattern='[0-9]*';i.autocomplete='off';i.addEventListener('input',()=>{const c=i.value.replace(/\D+/g,'');if(c!==i.value)i.value=c})}
 function listUI(f,dis){
   const L=E.LISTAS[f.lista],wrap=el('div');wrap.style.display='grid';wrap.style.gap='8px';
-  const rows=el('div');rows.style.display='grid';rows.style.gap='8px';wrap.append(rows);
-  const read=()=>[...rows.children].map(d=>{const o={};d.querySelectorAll('input[data-k]').forEach(i=>o[i.dataset.k]=i.value.trim());(d._tp||[]).forEach(([k,p])=>o[k]=p.getVal());return o});
-  const commit=()=>setV(f.p,read().filter(o=>Object.values(o).some(Boolean)));
+  const rows=el('div');rows.style.display='grid';rows.style.gap='8px';
+  const read=()=>[...rows.children].map(d=>{const o={};d.querySelectorAll('input[data-k],textarea[data-k]').forEach(i=>o[i.dataset.k]=i.value.trim());(d._tp||[]).forEach(([k,p])=>o[k]=p.getVal());if(d.dataset.kk)o.k=d.dataset.kk;return o});
+  const commit=()=>{setV(f.p,read().filter(o=>Object.values(o).some(Boolean)));if(f.lista==='acc'){try{derivarTiempos()}catch(e){}}};
   const addRow=vals=>{if(rows.children.length>=L.max)return;const d=el('div','lrow');d._tp=[];
+    if(f.lista==='acc'){
+      /* hora, minutos y AM/PM en fila · acción amplia debajo · «Ahora» y «Quitar» uno al lado del otro */
+      d.classList.add('acc');if(vals&&vals.k)d.dataset.kk=vals.k;
+      const tp=timePick((vals&&vals.h)||'',commit,dis,{sinAhora:true});d._tp.push(['h',tp]);d.append(tp);
+      const l2=el('label');l2.append(el('small','','Acción realizada'));const ta=el('textarea');ta.rows=3;ta.dataset.k='a';ta.value=(vals&&vals.a)||'';ta.disabled=dis;ta.oninput=commit;ta.placeholder='Qué se hizo o qué ocurrió';l2.append(ta);d.append(l2);
+      const br=el('div','btnrow');const ba=el('button','btn alt sm','Ahora');ba.type='button';ba.disabled=!!dis;ba.onclick=()=>{tp.setVal(nowHM());commit()};
+      const bq=el('button','btn alt sm','Quitar');bq.type='button';bq.onclick=()=>{d.remove();commit()};br.append(ba,bq);d.append(br);rows.append(d);return}
     L.cols.forEach(([k,lab,type])=>{const l=el('label');l.append(el('small','',lab));
       if(type==='time'){const p=timePick((vals&&vals[k])||'',commit,dis);d._tp.push([k,p]);l.append(p);l.classList.add('wide')}
       else{const i=el('input');i.type=type||'text';if(k==='d')soloDigitos(i);i.dataset.k=k;i.value=(vals&&vals[k])||'';i.disabled=dis;i.oninput=commit;l.append(i)}
       d.append(l)});
     const q=el('button','btn alt sm','Quitar');q.type='button';q.onclick=()=>{d.remove();commit()};d.append(q);rows.append(d)};
+  if(f.lista==='acc'){try{sincronizarCrono()}catch(e){}
+    const qc=el('div','chips');qc.append(el('small','derived','Acciones rápidas (toque para anotar con la hora actual):'));
+    QUICK.forEach(([t,k,tx])=>{const b=el('button','chip',t);b.type='button';b.disabled=!!dis;b.onclick=()=>{
+      const ya=k&&[...rows.children].find(r=>r.dataset.kk===k);
+      if(ya){ya._tp[0][1].setVal(nowHM());commit();toast('Hora actualizada: '+t);return}
+      addRow({h:nowHM(),a:tx||t,k:k||''});commit();const ult=rows.lastElementChild;if(ult&&ult.scrollIntoView)ult.scrollIntoView({block:'center'})};qc.append(b)});
+    wrap.append(qc)}
+  wrap.append(rows);
   (Array.isArray(getP(D,f.p))?getP(D,f.p):[]).forEach(addRow);
-  const b=el('button','btn alt sm','Agregar '+(f.lista==='acc'?'acción':f.lista==='les'?'lesionado':'vehículo'));b.type='button';b.disabled=dis;
+  const b=el('button','btn alt sm','Agregar '+(f.lista==='acc'?'acción escrita a mano':f.lista==='les'?'lesionado':'vehículo'));b.type='button';b.disabled=dis;
   b.onclick=()=>{addRow(f.lista==='acc'?{h:nowHM()}:null);if(f.lista==='acc')commit()};wrap.append(b);
   if(f.lista==='acc'){const t=el('button','btn','Abrir la bitácora en vivo');t.type='button';t.onclick=openLog;wrap.append(t);wrap.append(el('div','derived','Con la bitácora puede ir anotando cada acción con su hora mientras ocurre. Al menos una anotación es obligatoria.'))}
   return wrap;
@@ -981,7 +1042,7 @@ function timePick(val,onChange,dis,opt){
   const ch=()=>onChange(get());
   [sh,sm,sa].forEach(s=>s.onchange=ch);
   w.append(lh,lm,la);
-  const b=el('button','btn alt sm','Ahora');b.type='button';b.disabled=!!dis;b.onclick=()=>{set(nowHM());ch()};w.append(b);
+  if(!opt.sinAhora){const b=el('button','btn alt sm','Ahora');b.type='button';b.disabled=!!dis;b.onclick=()=>{set(nowHM());ch()};w.append(b)}
   w.getVal=get;w.setVal=set;
   return w;
 }
@@ -1060,7 +1121,7 @@ function sciUI(f,dis){
     const row=el('div','scirow');row.append(el('b','','Unidad '+u));
     const sf=el('select');sf.disabled=dis;sf.append(new Option('Sin función específica (opcional)',''));E.SCI_FUNC.forEach(x=>sf.append(new Option(x,x)));
     const g0=(cur().grupos||[]).find(g=>g.u===u)||{u,f:'',n:''};sf.value=g0.f||'';
-    const upd=(fv,nv)=>{const o=cur();o.grupos=(o.grupos||[]).filter(g=>g.u!==u);o.grupos.push({u,f:fv,n:nv});put(o)};
+    const upd=(fv,nv)=>{const o=cur();o.grupos=(o.grupos||[]).filter(g=>g.u!==u);o.grupos.push({u,f:fv,n:nv,p:g0.p||[]});put(o)};
     sf.onchange=()=>upd(sf.value,((cur().grupos||[]).find(g=>g.u===u)||{}).n||'');
     row.append(sf,el('small','','A cargo de la unidad (opcional)'),persona(g0.n||'',v=>upd(sf.value,v),[],'Sin asignar'));
     wrap.append(row);
@@ -1203,7 +1264,7 @@ function photosUI(f){
   const w=el('div');w.style.display='grid';w.style.gap='8px';
   const dis=naOn(f);
   const row=el('div','row');
-  const a=el('button','btn big','Tomar foto');a.type='button';a.disabled=dis;a.onclick=()=>$('cam').click();
+  const a=el('button','btn big','Tomar foto');a.type='button';a.disabled=dis;a.onclick=()=>camaraRafaga();
   const b=el('button','btn alt big','Elegir de la galería');b.type='button';b.disabled=dis;b.onclick=()=>$('fotos').click();
   row.append(a,b);
   const vb=el('button','btn alt big','Agregar video');vb.type='button';vb.disabled=dis;vb.onclick=()=>$('vids').click();row.append(vb);
@@ -1318,6 +1379,7 @@ async function nuevaEmergencia(silent){
   REG=null;FOTOS=[];lsSet('cbv_actual',null);
   D={fecha:isoDate(new Date()),hora:nowHM(),na:{},extra:{},rpt:null,pers:[]};
   const c=lsGet('cbv_cmd',{});if(c.n)setP(D,'rpt.cmd',c);
+  if(!nonEmpty(getP(D,'rpt.cmd.c'))||/^comandante de incidentes?$/i.test(String(getP(D,'rpt.cmd.c'))))setP(D,'rpt.cmd.c','CI');   /* el cargo del comandante sale prellenado como CI */
   showBad=false;stepIdx=0;resetView();$('editbanner').hidden=true;msg('');
   if(!silent)show('form');renderStep();window.scrollTo({top:0});takeGps(true);
 }
@@ -1358,7 +1420,7 @@ function toggleTrack(){
   else{startTrack();toast('Ubicación activada: la central la recibe.')}
 }
 async function startTrack(){
-  if(!loggedIn())return;
+  if(!loggedIn()&&!sosOn())return;
   if(TR.w!=null){try{navigator.geolocation.clearWatch(TR.w)}catch(e){}TR.w=null}
   if(!navigator.geolocation){TR.on=false;TR.err='este teléfono no permite ubicación';updateTrackUI();return}
   TR.on=true;TR.err='';lsSet('cbv_ps',0);trkNotify(true);
@@ -1386,7 +1448,7 @@ async function avisarPosStop(){
   try{const r=await call('posStop');if(r&&r.ok)lsSet('cbv_ps',0)}catch(e){}
 }
 async function sendPos(force){
-  if((!TR.on&&!sosOn())||!TR.last||!online)return;
+  if((!TR.on&&!sosOn())||!TR.last||!online||!loggedIn())return;
   const s=SOSF();
   const iv=(s?(APP().sosGpsSeg||5):(APP().gpsSeg||20))*1000;
   if(!force&&Date.now()-TR.sentAt<iv-300)return;
@@ -1489,7 +1551,7 @@ function paintSos(){
   $('sa_copy').hidden=!p;
 }
 async function activarSos(){
-  if(sosOn()||!loggedIn())return;
+  if(sosOn())return;
   const s={cid:'S'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),cuando:Date.now(),id:'',err:false};
   lsSet('cbv_sos',s);
   $('ov_sosa').hidden=false;paintSos();
@@ -1505,7 +1567,8 @@ async function enviarSos(){
   try{
     const p=TR.last||(s.lat!=null?{lat:s.lat,lon:s.lon}:null);
     if(!online)throw new Error('offline');
-    const r=await call('sos',{cid:s.cid,cuando:s.cuando,lat:p?p.lat:'',lon:p?p.lon:'',veh:D.veh||'',msg:''});
+    const cuerpo={cid:s.cid,cuando:s.cuando,lat:p?p.lat:'',lon:p?p.lon:'',veh:D.veh||'',msg:''};
+    const r=loggedIn()?await call('sos',cuerpo):await callPublic({a:'sosAnon',por:lsGet('cbv_ultnom','')||'',...cuerpo});
     if(!r.ok)throw new Error(r.error||'servidor');
     const cur=SOSF();if(cur){cur.id=r.id;cur.err=false;cur.canales={whatsapp:r.whatsapp,correo:r.correo};lsSet('cbv_sos',cur)}
     sendPos(true);
@@ -1517,7 +1580,8 @@ async function desactivarSos(){
   if(!confirm('¿Desactivar el SOS? Solo hágalo si ya está a salvo. Se apagan la alarma y la linterna y la central lo verá como cancelado.'))return;
   lsSet('cbv_sos',null);
   siren.stop();torch.stop();$('ov_sosa').hidden=true;paintSosBtn();
-  if(s.id){try{await call('sosFin',{id:s.id,nota:'Desactivado por el propio bombero'})}catch(e){lsSet('cbv_sosfin',[...lsGet('cbv_sosfin',[]),s.id])}}
+  if(s.id&&!loggedIn()){try{await callPublic({a:'sosFinAnon',cid:s.cid})}catch(e){}}
+  else if(s.id){try{await call('sosFin',{id:s.id,nota:'Desactivado por el propio bombero'})}catch(e){lsSet('cbv_sosfin',[...lsGet('cbv_sosfin',[]),s.id])}}
   updateTrackUI();toast('SOS desactivado.');
 }
 function sosCerradoCentral(){
@@ -1596,7 +1660,7 @@ function handleAlerts(list){
   if(s&&s.id&&!list.some(a=>a.id===s.id))sosCerradoCentral();
   const ajenas=list.filter(a=>!esMia(a));
   ajenas.filter(a=>a.tipo==='sos').forEach(a=>{if(!SEEN.has(a.id)){seeNow(a.id);abrirAlarma(a,true);notify('🚨 SOS · BOMBERO CAÍDO',a.por+(a.lat!==''&&a.lat!=null?' · '+gms(a.lat,a.lon):''),'sos-'+a.id)}});
-  ajenas.filter(a=>a.tipo==='llamado').forEach(a=>{
+  ajenas.filter(a=>a.tipo==='llamado'&&!a.silencioso).forEach(a=>{
     const k=a.id+'|'+(a.rep||0)+'|'+(a.v||0),nuevo=!SEEN.has(a.id),cambio=!nuevo&&!SEEN.has(k);
     if(!nuevo&&!cambio)return;
     const prev=LLV[a.id]||{rep:0,v:0};LLV[a.id]={rep:a.rep||0,v:a.v||0};
@@ -1674,7 +1738,6 @@ async function aceptarLlamado(a){
   try{const r=await call('confirmar',body);if(!r.ok&&r.error!=='El llamado ya se cerró.')throw new Error(r.error||'servidor');toast(r.ok?(r.asignado?'Confirmado: quedó asignado a esta emergencia y la central ya lo sabe.':'Unidad activa: la central ya lo sabe y ve su ubicación.'):'Ese llamado ya se cerró.');if(r.ok&&typeof asigPoll==='function')asigPoll()}
   catch(e){lsSet('cbv_confq',[...lsGet('cbv_confq',[]),body]);toast('Sin internet: se confirmará apenas haya señal. Su ubicación ya se está compartiendo.')}
   sendPos(true);
-  if(a.lat!==''&&a.lat!=null&&isFinite(+a.lat))window.open(dirUrl(a.lat,a.lon),'_blank','noopener');
 }
 let pollN=0;
 async function pollAlerts(){
@@ -1687,6 +1750,7 @@ async function pollAlerts(){
 
 /* ================= MENÚ PRINCIPAL ================= */
 const ICONOS={
+  asg:'<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="22" cy="20" r="7"/><circle cx="44" cy="22" r="6"/><path d="M8 50c0-9 6-15 14-15s14 6 14 15z"/><path d="M38 36c8-3 18 1 18 12h-14" class="fillacc"/></svg>',
   reg:'<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="14" y="10" width="36" height="46" rx="4"/><path d="M24 10v-3h16v3"/><path d="M22 24h20M22 32h20M22 40h12"/><path d="M44 38l10-10 5 5-10 10-7 2z" class="fillacc"/></svg>',
   mis:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M6 20v32a3 3 0 0 0 3 3h46a3 3 0 0 0 3-3V24a3 3 0 0 0-3-3H32l-6-8H9a3 3 0 0 0-3 3z"/><path d="M18 34h28M18 42h20"/><circle cx="48" cy="44" r="8" class="fillacc"/><path d="M44.5 44l2.5 2.5 4.5-5" class="wht"/></svg>',
   apo:'<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="24"/><circle cx="32" cy="32" r="10"/><path d="M15 15l11 11M49 15L38 26M15 49l11-11M49 49L38 38" class="thick"/></svg>',
@@ -1708,7 +1772,8 @@ function pintarMenu(){
     ['mis','Mis registros','Borradores y enviados',()=>show('list'),$('nlist')&&$('nlist').textContent||''],
     ['apo','Apoyos para emergencias','Guardia, mapas, GRE, SCI y chat',()=>show('tools'),CHAT.nuevos?CHAT.nuevos+' mensaje(s)':''],
     ['map','Mapa','Mi ubicación y punto de la emergencia',()=>show('map'),puntos?'punto nuevo':''],
-    ['cfg','Configuración','Clave, avisos y datos',()=>{fillSettings();show('set')},'']
+    ['cfg','Configuración','Clave, avisos y datos',()=>{fillSettings();show('set')},''],
+    ['asg','Asignación',asigSub(),()=>abrirAsig(),'']
   ];
   if(AJ.rol&&AJ.rol!=='campo')tiles.splice(4,0,['cfg','Panel de la central','Llamados, despacho y registros',()=>irPanelCentral(AJ),'']);
   box.innerHTML='';
@@ -1717,11 +1782,12 @@ function pintarMenu(){
   const LY=(CF&&CF.layout)||{};
   if(Array.isArray(LY.menu)&&LY.menu.length){const o=k=>{const i=LY.menu.indexOf(k);return i<0?99:i};tiles.sort((a,b)=>o(a[5])-o(b[5]))}
   const vis=tiles.filter(x=>x[5]==='cfg'||!(LY.hideMenu||[]).includes(x[5]));
-  vis.forEach(([ic,t,sub,fn,badge])=>{
-    const b=el('button','tile t-'+ic);b.type='button';b.innerHTML=ICONOS[ic];
+  vis.forEach(x0=>{const [ic,t,sub,fn,badge]=x0;
+    const b=el('button','tile t-'+ic);b.type='button';b.dataset.k=x0[5];b.innerHTML=ICONOS[ic];
     b.append(el('b','',t),el('small','',sub));
     if(badge){const x=el('span','tbadge',badge);b.append(x)}
     b.onclick=fn;box.append(b);
+    if(ic==='asg'){const g=asigGrupo();if(g&&g.color)b.style.borderLeft='8px solid '+g.color}
   });
 }
 async function abrirRegistro(){
@@ -1906,12 +1972,12 @@ function capasBase(map){
 }
 
 /* ---------- cargo automático del comandante del incidente ---------- */
-const CARGO_CI='Comandante de Incidentes';
+const CARGO_CI='CI';
 function autoCargoCmd(n){
   if(!nonEmpty(n))return;
   const cur=getP(D,'rpt.cmd.c');
   const deLista=(AJ.plantilla||[]).some(x=>x.c&&x.c===cur);
-  if(!nonEmpty(cur)||cur===CARGO_CI||deLista)setP(D,'rpt.cmd.c',CARGO_CI); /* un cargo escrito a mano no se pisa */
+  if(!nonEmpty(cur)||cur===CARGO_CI||/^comandante de incidentes?$/i.test(String(cur))||deLista)setP(D,'rpt.cmd.c',CARGO_CI); /* un cargo escrito a mano no se pisa */
 }
 
 /* ---------- estado de carga de cada registro ---------- */
@@ -2080,6 +2146,7 @@ async function reporteDeLlamado(x){
   D.extra=D.extra||{};D.extra._llam=x.emerg;
   const cats=(E.CATS||[]).map(c=>c[0]);const m=cats.find(c=>c===String(e.msg||'').toUpperCase());if(m)D.cat=m;
   if(e.lugar&&!D.dir)D.dir=e.lugar;
+  if(e.quien&&!D.rep)D.rep=e.quien;if(e.tel&&!D.reptel)D.reptel=e.tel;
   if(e.lat!==''&&e.lat!=null&&isFinite(+e.lat)&&!okNum(D.lat)){D.lat=(+e.lat).toFixed(6);D.lon=(+e.lon).toFixed(6)}
   renderStep();toast('Este reporte quedó vinculado a la emergencia.');
 }
@@ -2491,7 +2558,7 @@ verEmergenciasActivas=function(){show('emerg')};
 
 /* cronología: sólo la duración del evento (si pasa de la medianoche se calcula bien; más de 24 h se escribe a mano) */
 cronoCalc=function(){
-  const ref=document.querySelector('[data-p="hreg"]')||document.querySelector('[data-p="hsal"]');if(!ref||typeof D==='undefined'||!D)return;
+  const ref=document.querySelector('[data-p="hreg"]')||document.querySelector('[data-p="hsal"]')||document.querySelector('[data-p="rpt.acc"]');if(!ref||typeof D==='undefined'||!D)return;
   let p=document.getElementById('crono-calc');if(!p){p=document.createElement('p');p.id='crono-calc';p.className='derived';p.style.cssText='margin:6px 0;padding:8px;border:1px dashed var(--line);border-radius:8px';ref.insertAdjacentElement('afterend',p)}
   const d=lapse(D.hora,D.hfin);
   p.innerHTML='Duración del evento: <b>'+(d==null||d<=0||d>=1440?'—':durTxt(Math.round(d)))+'</b>';
@@ -2522,7 +2589,8 @@ function emergDetalle(box,e){
   const back=el('button','btn alt sm','← Todas las emergencias');back.type='button';back.onclick=()=>{EMG.sel=null;pintarEmerg()};box.append(back);
   const c=el('section','card emgc f-'+e.fase);
   const h=el('h3','');h.append(el('span','faseb f-'+e.fase,FASE_TXT[e.fase]||''),document.createTextNode(' '+(e.num?e.num+' · ':'')+e.msg));c.append(h);
-  if(e.mia)c.append(el('p','derived','✅ Usted está asignado a esta emergencia.'));
+  c.append(el('p','derived',etiquetaEmerg(e)));
+  if((e.preG||[]).length)c.append(el('p','derived','📌 Preasignada a: '+e.preG.map(g=>g.nombre+(g.cmd?' (líder '+g.cmd+')':'')).join(', ')));
   c.append(el('p','derived','Llamado a las '+hh12(e.cuando)));
   if(e.lugar)c.append(el('p','','📍 Dirección: '+e.lugar));
   if(hayCoord(e))c.append(el('p','sa-co',gms(e.lat,e.lon)));
@@ -2534,6 +2602,7 @@ function emergDetalle(box,e){
     const m=el('a','btn alt','Ver en el mapa');m.href=mapsUrl(e.lat,e.lon);m.target='_blank';m.rel='noopener';row.append(m);
     const k=el('button','btn alt','Copiar coordenadas');k.type='button';k.onclick=()=>{copyTxt(gms(e.lat,e.lon));toast('Coordenadas copiadas.')};row.append(k)}
   if(e.tel){const a=el('a','btn alt','Llamar al contacto');a.href='tel:'+e.tel;row.append(a)}
+  if(e.soyCmd&&online){const mv=el('button','btn','🗺️ Mapa en vivo de la emergencia');mv.type='button';mv.onclick=()=>mapaVivoCI(e);row.append(mv)}
   c.append(row);
   /* mando */
   const mando=el('div','emggrp');mando.append(el('b','','Mando del incidente (SCI)'));
@@ -2562,6 +2631,22 @@ function emergDetalle(box,e){
   else c.append(el('p','derived','La fase la cambia el comandante de incidentes de esta emergencia'+(e.cmd?' ('+e.cmd+')':'')+'.'));
   box.append(c);
 }
+/* tarjetas de todas las emergencias activas, siempre en este orden: asignadas al usuario, preasignadas a su grupo, activas */
+function ordenEmerg(l){return l.slice().sort((a,b)=>(b.mia?2:b.pre?1:0)-(a.mia?2:a.pre?1:0)||(b.cuando||0)-(a.cuando||0))}
+function etiquetaEmerg(e){return e.mia?'✅ Asignada a usted':e.pre?'📌 Preasignada a su grupo':'🔴 Activa'}
+function tarjetasEmerg(box,l,excluir){
+  ordenEmerg(l).filter(e=>e.id!==excluir).forEach(e=>{
+    const c=el('section','card emgc f-'+e.fase);c.style.cursor='pointer';
+    const h=el('h3','');h.append(el('span','faseb f-'+e.fase,FASE_TXT[e.fase]||''),document.createTextNode(' '+(e.num?e.num+' · ':'')+e.msg));c.append(h);
+    c.append(el('p','derived',etiquetaEmerg(e)+(e.pre&&!e.mia?': sigue después de la que está atendiendo.':'')));
+    if((e.preG||[]).length)c.append(el('p','derived','📌 Preasignada a: '+e.preG.map(g=>g.nombre+(g.cmd?' (líder '+g.cmd+')':'')).join(', ')));
+    if(e.lugar)c.append(el('p','','📍 '+e.lugar));
+    c.append(el('p','derived','Comandante de incidentes: '+(e.cmd||'sin asignar')+' · llamado a las '+hh12(e.cuando)));
+    const b=el('button','btn','Abrir la emergencia');b.type='button';b.onclick=ev=>{ev.stopPropagation();EMG.sel=e.id;pintarEmerg()};c.append(b);
+    c.onclick=()=>{EMG.sel=e.id;pintarEmerg()};
+    box.append(c);
+  });
+}
 pintarEmerg=async function(silencio){
   const box=$('emergbox');if(!box)return;
   if(!silencio){box.innerHTML='';box.append(el('p','derived','Cargando…'))}
@@ -2571,7 +2656,7 @@ pintarEmerg=async function(silencio){
   box.innerHTML='';
   const l=EMG.lista;
   if(!r||!r.ok)box.append(el('p','derived','Sin conexión: se muestra lo último recibido'+(EMG.t?' a las '+hh12(EMG.t):'')+'.'));
-  if(EMG.sel){const e=l.find(x=>x.id===EMG.sel);if(e){emergDetalle(box,e);return}EMG.sel=null}
+  if(EMG.sel){const e=l.find(x=>x.id===EMG.sel);if(e){emergDetalle(box,e);if(l.length>1){box.append(el('h3','','Otras emergencias activas'));tarjetasEmerg(box,l,e.id)}return}EMG.sel=null}
   const per=new Set(),veh=new Set();
   l.forEach(e=>{[].concat(e.grupos.flatMap(g=>g.unidades),e.sueltas).forEach(u=>{if(u.veh)veh.add(u.veh);(u.pers||[]).forEach(p=>per.add(p.n))})});
   const res=el('section','card emgres');
@@ -2579,17 +2664,7 @@ pintarEmerg=async function(silencio){
   box.append(res);
   if(!l.length){const nc=el('section','card');nc.append(el('p','','No hay emergencias activas en este momento.'));box.append(nc);return}
   /* primero la emergencia en la que está asignado el usuario; luego las más recientes */
-  l.slice().sort((a,b)=>(b.mia?2:b.pre?1:0)-(a.mia?2:a.pre?1:0)||(b.cuando||0)-(a.cuando||0)).forEach(e=>{
-    const c=el('section','card emgc f-'+e.fase);c.style.cursor='pointer';
-    const h=el('h3','');h.append(el('span','faseb f-'+e.fase,FASE_TXT[e.fase]||''),document.createTextNode(' '+(e.num?e.num+' · ':'')+e.msg));c.append(h);
-    if(e.mia)c.append(el('p','derived','✅ Usted está asignado a esta emergencia.'));
-    else if(e.pre)c.append(el('p','derived','📌 Preasignada a su grupo: sigue después de la que está atendiendo.'));
-    if(e.lugar)c.append(el('p','','📍 '+e.lugar));
-    c.append(el('p','derived','Comandante de incidentes: '+(e.cmd||'sin asignar')+' · llamado a las '+hh12(e.cuando)));
-    const b=el('button','btn','Abrir la emergencia');b.type='button';b.onclick=ev=>{ev.stopPropagation();EMG.sel=e.id;pintarEmerg()};c.append(b);
-    c.onclick=()=>{EMG.sel=e.id;pintarEmerg()};
-    box.append(c);
-  });
+  tarjetasEmerg(box,l,null);
 };
 
 /* ---------- reportes pendientes: ventana con plazo de 48 horas, enlace directo y vínculo con «Realizar registro» ---------- */
@@ -2711,8 +2786,7 @@ function bitacoraLive(txt){
 {const ol0=openLog;openLog=async function(){
   await ol0.apply(this,arguments);
   try{
-    if(!$('bl-box')){const b=document.createElement('div');b.id='bl-box';b.innerHTML='<div style="display:flex;gap:6px;align-items:flex-start"><p id="bl-st" class="derived" style="flex:1;margin:0"></p><button type="button" class="btn alt sm" id="bl-x" aria-label="Cerrar el aviso">✕</button></div><div class="bl-pick" hidden><label class="derived">Vincular esta bitácora a una emergencia activa <select id="bl-sel"></select></label></div>';$('log_list').parentNode.insertBefore(b,$('log_list'));
-      $('bl-x').onclick=()=>{$('bl-st').hidden=true};
+    if(!$('bl-box')){const b=document.createElement('div');b.id='bl-box';b.innerHTML='<div style="display:flex;gap:6px;align-items:flex-start"><p id="bl-st" class="derived" style="flex:1;margin:0"></p></div><div class="bl-pick" hidden><label class="derived">Vincular esta bitácora a una emergencia activa <select id="bl-sel"></select></label></div>';$('log_list').parentNode.insertBefore(b,$('log_list'));
       $('bl-sel').onchange=()=>{const v=$('bl-sel').value;if(!v)return;D.extra=D.extra||{};D.extra._llam=v;autosave();toast('Bitácora vinculada a la emergencia.');bitacoraLive('')}}
     blEstado(BL.txt||'Comprobando la conexión con la central…',BL.cls||'info');bitacoraLive('')
   }catch(e){}
@@ -2841,11 +2915,18 @@ function autollenarPersonal(x){
   const uni=atencionDe(x);if(!uni.length)return;
   const pers=[...new Set(uni.flatMap(u=>u.pers))].filter(Boolean),veh=[...new Set(uni.map(u=>u.veh).filter(Boolean))];
   let hizo=false;
+  /* la hora del despacho de la central es la salida de la estación; la del llamado, la alerta (quedan anotadas en la bitácora) */
+  try{const hm=t=>{const d=new Date(+t);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
+    const em=(EMG.lista||[]).find(z=>z.id===x.emerg);
+    if(!D.hora&&em&&em.cuando){D.hora=hm(em.cuando);hizo=true}
+    if(!D.hsal&&x.cuando){D.hsal=hm(x.cuando);hizo=true}
+    if(hizo&&!modoSimple()){D.extra=D.extra||{};sincronizarCrono()}}catch(e){}
   if(!(D.pers||[]).length&&pers.length){setV('pers',ordenarPorRango(pers));hizo=true}
   if(!nonEmpty(D.veh)&&veh.length){setV('veh',veh.join(', '));hizo=true}
   /* «A cargo de la unidad»: el líder del grupo si va en ese vehículo; si no, el maquinista; si no, el primero de la lista */
   const o=Object.assign({grupos:[]},getP(D,'rpt.sci')||{});
-  if(!(o.grupos||[]).length){const gs=uni.filter(u=>u.veh&&u.pers.length).map(u=>({u:u.veh,f:'',n:aCargoDe(u)}));if(gs.length){o.grupos=gs;setP(D,'rpt.sci',o);hizo=true}}
+  if(!(o.grupos||[]).length){const gs=uni.filter(u=>u.veh&&u.pers.length).map(u=>({u:u.veh,f:'',n:aCargoDe(u),p:u.pers.map(x=>typeof x==='string'?x:x.n)}));if(gs.length){o.grupos=gs;setP(D,'rpt.sci',o);hizo=true}}
+  {let cambioP=false;(o.grupos||[]).forEach(g=>{const u=uni.find(z=>z.veh===g.u);if(u&&u.pers&&u.pers.length&&!(g.p&&g.p.length)){g.p=u.pers.map(x=>typeof x==='string'?x:x.n);cambioP=true}});if(cambioP&&!hizo){setP(D,'rpt.sci',o);autosave()}}
   if(hizo){D.extra=D.extra||{};D.extra._auto=1;autosave();renderStep();toast('Personal, vehículos y unidad a cargo llenados con lo que asignó la central. Puede cambiarlos.')}
 }
 {const rd3=reporteDeLlamado;reporteDeLlamado=async function(x){
@@ -2881,11 +2962,47 @@ abrirRegistro=async function(){
   });
 };
 
+/* ---------- un solo reporte por emergencia: si ya hay uno (aquí o en otro dispositivo) se abre ese, no se crea otro ---------- */
+const llamDe=r=>(r&&r.datos&&r.datos.extra&&r.datos.extra._llam)||'';
+{const rd5=reporteDeLlamado;reporteDeLlamado=async function(x){
+  if(x&&x.emerg){
+    try{if(online&&loggedIn())await traerMisRegs(true)}catch(e){}
+    const regs=(await DB.all('regs')).filter(r=>llamDe(r)===x.emerg);
+    const bor=regs.filter(r=>r.estado!=='final'&&editable(r)).sort((a,b)=>b.touch-a.touch)[0];
+    if(bor){await abrir(bor.tmp);toast('Se abrió el borrador que ya llevaba de esta emergencia.');return}
+    const fin=regs.filter(r=>r.estado==='final').sort((a,b)=>b.touch-a.touch)[0];
+    if(fin&&editable(fin)){await abrir(fin.tmp);toast('Esta emergencia ya tiene su reporte terminado: puede corregirlo.');return}
+    if(fin){toast('Esta emergencia ya tiene su reporte terminado ('+(fin.num||'')+').');show('list');return}
+  }
+  return rd5.apply(this,arguments);
+}}
 /* ---------- los reportes y borradores son de la persona, no del teléfono: se traen de la central al entrar con su usuario ---------- */
-let MR_T=0;
+let MR_T=0,MF_BUSY=false;
+/* las fotos de mis reportes también se traen (hasta 6 por vuelta) para que el reporte no quede sin ellas en otro dispositivo */
+async function traerMisFotos(){
+  if(MF_BUSY||!online||!loggedIn())return 0;MF_BUSY=true;let n=0;
+  try{
+    const regs=(await DB.all('regs')).filter(r=>r.subida>=1||r.deOtro).sort((a,b)=>b.touch-a.touch).slice(0,25);
+    if(!regs.length)return 0;
+    const r=await call('misFotos',{tmps:regs.map(x=>x.tmp)});if(!r||!r.ok)return 0;
+    for(const f of (r.fotos||[])){
+      if(n>=6)break;
+      const key=f.tmp+'#'+f.n;if(f.video)continue;
+      const loc=await DB.get('fotos',key);if(loc)continue;
+      const g=await call('misFotoGet',{archivo:f.archivo});if(!g||!g.ok)continue;
+      const blob=await (await fetch(g.d)).blob();
+      const c=await compress(new File([blob],'foto.jpg',{type:blob.type||'image/jpeg'}));
+      await DB.put('fotos',{key,tmp:f.tmp,n:f.n,blob:c.blob,thumb:c.thumb,w:c.w,h:c.h,desc:f.desc||'',up:true,t:Date.now()});
+      const rg=await DB.get('regs',f.tmp);if(rg&&(rg.sig||1)<=f.n)await DB.upd('regs',f.tmp,x=>{x.sig=f.n+1});
+      n++;
+    }
+    if(n&&REG){try{FOTOS=await DB.byTmp(REG.tmp);if(VISTA==='form')drawThumbs()}catch(e){}}
+  }catch(e){}finally{MF_BUSY=false}
+  return n;
+}
 async function traerMisRegs(fuerza){
   if(!online||!loggedIn())return 0;
-  if(!fuerza&&Date.now()-MR_T<60000)return 0;
+  if(!fuerza&&Date.now()-MR_T<15000)return 0;
   MR_T=Date.now();
   let n=0;
   try{
@@ -2893,19 +3010,126 @@ async function traerMisRegs(fuerza){
     const borr=new Set(lsGet('cbv_delq',[]));
     for(const s of (r.regs||[])){
       if(borr.has(s.tmp))continue;
-      const loc=await DB.get('regs',s.tmp);if(loc)continue;   /* lo que está en este teléfono manda: ya se sincroniza solo */
+      const loc=await DB.get('regs',s.tmp);
+      if(loc){
+        /* si en otro equipo se avanzó más y aquí no hay cambios sin enviar, se trae la versión más reciente */
+        if(loc.ver===loc.subida&&!loc.pedido&&Number(s.actualizado)>Number(loc.touch||0)+2000&&!(REG&&REG.tmp===loc.tmp&&VISTA==='form')&&s.estado!=='final'){
+          await DB.put('regs',Object.assign({},loc,{touch:s.actualizado,datos:s.datos||loc.datos,ver:loc.ver+1,subida:loc.ver+1}));n++;
+        }
+        continue;
+      }
       const fin=s.estado==='final';
       await DB.put('regs',{tmp:s.tmp,num:s.num||null,creado:s.creado,touch:s.actualizado,ver:1,subida:1,estado:s.estado,pedido:false,datos:s.datos||{},sig:1,docVer:1,finAt:fin?s.actualizado:undefined,step:0,deOtro:true});
       n++;
     }
     if(n){try{await pintarBorradores()}catch(e){}if(VISTA==='list')renderList();toast(n+' reporte(s) o borrador(es) suyos se trajeron de la central.')}
+    try{n+=await traerMisFotos()}catch(e){}
   }catch(e){}
   return n;
 }
 {const rl9=renderList;renderList=async function(){try{await traerMisRegs()}catch(e){}return rl9.apply(this,arguments)}}
 setTimeout(()=>{if(loggedIn())traerMisRegs(true)},6000);
-setInterval(()=>{if(loggedIn()&&online)traerMisRegs()},3*60000);
+setInterval(()=>{if(loggedIn()&&online)traerMisRegs()},90000);
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&loggedIn()&&online)setTimeout(()=>traerMisRegs(true),1500)});
 window.addEventListener('online',()=>setTimeout(()=>traerMisRegs(true),2000));
+
+/* ---------- «Asignación»: grupo de intervención del usuario (nombre, color, integrantes, vehículo, quién va a cargo); se actualiza solo ---------- */
+function asigGrupo(){const l=(ASIG&&ASIG.lista)||[];const x=l.find(z=>z.grupo&&z.grupo.id);return x?x.grupo:null}
+function asigSub(){const g=asigGrupo();return g?(g.nombre||'Grupo de intervención'):'Sin grupo asignado'}
+function asigHtml(){
+  const l=(ASIG&&ASIG.lista)||[],x=l.find(z=>z.grupo&&z.grupo.id),g=x&&x.grupo;
+  if(!g)return '<h3>Asignación</h3><p>Todavía no pertenece a un grupo de intervención. Cuando la central lo asigne, aparecerá aquí con su color, sus compañeros y el vehículo.</p><div class="row"><button class="btn alt" type="button" id="asg-x">Cerrar</button></div>';
+  const mias=l.filter(z=>z.grupo&&z.grupo.id===g.id);
+  const uni=(g.unidades||[]).map(u=>'<li><b>'+esc(u.veh||'—')+'</b>: '+esc((u.pers||[]).join(', ')||'sin personal')+'</li>').join('');
+  const mio=(x.veh?'<p>Su vehículo: <b>'+esc(x.veh)+'</b>'+(x.mi_rol?' · '+esc(x.mi_rol):'')+'</p>':'');
+  const cargo=g.cmd||(g.maq?g.maq:'');
+  return '<h3><span style="display:inline-block;width:14px;height:14px;border-radius:50%;vertical-align:-2px;margin-right:6px;background:'+esc(g.color||'#888')+'"></span>'+esc(g.nombre||'Grupo de intervención')+'</h3>'
+    +'<p>Color del grupo: <span style="display:inline-block;width:42px;height:14px;border-radius:4px;vertical-align:-2px;background:'+esc(g.color||'#888')+'"></span></p>'
+    +'<p>A cargo (líder del grupo): <b>'+esc(cargo||'Sin definir')+'</b>'+(g.maq&&g.cmd?' · Maquinista: '+esc(g.maq):'')+'</p>'+mio
+    +'<p><b>Vehículos e integrantes</b></p><ul>'+(uni||'<li>Sin unidades</li>')+'</ul>'
+    +(mias.some(z=>z.emerg)?'<p class="derived">Grupo en emergencia activa.</p>':'<p class="derived">Grupo disponible; la central le avisará del próximo llamado.</p>')
+    +'<div class="row"><button class="btn alt" type="button" id="asg-x">Cerrar</button></div>';
+}
+let ASG_ABIERTO=false;
+function abrirAsig(){ASG_ABIERTO=true;dlgA(asigHtml(),()=>{const b=$('asg-x');if(b)b.onclick=()=>{ASG_ABIERTO=false;$('dlg').close()}});const d=$('dlg');d.addEventListener('close',()=>{ASG_ABIERTO=false},{once:true})}
+{const pa=pintarAsig;pintarAsig=function(){pa.apply(this,arguments);try{const t=document.querySelector('.tile.t-asg');if(t){const g=asigGrupo();const s=t.querySelector('small');if(s)s.textContent=asigSub();t.style.borderLeft=g&&g.color?'8px solid '+g.color:''}
+  if(ASG_ABIERTO&&$('dlg').open&&$('asg-x')){const x=$('asg-x');dlgA(asigHtml(),()=>{const b=$('asg-x');if(b)b.onclick=()=>{ASG_ABIERTO=false;$('dlg').close()}})}}catch(e){}}}
+
+/* ---------- cámara en ráfaga: varias fotos seguidas sin salir; si el navegador no la permite se usa la cámara normal ---------- */
+let CAM_S=null;
+async function camaraRafaga(){
+  if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)){$('cam').click();return}
+  let s;try{s=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false})}catch(e){$('cam').click();return}
+  CAM_S=s;let n=0;
+  dlgA('<h3>Cámara</h3><video id="cr-v" autoplay playsinline muted style="width:100%;max-height:60vh;background:#000;border-radius:8px"></video><p class="derived" id="cr-n">Toque «Tomar foto» las veces que necesite; todas se cargan al formulario.</p><div class="row"><button class="btn big" type="button" id="cr-t">📷 Tomar foto</button><button class="btn alt big" type="button" id="cr-ok">Listo</button></div>',()=>{
+    const v=$('cr-v');v.srcObject=s;
+    const parar=()=>{try{CAM_S&&CAM_S.getTracks().forEach(t=>t.stop())}catch(e){}CAM_S=null};
+    $('dlg').addEventListener('close',parar,{once:true});
+    $('cr-ok').onclick=()=>{parar();$('dlg').close()};
+    $('cr-t').onclick=async()=>{
+      if(!v.videoWidth)return;const c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;c.getContext('2d').drawImage(v,0,0);
+      const b=await new Promise(r=>c.toBlob(r,'image/jpeg',.9));if(!b)return;
+      const f=new File([b],'camara-'+Date.now()+'.jpg',{type:'image/jpeg',lastModified:Date.now()});
+      await addFotos([f],true);n++;$('cr-n').textContent=n+' foto'+(n>1?'s':'')+' tomada'+(n>1?'s':'')+' y cargada'+(n>1?'s':'')+'. Siga tomando o toque «Listo».';
+      v.style.opacity=.3;setTimeout(()=>{v.style.opacity=1},120)}
+  });
+}
+
+/* ---------- vista previa: los botones del menú se pueden arrastrar para cambiar el orden (el superadministrador lo guarda desde la plataforma) ---------- */
+{const pm0=pintarMenu;pintarMenu=function(){pm0.apply(this,arguments);
+  if(!document.body.classList.contains('vp'))return;
+  const box=$('menugrid');if(!box)return;let drag=null;
+  [...box.querySelectorAll('.tile')].forEach(t=>{t.draggable=true;t.style.cursor='grab';
+    t.ondragstart=e=>{drag=t;try{e.dataTransfer.setData('text/plain',t.dataset.k||'')}catch(x){}t.style.opacity=.4};
+    t.ondragend=()=>{t.style.opacity=1};
+    t.ondragover=e=>e.preventDefault();
+    t.ondrop=e=>{e.preventDefault();if(!drag||drag===t)return;const a=[...box.children],i=a.indexOf(drag),j=a.indexOf(t);if(i<j)t.after(drag);else t.before(drag);
+      const orden=[...box.querySelectorAll('.tile')].map(x=>x.dataset.k).filter(Boolean);try{parent.postMessage({tipo:'vp-orden',cual:'menu',orden},'*')}catch(x){}}});
+}}
+
+/* ---------- mapa en vivo: solo el comandante de incidentes y solo mientras la emergencia esté activa; muestra solo las unidades asignadas (3 capas) ---------- */
+let MVV={t:null,map:null,cap:null};
+async function mapaVivoCI(e){
+  clearInterval(MVV.t);
+  dlgA('<h3>Mapa en vivo · '+esc((e.num?e.num+' · ':'')+(e.msg||''))+'</h3><div id="mvv-map" style="height:56vh;border-radius:8px"></div><p class="derived" id="mvv-n">Cargando…</p><div class="row"><button class="btn alt" type="button" id="mvv-x">Cerrar</button></div>',()=>{
+    const cerrar=()=>{clearInterval(MVV.t);MVV.map&&MVV.map.remove();MVV.map=null;if($('dlg').open)$('dlg').close()};
+    $('mvv-x').onclick=cerrar;$('dlg').addEventListener('close',()=>{clearInterval(MVV.t);try{MVV.map&&MVV.map.remove()}catch(x){}MVV.map=null},{once:true});
+    if(!window.L){$('mvv-n').textContent='El mapa necesita conexión a internet.';return}
+    const map=L.map('mvv-map').setView(hayCoord(e)?[+e.lat,+e.lon]:[4.53,-76.1],14);MVV.map=map;capasBase(map);MVV.cap=L.layerGroup().addTo(map);
+    let ajustado=false;
+    const pintar=async()=>{
+      let r;try{r=await call('mapaEmerg',{id:e.id})}catch(x){r=null}
+      if(!r||!r.ok){$('mvv-n').textContent=(r&&r.error)||'Sin conexión.';if(r&&/ya no está activa|solo es para/.test(r.error||'')){clearInterval(MVV.t);setTimeout(()=>{try{$('dlg').close()}catch(x){}},2500)}return}
+      MVV.cap.clearLayers();const pts=[];
+      if(r.punto){L.marker([r.punto.lat,r.punto.lon]).addTo(MVV.cap).bindPopup('📍 '+esc(r.lugar||'Emergencia'));pts.push([r.punto.lat,r.punto.lon])}
+      (r.unidades||[]).forEach(u=>{const m=L.circleMarker([u.lat,u.lon],{radius:9,color:'#b00',fillColor:'#fc0',fillOpacity:.9,weight:2}).addTo(MVV.cap);m.bindTooltip((u.veh?u.veh+' · ':'')+u.n+(u.hace>120?' (hace '+Math.round(u.hace/60)+' min)':''),{permanent:true,direction:'top'});pts.push([u.lat,u.lon])});
+      if(!ajustado&&pts.length>1){map.fitBounds(pts,{padding:[30,30],maxZoom:17});ajustado=true}
+      $('mvv-n').textContent=(r.unidades||[]).length+' unidad(es) compartiendo ubicación · se actualiza cada 15 s';
+    };
+    pintar();MVV.t=setInterval(pintar,15000);setTimeout(()=>map.invalidateSize(),300);
+  });
+}
+
+/* ---------- la bitácora es la cronología: sus anotaciones con clave llenan las horas del reporte y, al revés, las horas ya conocidas (p. ej. el despacho de la central) se anotan en la bitácora ---------- */
+const CRONO_TX={hora:'Se recibió el llamado de emergencia',hsal:'La unidad salió desde la estación',hlle:'La unidad llegó al lugar del evento',hfin:'Se dio por terminada la atención en el sitio',hdes:'La unidad inició la desmovilización hacia el cuartel',hreg:'La unidad llegó nuevamente a la estación'};
+const CRONO_K=Object.keys(CRONO_TX);
+const CRONO_P=k=>k==='hdes'?'rpt.hdes':k;
+function derivarTiempos(){
+  if(!D)return;D.extra=D.extra||{};
+  const l=accList(),prev=D.extra._bk||{},nuevo={};let cambio=false;
+  CRONO_K.forEach(k=>{const p=CRONO_P(k),es=l.filter(x=>x.k===k&&x.h),e=es[es.length-1];
+    if(e){nuevo[k]=e.h;if(getP(D,p)!==e.h){setP(D,p,e.h);if(D.na)delete D.na[p];cambio=true}}
+    else if(prev[k]&&getP(D,p)===prev[k]){setP(D,p,'');cambio=true}});
+  D.extra._bk=nuevo;
+  if(cambio){try{onChanged('hora');onChanged('hfin')}catch(e){}}
+  autosave();
+}
+function sincronizarCrono(){
+  if(!D||modoSimple())return;
+  const l=accList().slice();let cambio=false;
+  CRONO_K.forEach(k=>{const v=getP(D,CRONO_P(k));if(v&&!l.some(x=>x.k===k)){l.push({h:v,a:CRONO_TX[k],k});cambio=true}});
+  if(cambio){l.sort((x,y)=>String(x.h).localeCompare(String(y.h)));setP(D,'rpt.acc',l);D.extra=D.extra||{};D.extra._bk=D.extra._bk||{};CRONO_K.forEach(k=>{if(l.some(x=>x.k===k))D.extra._bk[k]=getP(D,CRONO_P(k))})}
+}
 
 
 /* ================= MIS REGISTROS ================= */
@@ -2934,7 +3158,10 @@ async function verReporte(reg){
   }catch(e){$('pv_msg').textContent='No se pudo mostrar la vista previa: '+humanErr(e)}
 }
 async function renderList(){
-  const regs=(await DB.all('regs')).sort((a,b)=>b.creado-a.creado);
+  const todosR=(await DB.all('regs')).sort((a,b)=>b.creado-a.creado);
+  const llamR=r=>(r.datos&&r.datos.extra&&r.datos.extra._llam)||'';
+  const finR=new Set(todosR.filter(r=>r.estado==='final').map(llamR).filter(Boolean));
+  const regs=todosR.filter(r=>!(r.estado!=='final'&&llamR(r)&&finR.has(llamR(r))));   /* sin borradores repetidos de una emergencia ya reportada */
   const dr=regs.filter(r=>r.estado!=='final'&&(hasContent(r)||r.num)).length;
   $('nlist').textContent=dr?'('+dr+' pendiente'+(dr>1?'s':'')+')':'';
   const box=$('recs');box.innerHTML='';
@@ -3045,7 +3272,7 @@ async function cerrarSesion(){
   if(n>0&&!confirm('Hay '+n+' envío(s) pendiente(s) en este teléfono. Si cierra sesión no se podrán enviar hasta que vuelva a entrar. ¿Cerrar sesión de todos modos?'))return;
   if(!n&&!confirm('¿Cerrar sesión en este teléfono?'))return;
   if(TR.on)stopTrack();
-  AJ={clave:'',nombre:'',roster:AJ.roster||[]};lsSet('cbv_aj',AJ);guardarAuthSW();
+  if(AJ.nombre)lsSet('cbv_ultnom',AJ.nombre);AJ={clave:'',nombre:'',roster:AJ.roster||[]};lsSet('cbv_aj',AJ);guardarAuthSW();
   show('setup');setChip();
 }
 
@@ -3058,13 +3285,13 @@ function startApp(){
 }
 function bindForm(){
   const onFiles=cam=>e=>{const fs=[...e.target.files];e.target.value='';if(fs.length)addFotos(fs,cam)};
-  $('barcam').onclick=()=>$('cam').click();$('cam').onchange=onFiles(true);$('fotos').onchange=onFiles(false);$('vids').onchange=async e=>{const l=[...e.target.files];e.target.value='';if(l.length)await addVideos(l)};
+  $('barcam').onclick=()=>camaraRafaga();$('cam').onchange=onFiles(true);$('fotos').onchange=onFiles(false);$('vids').onchange=async e=>{const l=[...e.target.files];e.target.value='';if(l.length)await addVideos(l)};
   $('btnPrev').onclick=()=>{msg('');goStep(stepIdx-1)};
   $('btnNext').onclick=nextStep;
   $('stepsel').onchange=e=>{showBad=true;goStep(+e.target.value)};
   $('btnDraft').onclick=async()=>{await guardar(false)};
   $('btnOtra').onclick=async()=>{
-    if(REG||D.cat||D.dir||D.desc||accList().length){
+    if(REG||hasContent({datos:D})||accList().length){
       await guardar(false);
       toast('Quedó guardado como «borrador pendiente por diligenciar» en Mis registros.');
     }
@@ -3139,7 +3366,7 @@ function bindAll(){
       if(!r.ok){$('s_err').textContent=r.error==='bloqueado'?'Demasiados intentos fallidos. Espere 10 minutos o pida ayuda a Comandancia.':(r.error==='licencia'?(r.detalle||'La licencia del sistema no está vigente.'):'La cédula o la clave no son correctas. Si no la ha cambiado, su clave es su número de cédula.');$('s_go').disabled=false;return}
       AJ={u:r.usuario,usuario:r.usuario,t:r.token,nombre:r.nombre,rol:r.rol,yo:r.yo||{},roster:r.personal||[],plantilla:r.plantilla||[],clave:''};
       lsSet('cbv_aj',AJ);if(r.cfg)applyCfg(r.cfg);
-      if(r.rol&&r.rol!=='campo'){irPanelCentral(r);return}
+      if(r.rol&&r.rol!=='campo')lsSet('cbv_central2',{u:r.usuario,t:r.token,n:r.nombre,r:r.rol});   /* con cualquier rol se entra a la aplicación; el menú trae el botón «Panel de la central» */
       $('s_pass').value='';$('s_go').disabled=false;finishSetup();
     }catch(x){$('s_err').textContent=humanErr(x)+(x.snip?' ['+x.snip+']':'');$('s_go').disabled=false}
   };

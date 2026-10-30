@@ -293,19 +293,14 @@
     // 9. resumen de acciones (hasta 57 filas)
     // descripción de los hechos (tercera persona) + una línea + resumen de acciones; si no cabe, sigue en la hoja CONTINUACIÓN
     const lineas = [];
-    wrapAll(r.desc, 78).forEach(t => lineas.push({ h: '', a: t }));
-    if (lineas.length) lineas.push({ h: '', a: '' });
+    /* primero la cronología / bitácora, después una casilla y la descripción de los hechos */
     (rp.acc || []).slice().sort((a, b) => h24(a.h).localeCompare(h24(b.h))).forEach(x => wrapAll(x.a, 72).forEach((t, k) => lineas.push({ h: k === 0 ? h24(x.h) : '', a: t })));
-    const CAP = 56;                       // filas 3 a 58 del formato
-    const cabe = lineas.length <= CAP ? lineas : lineas.slice(0, CAP - 1);
-    const resto = lineas.length <= CAP ? [] : lineas.slice(CAP - 1);
-    cabe.forEach((x, i) => { const n = 3 + i; s = put(s, 'V' + n, x.h); s = put(s, 'X' + n, x.a); });
-    if (resto.length) s = put(s, 'X58', '(continúa en la hoja CONTINUACIÓN)');
-    if (!lineas.length) s = put(s, 'X3', 'N/A');
+    if (!blank(r.desc)) { if (lineas.length) lineas.push({ h: '', a: '' }); lineas.push({ h: '', a: 'DESCRIPCIÓN DE LOS HECHOS' }); wrapAll(r.desc, 78).forEach(t => lineas.push({ h: '', a: t })); }
     // 10. unidad que comandó
     const cm = rp.cmd || {}; const gradosDe = r.grados || {};
     s = pn(s, 'AD4', cm.n); s = pn(s, 'AG4', cm.g || gradosDe[cm.n]); s = pn(s, 'AH4', cm.c);
     ajusta(['AD4', 'AG4', 'AH4'], 'center', 'center');
+    { const gf = cm.g || gradosDe[cm.n] || ''; if (cm.n) { s = pn(s, 'AI3', [gf, cm.n].filter(Boolean).join(' ')); ajusta(['AI3'], 'center', 'bottom'); } }
     s = crecer(s, [4], Math.max(lineasDe(cm.n || 'N/A', anchoRango(s, 'AD', 'AF')), lineasDe(cm.g || gradosDe[cm.n] || 'N/A', anchoCol(s, 33)), lineasDe(cm.c || 'N/A', anchoCol(s, 34))) * LH + 4);
     // 11. unidades que intervinieron (12 nombres, dos columnas)
     if (!(r.pers || []).length) s = put(s, 'AD7', 'N/A');
@@ -319,18 +314,29 @@
     obs.push(`Duración: ${durOf(r)}. Unidades que asistieron: ${na(r.uni)}. Vehículos: ${na(r.veh)}.`);
     if (r.hsal) obs.push('Salida de estación: ' + h24(r.hsal) + ' h.');
     if (r.hfin) obs.push('Terminación de la emergencia: ' + h24(r.hfin) + ' h.');
+    if (rp.hdes) obs.push('Desmovilización hacia el cuartel: ' + h24(rp.hdes) + ' h.');
     if (r.hreg) obs.push('Llegada a la estación: ' + h24(r.hreg) + ' h.');
     if (r.area) obs.push('Área afectada: ' + r.area + (r.veg ? ' (' + r.veg + ')' : '') + '.');
     if (r.inc && (r.inc.tipo || r.inc.causa || r.inc.areaTipo)) { const i = r.inc; obs.push('Incendio forestal: tipo ' + (SNIF_TIPO[i.tipo] || na(i.tipo)) + ', causa ' + (SNIF_CAUSA[i.causa] || na(i.causa)) + ', cobertura ' + (SNIF_AREA[i.areaTipo] || na(i.areaTipo)) + '. Área protegida de orden nacional: ' + na(i.prot) + (i.protNom ? ' (' + i.protNom + ')' : '') + '.'); }
     if (r.extraTxt) obs.push(r.extraTxt);
     if (fuera.length) obs.push('Otros vehículos: ' + fuera.join(', '));
     if (!(rp.les || []).length && r.lesionados) obs.push('Lesionados: ' + r.lesionados + (r.trasladado ? ' (trasladado a ' + r.trasladado + ')' : ''));
-    if (r.canal) obs.push('Aviso recibido por: ' + r.canal + (r.rep ? ' (' + r.rep + ')' : '') + '.');
+    if (r.canal) obs.push('Aviso recibido por: ' + r.canal + (r.rep ? ' (' + r.rep + (r.reptel ? ', tel. ' + r.reptel : '') + ')' : (r.reptel ? ' (tel. ' + r.reptel + ')' : '')) + '.');
     if (!r.rpt) obs.push('Datos completados desde el registro ' + (r.id || '') + '. Faltan los demás campos del formato.');
     const obsTxt = obs.join(' ');
+    if (lineas.length) lineas.push({ h: '', a: '' });
+    wrapAll('OBSERVACIONES: ' + obsTxt, 72).forEach(t => lineas.push({ h: '', a: t }));
+    const CAP = 56;                       // filas 3 a 58 del formato
+    const cabe = lineas.length <= CAP ? lineas : lineas.slice(0, CAP - 1);
+    const resto = lineas.length <= CAP ? [] : lineas.slice(CAP - 1);
+    cabe.forEach((x, i) => { const n = 3 + i; s = put(s, 'V' + n, x.h); s = put(s, 'X' + n, x.a); });
+    { const vs = [], xs = []; cabe.forEach((x, i) => { vs.push('V' + (3 + i)); xs.push('X' + (3 + i)); }); if (vs.length) { ajusta(vs, 'center', 'center'); ajusta(xs, 'left', 'center'); } }
+    if (resto.length) s = put(s, 'X58', '(continúa en la hoja CONTINUACIÓN)');
+    if (!lineas.length) s = put(s, 'X3', 'N/A');
     s = unirCeldas(s, ['AD15:AK15', 'AD16:AK16', 'AD17:AK17', 'AD18:AK18', 'AD19:AK19', 'AD20:AK20'], 'AD15:AK20');
-    s = setCell(s, 'AD15', obsTxt); ajusta(['AD15'], 'left', 'top');
-    s = crecer(s, [15, 16, 17, 18, 19, 20], lineasDe(obsTxt, anchoRango(s, 'AD', 'AK')) * LH + 4);
+    const obsRef = 'Las observaciones del comandante y los datos complementarios están en el numeral 9 (Resumen de las acciones).';
+    s = setCell(s, 'AD15', obsRef); ajusta(['AD15'], 'left', 'top');
+    s = crecer(s, [15, 16, 17, 18, 19, 20], lineasDe(obsRef, anchoRango(s, 'AD', 'AK')) * LH + 4);
     // 7. organización del incidente (SCI) dentro de los recuadros del formato
     let dr = await zip.file('xl/drawings/drawing1.xml').async('string');
     dr = organigrama(dr, rp.sci || {}, rp.cmd || {}, r);
@@ -340,6 +346,7 @@
     else zip.file('xl/drawings/drawing1.xml', dr);
     if (resto.length) { let ct2 = await zip.file('[Content_Types].xml').async('string'); ct2 = await hojaContinuacion(zip, ct2, resto, r); zip.file('[Content_Types].xml', ct2); }
     if ((r.sistema || []).length) { let ct3 = await zip.file('[Content_Types].xml').async('string'); ct3 = await hojaContinuacion(zip, ct3, r.sistema, r, { n: 5, rid: 'rId11', sid: 11, name: 'REGISTROS_SISTEMA', titulo: 'ANEXO · REGISTROS DEL SISTEMA (hora · evento registrado automáticamente en la plataforma)' }); zip.file('[Content_Types].xml', ct3); }
+    { let wbx = await zip.file('xl/workbook.xml').async('string'); wbx = wbx.replace(/<sheet name="BORRADOR"(?![^>]*state=)/, '<sheet name="BORRADOR" state="hidden"'); zip.file('xl/workbook.xml', wbx); }
     zip.file('xl/styles.xml', st);
     s = paginaCarta(s);
     zip.file('xl/worksheets/sheet1.xml', s);
@@ -392,7 +399,8 @@
     dr = dr.replace(/<xdr:twoCellAnchor[\s\S]*?<\/xdr:twoCellAnchor>/g, a => /name="10 Rect/.test(a) ? a.replace(/(<xdr:to>[\s\S]*?)<xdr:row>17<\/xdr:row><xdr:rowOff>\d+<\/xdr:rowOff>/, '$1<xdr:row>18</xdr:row><xdr:rowOff>80000</xdr:rowOff>').replace(/(<a:ext cx="\d+" cy=")\d+/, '$1430000') : a);
     const grupos = (sci.grupos || []).filter(g => g && g.u);
     const ops = rol('JEFE DE OPERACIONES', 'ops');
-    grupos.slice(0, 6).forEach(g => ops.push({ t: g.u + ': ' + (g.f || '') + (g.n ? ' (' + g.n + ')' : ''), sz: 600 }));
+    grupos.slice(0, 6).forEach(g => { ops.push({ t: g.u + ': ' + (g.f || '') + (g.n ? ' (a cargo: ' + g.n + ')' : ''), sz: 600 }); if ((g.p || []).length) ops.push({ t: g.p.join(', '), sz: 520 }); });
+    if (grupos.length) dr = dr.replace(/<xdr:twoCellAnchor[\s\S]*?<\/xdr:twoCellAnchor>/g, an => /name="60 Rect/.test(an) ? an.replace(/(<xdr:from><xdr:col>15<\/xdr:col><xdr:colOff>)\d+/, '$160000').replace(/(<xdr:to>[\s\S]*?<xdr:colOff>)1352550/, '$11500000').replace(/(<xdr:to>[\s\S]*?)<xdr:row>26<\/xdr:row><xdr:rowOff>\d+<\/xdr:rowOff>/, '$1<xdr:row>' + (27 + Math.min(6, grupos.length * 2)) + '</xdr:row><xdr:rowOff>0</xdr:rowOff>') : an);
     dr = textoForma(dr, '60 Rectángulo', ops);
     dr = textoForma(dr, '61 Rectángulo', rol('JEFE DE PLANIFICACIÓN', 'pla'));
     dr = textoForma(dr, '62 Rectángulo', rol('JEFE DE LOGÍSTICA', 'log'));
@@ -488,8 +496,8 @@
     const lat = gmsLat(r.lat), lon = gmsLon(r.lon);
     const acc = (rp.acc || []).slice().sort((a, b) => h24(a.h).localeCompare(h24(b.h)));
     const fotos = o.fotos || r.fotos || [];
-    const css = `@page{size:21.59cm 27.94cm;margin:.5cm}*{box-sizing:border-box}body{font:10.5px/1.3 Arial,Helvetica,sans-serif;color:#000;margin:0}h1,h2{margin:0}.hd{display:grid;grid-template-columns:80px 1fr 80px;align-items:center;border:1.5px solid #000;padding:4px}.hd img{max-height:64px;max-width:76px}.hd .t{text-align:center;font-weight:700;font-size:13px}table{border-collapse:collapse;width:100%;margin-top:4px;page-break-inside:avoid}th,td{border:1px solid #000;padding:3px 5px;vertical-align:top;text-align:left}th{background:#eee;width:23%;font-weight:700}.sec{background:#222;color:#fff;font-weight:700;text-align:center;padding:3px;margin-top:6px;border:1px solid #000;page-break-after:avoid}.ck{margin-right:12px;white-space:nowrap}.org{display:grid;gap:6px;justify-items:center;border:1px solid #000;padding:6px;margin-top:4px;page-break-inside:avoid}.bx{border:1.5px solid #000;padding:4px 8px;text-align:center;min-width:130px}.bx b{display:block;font-size:9px}.row{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}.ph{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}.ph figure{margin:0;border:1px solid #000;padding:4px;text-align:center;page-break-inside:avoid}.ph img{max-width:100%;max-height:230px}.ph figcaption{font-size:9.5px}.sign{height:46px}`;
-    const gr = (sci.grupos || []).map(g => `<div class="bx"><b>Unidad ${E(g.u)}</b>${E(g.f || '')}${g.n ? '<br>' + E(g.n) : ''}</div>`).join('');
+    const css = `@page{size:21.59cm 27.94cm;margin:.5cm}*{box-sizing:border-box}body{font:10.5px/1.3 Arial,Helvetica,sans-serif;color:#000;margin:0;zoom:.95}h1,h2{margin:0}.hd{display:grid;grid-template-columns:80px 1fr 80px;align-items:center;border:1.5px solid #000;padding:4px}.hd img{max-height:64px;max-width:76px}.hd .t{text-align:center;font-weight:700;font-size:13px}table{border-collapse:collapse;width:100%;margin-top:4px;page-break-inside:avoid}th,td{border:1px solid #000;padding:3px 5px;vertical-align:top;text-align:left}th{background:#eee;width:23%;font-weight:700}.sec{background:#222;color:#fff;font-weight:700;text-align:center;padding:3px;margin-top:6px;border:1px solid #000;page-break-after:avoid}.ck{margin-right:12px;white-space:nowrap}.org{display:grid;gap:6px;justify-items:center;border:1px solid #000;padding:6px;margin-top:4px;page-break-inside:avoid}.bx{border:1.5px solid #000;padding:4px 8px;text-align:center;min-width:130px}.bx b{display:block;font-size:9px}.row{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}.ph{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}.ph figure{margin:0;border:1px solid #000;padding:4px;text-align:center;page-break-inside:avoid}.ph img{max-width:100%;max-height:230px}.ph figcaption{font-size:9.5px}.sign{height:46px}`;
+    const gr = (sci.grupos || []).map(g => `<div class="bx"><b>Unidad ${E(g.u)}</b>${E(g.f || '')}${g.n ? '<br>' + E(g.n) : ''}${(g.p || []).length ? '<br><small>' + E(g.p.join(', ')) + '</small>' : ''}</div>`).join('');
     return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Reporte de Emergencias ${E(r.id)}</title><style>${css}</style></head><body>
 <div class="hd">${o.logo1 ? `<img src="${o.logo1}" alt="">` : '<span></span>'}<div class="t">CUERPO DE BOMBEROS VOLUNTARIOS<br>LA UNION - VALLE DEL CAUCA<br><br>REPORTE DE EMERGENCIAS</div>${o.logo2 ? `<img src="${o.logo2}" alt="">` : '<span></span>'}</div>
 <table><tr><th>INCIDENTE N°</th><td style="font-size:15px;font-weight:700;letter-spacing:.35em">${E(seq)}</td><th>Fecha y hora de elaboración</th><td>${E(f ? f.slice(8, 10) + '/' + f.slice(5, 7) + '/' + f.slice(2, 4) : '')} · ${E(h24(r.hora))} h</td></tr></table>
@@ -520,13 +528,13 @@ ${row('Ubicación del puesto de comando', v(rp.pc))}${row('Identificación del p
 ${gr ? `<div><b>Función de cada unidad</b></div><div class="row">${gr}</div>` : ''}</div>
 <div class="sec">8. BOSQUEJO O CROQUIS DEL LUGAR DEL INCIDENTE</div><table><tr><td style="height:110px"></td></tr></table>
 <div class="sec">9. RESUMEN DE LAS ACCIONES</div>
-<table><tr><th style="width:12%">HORA (24 h)</th><th>ACCIÓN REALIZADA</th></tr>${acc.map(x => `<tr><td>${E(h24(x.h))}</td><td>${v(x.a)}</td></tr>`).join('') || '<tr><td colspan="2">N/A</td></tr>'}</table>
+<table><tr><th style="width:12%">HORA (24 h)</th><th>ACCIÓN REALIZADA</th></tr>${acc.map(x => `<tr><td style="text-align:center">${E(h24(x.h))}</td><td>${v(x.a)}</td></tr>`).join('') || '<tr><td colspan="2">N/A</td></tr>'}<tr><td></td><td><b>OBSERVACIONES:</b> ${v(rp.obs)}<br>Duración: ${E(durOf(r))}. Unidades que asistieron: ${E(na(r.uni))}. Vehículos: ${E(na(r.veh))}.${r.hsal ? ' Salida de estación: ' + E(h24(r.hsal)) + ' h.' : ''}${r.hfin ? ' Terminación de la emergencia: ' + E(h24(r.hfin)) + ' h.' : ''}${rp.hdes ? ' Desmovilización hacia el cuartel: ' + E(h24(rp.hdes)) + ' h.' : ''}${r.hreg ? ' Llegada a la estación: ' + E(h24(r.hreg)) + ' h.' : ''}${r.area ? ' Área afectada: ' + E(r.area) + '.' : ''} ${E(r.extraTxt || '')}</td></tr></table>
 <div class="sec">10. UNIDAD QUE COMANDÓ EL INCIDENTE</div>
-<table><tr><th>Nombres y apellidos</th><th>Grado</th><th>Cargo</th><th>Firma</th></tr><tr><td>${v(cmd.n)}</td><td>${v(cmd.g)}</td><td>${v(cmd.c)}</td><td class="sign"></td></tr></table>
+<table><tr><th>Nombres y apellidos</th><th>Grado</th><th>Cargo</th><th>Firma</th></tr><tr><td>${v(cmd.n)}</td><td>${v(cmd.g)}</td><td>${v(cmd.c)}</td><td class="sign" style="vertical-align:bottom;text-align:center;font-size:9px">${E([cmd.g, cmd.n].filter(Boolean).join(' '))}</td></tr></table>
 <div class="sec">11. UNIDADES QUE INTERVINIERON EN EL INCIDENTE</div>
 <table><tr><td>${pers.map(p => E(p)).join('</td><td>').replace(/(<td>[^]*?){0}/, '')}</td></tr></table>
 <div class="sec">12. OBSERVACIONES ADICIONALES (LEGALES, DISCIPLINARIAS, NORMATIVAS O DE REQUERIMIENTOS Y NECESIDADES)</div>
-<table><tr><td>${v(rp.obs)}<br>Duración: ${E(durOf(r))}. Unidades que asistieron: ${E(na(r.uni))}. Vehículos: ${E(na(r.veh))}.${r.hsal ? ' Salida de estación: ' + E(h24(r.hsal)) + ' h.' : ''}${r.hfin ? ' Terminación de la emergencia: ' + E(h24(r.hfin)) + ' h.' : ''}${r.hreg ? ' Llegada a la estación: ' + E(h24(r.hreg)) + ' h.' : ''}${r.area ? ' Área afectada: ' + E(r.area) + '.' : ''} ${E(r.extraTxt || '')}</td></tr></table>
+<table><tr><td>Las observaciones del comandante y los datos complementarios están en el numeral 9 (Resumen de las acciones).</td></tr></table>
 <div class="sec">13. RECEPCIÓN Y APROBACIÓN DEL INFORME</div>
 <table><tr><th>Guardia que recibe el informe</th><th>Grado</th><th>Estado en que recibe</th><th>Firma</th></tr><tr><td class="sign"></td><td></td><td>${chk(false, 'COMPLETO')}${chk(false, 'INCOMPLETO')}</td><td></td></tr></table>
 ${fotos.length ? `<div class="sec" style="page-break-before:always">14. REGISTRO FOTOGRÁFICO DEL INCIDENTE</div><div class="ph">${fotos.map((p, i) => `<figure><img src="${p.src}" alt="Fotografía ${i + 1}"></figure>`).join('')}</div>` : '<div class="sec">14. REGISTRO FOTOGRÁFICO DEL INCIDENTE</div><table><tr><td>Sin fotografías.</td></tr></table>'}

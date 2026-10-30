@@ -210,6 +210,11 @@ fieldset.aud label{display:flex;align-items:center;gap:6px;font-weight:600}
 .dz-fr-est iframe{transform-origin:0 0;width:1280px;height:800px}
 body.vp .only-master.bar,body.vp #logout{display:none}
 
+.topbtns{display:flex;gap:6px;align-items:center}
+.topbtns .who{margin-left:2px}
+#refresh.girando{animation:gira 1s linear infinite}
+@keyframes gira{to{transform:rotate(360deg)}}
+
 .mini{display:inline-block;height:10px;background:var(--s25)}
 </style></head><body>
 <div class="wrap">
@@ -218,9 +223,12 @@ body.vp .only-master.bar,body.vp #logout{display:none}
       <div class="eyebrow">Cuerpo de Bomberos Voluntarios · La Unión, Valle del Cauca</div>
       <h1 id="h1">Central</h1>
     </div>
-    <div class="who" id="who"></div>
-    <button type="button" class="bell" id="btnTema" aria-label="Cambiar colores">🎨</button>
-    <button type="button" class="bell" id="bell" hidden aria-label="Notificaciones">🔔<span id="bell-n" hidden>0</span></button>
+    <div class="topbtns">
+      <button type="button" class="bell" id="bell" hidden aria-label="Notificaciones">🔔<span id="bell-n" hidden>0</span></button>
+      <button type="button" class="bell" id="btnTema" aria-label="Cambiar colores">🎨</button>
+      <button type="button" class="bell" id="refresh" hidden aria-label="Actualizar la información de todo el sistema" title="Actualizar todo">⟳</button>
+      <span class="who" id="who"></span>
+    </div>
   </div>
   <div id="msg" class="note" hidden></div>
 
@@ -239,6 +247,20 @@ body.vp .only-master.bar,body.vp #logout{display:none}
   <section id="v-pan" hidden>
     <div class="note" id="histbanner" hidden>El histórico (estadística 2013–2026) se está cargando solo la primera vez. Si este aviso no desaparece, suba el archivo <b>historico.json</b> al sitio junto con las demás páginas o cárguelo desde Administración → Histórico.</div>
     <div class="sec">
+      <div class="tabs" id="ptabs" role="tablist">
+        <button role="tab" aria-selected="true" data-p="est">Estadística y archivos</button>
+        <button role="tab" aria-selected="false" data-p="vivo">Operación</button>
+        <button role="tab" aria-selected="false" data-p="reg">Registros</button>
+        <button role="tab" aria-selected="false" data-p="calor">Mapa de calor</button>
+        <button role="tab" aria-selected="false" data-p="per">Personal</button>
+        <button role="tab" aria-selected="false" data-p="aud">Auditoría</button>
+        <button role="tab" aria-selected="false" data-p="cfg">Conexión y Drive</button>
+        <button role="tab" aria-selected="false" data-p="vpv">Vista previa</button>
+        <button role="tab" aria-selected="false" data-p="adm" class="only-master" hidden>Administración</button>
+        <button role="tab" aria-selected="false" data-p="ser">Histórico</button>
+      </div>
+
+      <div id="p-est" class="sec">
       <div class="card" id="fcard">
         <div class="tools">
           <label>Periodo
@@ -257,21 +279,8 @@ body.vp .only-master.bar,body.vp #logout{display:none}
           <label>Categoría<select id="fcat"></select></label>
         </div>
         <div class="derived" id="fsum"></div>
-        <div class="dl" style="margin-top:8px"><button class="btn alt sm" id="refresh">Actualizar datos</button><button class="btn alt sm" id="backup">Copia de seguridad (.json)</button><span class="derived" id="opmsg" role="status"></span></div>
+        <div class="dl" style="margin-top:8px"><button class="btn alt sm" id="backup">Copia de seguridad (.json)</button><span class="derived" id="opmsg" role="status"></span></div>
       </div>
-      <div class="tabs" id="ptabs" role="tablist">
-        <button role="tab" aria-selected="true" data-p="est">Estadística y archivos</button>
-        <button role="tab" aria-selected="false" data-p="reg">Registros</button>
-        <button role="tab" aria-selected="false" data-p="vivo">Operación</button>
-        <button role="tab" aria-selected="false" data-p="calor">Mapa de calor</button>
-        <button role="tab" aria-selected="false" data-p="per">Personal</button>
-        <button role="tab" aria-selected="false" data-p="aud">Auditoría</button>
-        <button role="tab" aria-selected="false" data-p="cfg">Conexión y Drive</button>
-        <button role="tab" aria-selected="false" data-p="adm" class="only-master" hidden>Administración</button>
-        <button role="tab" aria-selected="false" data-p="ser">Histórico</button>
-      </div>
-
-      <div id="p-est" class="sec">
         <div class="kpis" id="kpis"></div>
         <div class="card">
           <h3>Informe del periodo</h3>
@@ -293,7 +302,6 @@ body.vp .only-master.bar,body.vp #logout{display:none}
 
       <div id="p-reg" class="sec" hidden>
         <div class="card" id="v-pend-card"><div id="v-pend"></div></div>
-        <div class="card" id="emg-at-card"><h3>Emergencias atendidas</h3><p class="derived">Todas las emergencias con llamado (activas y terminadas), con su reporte vinculado. «Completada» no las saca de aquí.</p><div class="tools"><label>Buscar<input id="at-q" placeholder="Consecutivo, tipo o lugar"></label><label style="flex-direction:row;gap:8px;align-items:center"><input type="checkbox" id="at-sin" style="width:auto"> Solo las que no tienen reporte</label><button class="btn alt sm" id="at-rec">Actualizar</button></div><div class="scroll"><table id="at-tab"></table></div><div class="derived" id="at-pg"></div></div>
         <div class="card"><label>Buscar<input id="q" placeholder="Número, categoría, dirección, barrio o descripción"></label><label class="only-master" style="flex-direction:row;display:flex;gap:8px;align-items:center;margin-top:8px" hidden><input type="checkbox" id="showanul" style="width:auto"> Mostrar también los registros eliminados</label></div>
         <div class="scroll"><table id="rtab"></table></div>
         <div class="tools"><button class="btn alt sm" id="prev">Anterior</button><span class="derived" id="pg"></span><button class="btn alt sm" id="next">Siguiente</button></div>
@@ -313,6 +321,7 @@ body.vp .only-master.bar,body.vp #logout{display:none}
         <div class="card"><h3>Correcciones hechas por Comandancia</h3><p class="derived expl">Cada corrección queda anotada con el motivo, quién la hizo y qué valor tenía antes.</p>
         <div class="scroll"><table id="atab"></table></div></div>
       </div>
+      <div id="p-vpv" class="sec" hidden></div>
       <div id="p-cfg" class="sec" hidden>
         <div class="card" id="pc-box"></div>
         <div class="card only-master" id="ses-card" hidden></div>
@@ -334,7 +343,7 @@ body.vp .only-master.bar,body.vp #logout{display:none}
       <div id="p-vivo" class="sec" hidden>
         <div class="card" id="op-ll">
           <h3>Llamado rápido</h3>
-          <div class="tools"><label style="flex:2;min-width:14rem">Tipo de emergencia<select id="ll-tipo"></select></label><label>Lugar<input id="ll-lugar" placeholder="Dirección o referencia"></label><label>Teléfono de quien reporta<input id="ll-tel" inputmode="tel" placeholder="300 000 0000"></label><label>Coordenadas<input id="ll-co" placeholder="4°31'50&quot;N 76°06'29&quot;W o 4.5306, -76.1082"></label><button class="btn" id="ll-send">Llamar a las unidades</button></div>
+          <div class="tools"><label style="flex:2;min-width:14rem">Tipo de emergencia<select id="ll-tipo"></select></label><label>Lugar<input id="ll-lugar" placeholder="Dirección o referencia"></label><label>Nombre de quien avisó<input id="ll-quien" placeholder="Nombre (opcional)"></label><label>Teléfono de quien reporta<input id="ll-tel" inputmode="tel" placeholder="300 000 0000"></label><label>Coordenadas<input id="ll-co" placeholder="4°31'50&quot;N 76°06'29&quot;W o 4.5306, -76.1082"></label><button class="btn" id="ll-send">Llamar a las unidades</button></div>
           <div id="ll-extra"></div>
           <div class="derived" id="ll-out" role="status"></div>
         </div>
@@ -496,7 +505,7 @@ async function login(e){
 }
 function enter(){
   if(ROL==='campo'){irCampo();return}
-  $('v-login').hidden=true;$('v-pan').hidden=false;$('who').innerHTML=esc(YO)+' · '+ROLNOM()+' · <button type="button" class="btn alt sm" id="logout">Salir</button>';
+  $('v-login').hidden=true;$('v-pan').hidden=false;$('who').innerHTML='<button type="button" class="btn alt sm" id="logout">Salir</button>';$('who').title=YO+' · '+ROLNOM();$('refresh').hidden=false;
   $('logout').onclick=()=>salir();
   document.querySelectorAll('.only-master').forEach(x=>x.hidden=!esMaster());
   tabsPorRol();
@@ -510,8 +519,8 @@ function aplicarCfg(c){
 }
 
 /* ================= PANEL DE ESTADÍSTICA ================= */
-const TABS=['est','reg','vivo','calor','per','aud','cfg','adm','ser'];
-const TABS_ROL={central:['reg','vivo'],estadistica:['est','reg','vivo','calor','ser'],master:TABS};
+const TABS=['est','vivo','reg','calor','per','aud','cfg','vpv','adm','ser'];
+const TABS_ROL={central:['vivo','reg','vpv'],estadistica:['est','vivo','reg','calor','ser','vpv'],master:TABS};
 function showTab(k){
   document.querySelectorAll('#ptabs button').forEach(x=>x.setAttribute('aria-selected',x.dataset.p===k));
   TABS.forEach(t=>{const e=$('p-'+t);if(e)e.hidden=t!==k});
@@ -528,7 +537,7 @@ async function initPanel(){
   ['fper','fanio','fmes','fd1','fd2','ftipo','fcat','fcmp'].forEach(id=>$(id).onchange=()=>{togglePer();renderPanel();if(!$('p-calor').hidden)drawCalor()});
   $('q').oninput=()=>{page=0;renderRecs()};$('prev').onclick=()=>{page=Math.max(0,page-1);renderRecs()};$('next').onclick=()=>{page++;renderRecs()};
   $('gen').onclick=()=>informe($('gen'));$('gen-snif').onclick=()=>snifSolo($('gen-snif'));
-  $('refresh').onclick=async()=>{$('opmsg').textContent='Actualizando…';try{await loadAll();renderPanel();$('opmsg').textContent='Datos al día ('+new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'})+').'}catch(e){$('opmsg').textContent='No se pudo actualizar: '+humanErr(e)}};
+  $('refresh').onclick=async()=>{const b=$('refresh');b.disabled=true;b.classList.add('girando');try{await loadAll();renderPanel();try{ROSTERD=null}catch(e){}try{await pollVivo()}catch(e){}try{await pollPend()}catch(e){}try{await pollNotif()}catch(e){}toast('Información actualizada ('+new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'})+').')}catch(e){toast('No se pudo actualizar: '+humanErr(e),1)}finally{b.disabled=false;b.classList.remove('girando')}};
   $('backup').onclick=backup;$('showanul').onchange=async()=>{page=0;if($('showanul').checked&&typeof cargarElim==='function')await cargarElim();renderRecs()};
   $('fsum').textContent='Cargando datos…';
   try{await loadAll()}catch(e){$('fsum').textContent='No se pudieron cargar los datos ('+humanErr(e)+'). Revise la conexión y pulse «Actualizar datos».'}
@@ -583,6 +592,8 @@ async function loadAll(){
     CARGAS=[];
     Object.keys(CARGAS_RAW||{}).filter(k=>/^carga-/.test(k)).forEach(k=>{try{const c=JSON.parse(CARGAS_RAW[k]);(c.rows||[]).forEach((it,i)=>HISTROWS.push(Object.assign({src:'hist',id:'CA-'+k.slice(6).toUpperCase()+'-'+pad(i+1,4),carga:k},it)));CARGAS.push({clave:k,n:(c.rows||[]).length,meta:c.meta||{}})}catch(e){}});
   }
+  if(HISTROWS&&HISTROWS.length&&!window._nb){window._nb=1;try{const mx={};HISTROWS.forEach(r=>{const y=String(r.fecha||'').slice(0,4);if(!/^\d{4}$/.test(y))return;const m=/^HI-\d{4}-(\d+)$/.exec(r.id||'');mx[y]=mx[y]||{hi:0,ca:0};if(m)mx[y].hi=Math.max(mx[y].hi,+m[1]);else mx[y].ca++});
+    Object.keys(mx).forEach(y=>{const n=mx[y].hi+mx[y].ca;if(n>0&&!/^HI-/.test(y))call('numBase',{anio:y,n}).catch(()=>{})})}catch(e){}}
   const l=need(await call('lista',{desde:LAST}));MODIF=l.modif||MODIF;
   l.regs.forEach(o=>{REGS.set(o.tmp,o);LAST=Math.max(LAST,o.actualizado||0)});
   if(Array.isArray(l.tmps)){const vivos=new Set(l.tmps);[...REGS.keys()].forEach(k=>{if(!vivos.has(k))REGS.delete(k)})}   /* eliminados: salen de la estadística */
@@ -661,14 +672,34 @@ function drawMonths(){
   $('cm').innerHTML=s+'</svg>';
 }
 
+function repEmerg(x){
+  const rp=x&&x.reporte;
+  if(rp)return rp.estado==='final'?'<span class="pill on">completo</span>':'<span class="pill warn">borrador</span>';
+  if(x&&x.completada)return '<span class="pill info">completada sin reporte</span>';
+  if(x&&x.estado==='activa')return '<span class="derived">en curso</span>';
+  return x&&x.vencido?'<span class="pill bad">pendiente · vencido</span>':'<span class="pill warn">pendiente</span>';
+}
 function renderRecs(){
-  const q=$('q').value.trim().toLowerCase(),base=CUR.concat([...REGS.values()].filter(o=>o.cat&&o.fecha&&!o.anulado&&o.estado!=='final').map(toRow),$('showanul')&&$('showanul').checked?[...REGS.values()].filter(o=>o.anulado&&o.cat).map(toRow).concat(typeof ELIMROWS!=='undefined'?ELIMROWS:[]):[]),rows=base.filter(r=>!q||[r.id,r.cat,r.dir,r.bar,r.desc].join(' ').toLowerCase().includes(q)).slice().reverse();
+  const q=$('q').value.trim().toLowerCase(),base=CUR.concat([...REGS.values()].filter(o=>o.cat&&o.fecha&&!o.anulado&&o.estado!=='final').map(toRow),$('showanul')&&$('showanul').checked?[...REGS.values()].filter(o=>o.anulado&&o.cat).map(toRow).concat(typeof ELIMROWS!=='undefined'?ELIMROWS:[]):[]);
+  /* una sola tabla: cada registro con los datos de su emergencia; las emergencias sin reporte aparecen como filas propias */
+  const em=(typeof AT!=='undefined'&&AT.lista)||[],porNum={},usados=new Set();
+  em.forEach(x=>{if(x.num)porNum[x.num]=x});
+  base.forEach(r=>{const x=porNum[r.id];if(x){r.em=x;usados.add(x.id)}});
+  const extra=em.filter(x=>!usados.has(x.id)&&!(x.reporte&&REGS.has(x.reporte.tmp))).map(x=>{const f=new Date(x.cuando);const p=n=>String(n).padStart(2,'0');return {src:'llamado',id:x.num||'—',fecha:f.getFullYear()+'-'+p(f.getMonth()+1)+'-'+p(f.getDate()),hora:p(f.getHours())+':'+p(f.getMinutes()),cat:x.msg,dir:x.lugar,uni:null,veh:'',em:x,virtual:true}});
+  const rows=base.concat(extra).filter(r=>!q||[r.id,r.cat,r.dir,r.bar,r.desc,r.em&&r.em.cmdn].join(' ').toLowerCase().includes(q)).slice().sort((a,b)=>String(a.fecha+(a.hora||'')).localeCompare(String(b.fecha+(b.hora||'')))).reverse();
   const PS=10,pages=Math.max(1,Math.ceil(rows.length/PS));if(page>=pages)page=pages-1;
   const sl=rows.slice(page*PS,page*PS+PS);
-  $('rtab').innerHTML='<tr><th>N°</th><th>Día</th><th>Categoría</th><th>Lugar</th><th class="n">Unid.</th><th>Vehículo</th><th>Origen</th></tr>'+(sl.length?sl.map(r=>'<tr class="click" data-i="'+rows.indexOf(r)+'"'+(r.anulado||r.eliminado?' style="text-decoration:line-through;opacity:.6"':'')+'><td class="m">'+esc(r.id)+'</td><td>'+GEN.dmy(r.fecha)+' '+esc(r.hora||'')+'</td><td>'+esc(tc(r.cat))+'</td><td>'+esc(r.dir||'—')+'</td><td class="n">'+(r.uni==null?'—':r.uni)+'</td><td>'+esc(r.veh||'—')+'</td><td>'+(r.src==='app'?'App '+estadoPill(r):'Excel')+'</td></tr>').join(''):'<tr><td colspan="7">Sin registros con estos filtros.</td></tr>');
+  $('rtab').innerHTML='<tr><th>N°</th><th>Día</th><th>Categoría</th><th>Lugar</th><th class="n">Unid.</th><th>Vehículo</th><th>Origen</th><th>Estado</th><th>Comandante</th><th>Reporte</th><th></th></tr>'+(sl.length?sl.map(r=>{const x=r.em;
+    const est=x?(x.estado==='activa'?'<span class="pill on">Activa</span>':'<span class="pill off">Terminada</span>'):'<span class="derived">—</span>';
+    const rep=r.virtual?repEmerg(x):(r.src==='app'?estadoPill(r):'<span class="derived">Histórico</span>');
+    const bt=x?'<button class="btn alt sm" data-emr="'+esc(x.id)+'">Emergencia</button>'+(r.virtual&&puedeF('pendientes')?'<button class="btn alt sm" data-emv="'+esc(x.id)+'">Vincular reporte</button>':'')+(esMaster()?'<button class="btn alt sm danger" data-emd="'+esc(x.id)+'">Eliminar</button>':''):'';
+    return '<tr class="click" data-i="'+rows.indexOf(r)+'"'+(r.anulado||r.eliminado?' style="text-decoration:line-through;opacity:.6"':'')+'><td class="m">'+esc(r.id)+'</td><td>'+GEN.dmy(r.fecha)+' '+esc(r.hora||'')+'</td><td>'+esc(tc(r.cat))+'</td><td>'+esc(r.dir||'—')+'</td><td class="n">'+(r.uni==null?'—':r.uni)+'</td><td>'+esc(r.veh||'—')+'</td><td>'+(r.virtual?'Llamado':r.src==='app'?'App':'Excel')+'</td><td>'+est+'</td><td>'+esc((x&&x.cmdn)||'—')+'</td><td>'+rep+'</td><td>'+bt+'</td></tr>'}).join(''):'<tr><td colspan="11">Sin registros con estos filtros.</td></tr>');
+  $('rtab').querySelectorAll('[data-emr]').forEach(b=>b.onclick=ev=>{ev.stopPropagation();emergResumen(b.dataset.emr)});
+  $('rtab').querySelectorAll('[data-emv]').forEach(b=>b.onclick=ev=>{ev.stopPropagation();vincularReporteUI(b.dataset.emv)});
+  $('rtab').querySelectorAll('[data-emd]').forEach(b=>b.onclick=ev=>{ev.stopPropagation();eliminarEmergenciaUI(b.dataset.emd)});
   $('pg').textContent='Página '+(page+1)+' de '+pages+' · '+nf.format(rows.length)+' registros';
   $('prev').disabled=page===0;$('next').disabled=page>=pages-1;
-  $('rtab').querySelectorAll('tr.click').forEach(tr=>tr.onclick=()=>showDetail(rows[+tr.dataset.i]));
+  $('rtab').querySelectorAll('tr.click').forEach(tr=>tr.onclick=()=>{const r=rows[+tr.dataset.i];if(r.virtual)emergResumen(r.em.id);else showDetail(r)});
   window._rows=rows;
 }
 /* ----- Tiempos, calor, barrios, vehículos ----- */
@@ -1480,7 +1511,7 @@ function drawPers(){
   const ysel=H('select');anios.forEach(y=>ysel.append(new Option(y,y)));ysel.value=PYEAR;ysel.onchange=()=>{PYEAR=ysel.value;drawPers()};
   const ynota=H('p',{className:'derived'},'Participaciones y horas del año '+PYEAR+'. Cada año empieza en cero; los años anteriores quedan archivados y se consultan eligiendo el año.');
   const tw=H('div',{className:'scroll'});t.innerHTML=head;t.append(body);tw.append(t);
-  box.append(card(H('h3',{},'Personal de la estación'),info,H('div',{className:'tools'},lbl('Buscar',q),lbl('Año de participaciones',ysel)),ynota,H('div',{className:'dl'},add,ini,csv,sv),msg,tw));
+  box.append(card(H('h3',{},'Personal de la estación'),info,H('div',{className:'tools'},lbl('Buscar',q),lbl('Año de participaciones',ysel)),ynota,H('div',{className:'dl'},add,csv,sv),msg,tw));
   draw();
   window.onbeforeunload=()=>sucio?'Hay cambios sin guardar en el personal.':undefined;
 }
@@ -2019,7 +2050,9 @@ const primeraTab=()=>{const b=[...document.querySelectorAll('#ptabs button')].fi
 function toast(t,mal){const b=$('toasts');if(!b)return;const d=document.createElement('div');d.className='toast'+(mal?' bad':'');d.textContent=t;b.append(d);setTimeout(()=>d.remove(),mal?7000:3800)}
 function dlg(html,onopen){const d=$('dlg');d.innerHTML=html;if(!d.open)d.showModal();if(onopen)onopen(d);return d}
 function dlgCerrar(){const d=$('dlg');if(d.open)d.close()}
-$('dlg')&&$('dlg').addEventListener('click',e=>{if(e.target===$('dlg'))dlgCerrar()});
+/* la ventana solo se cierra con un clic que EMPIEZA y TERMINA fuera del cuadro (no al soltar el ratón tras seleccionar texto) y la tecla Esc primero borra lo escrito en una búsqueda */
+{let md=null;const dd=$('dlg');if(dd){dd.addEventListener('mousedown',e=>{md=e.target});dd.addEventListener('click',e=>{if(e.target===dd&&md===dd)dlgCerrar();md=null});
+dd.addEventListener('cancel',e=>{const a=document.activeElement;if(a&&a.tagName==='INPUT'&&a.value&&dd.contains(a)){e.preventDefault();a.value='';a.dispatchEvent(new Event('input',{bubbles:true}))}})}}
 
 /* ---------- llamado: crear (panel y botón flotante), con un identificador que evita duplicados al reintentar ---------- */
 let LL_CID='';
@@ -2032,7 +2065,7 @@ async function enviarLlamado(v,out,btn,despues){
   if(!LL_CID)LL_CID='c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
   if(btn)btn.disabled=true;out.textContent='Enviando…';
   try{
-    const r=need(await call('llamado',{msg:m,lugar:lug,lat,lon,tel,cid:LL_CID}));
+    const r=need(await call('llamado',{msg:m,lugar:lug,lat,lon,tel,quien:((v.quien||'').trim()),cid:LL_CID}));
     LL_CID='';
     const wa=canalTxt(r.canales),pu=r.push&&r.push.enviados?' Aviso a '+r.push.enviados+' teléfono(s).':' Ningún teléfono recibió aviso push (verán el llamado al abrir la aplicación).';
     out.textContent=(r.repetida?'Ese llamado ya estaba registrado: no se duplicó. ':'Llamado registrado en el servidor. ')+wa+pu;
@@ -2044,7 +2077,7 @@ async function enviarLlamado(v,out,btn,despues){
 function bindLlamado(){
   const b=$('ll-send');if(!b||b._b)return;b._b=1;
   const sel=$('ll-tipo');if(sel&&!sel.options.length)sel.innerHTML='<option value="">Elija el tipo de emergencia…</option>'+CATS.map(c=>'<option>'+esc(c)+'</option>').join('');
-  b.onclick=async()=>{const ok=await enviarLlamado({tipo:sel.value,lugar:$('ll-lugar').value,co:$('ll-co').value,tel:$('ll-tel').value},$('ll-out'),b);if(ok){sel.value='';$('ll-lugar').value='';$('ll-co').value='';$('ll-tel').value=''}};
+  b.onclick=async()=>{const ok=await enviarLlamado({tipo:sel.value,lugar:$('ll-lugar').value,co:$('ll-co').value,tel:$('ll-tel').value,quien:($('ll-quien')||{}).value},$('ll-out'),b);if(ok){sel.value='';$('ll-lugar').value='';$('ll-co').value='';$('ll-tel').value=''}};
   const fab=$('fab-ll');if(fab&&!fab._b){fab._b=1;fab.onclick=()=>abrirLlamadoRapido()}
 }
 function abrirLlamadoRapido(){
@@ -2138,7 +2171,7 @@ async function despachoUI(a){
   dlg('<h3>Despachar · '+esc(a.msg)+'</h3><div id="ds-lst">'+(ds.length?ds.map(x=>'<div class="ntf"><div><b>'+esc(x.veh)+'</b> · '+esc(EST_DESP[x.estado]||x.estado)+' · '+x.pers.length+' persona(s)<br><span class="derived">'+x.pers.map(p=>esc(p.n)+(p.rol?' ('+esc(p.rol)+')':'')).join(', ')+' · confirmaron '+(x.conf||[]).length+'</span></div><button class="btn alt sm" data-q="'+esc(x.id)+'">Quitar</button></div>').join(''):'<p class="derived">Aún no hay vehículos asignados.</p>')+'</div>'+
     '<label>Vehículo<select id="ds-veh">'+veh.map(v=>'<option>'+esc(v)+'</option>').join('')+'</select></label>'+
     '<label>Grupo de intervención<select id="ds-grp">'+(()=>{const gs=(VIVO.grupos||[]).filter(g=>g.estado==='activo'&&(g.emerg===a.id||!g.emerg));return (gs.some(g=>g.emerg===a.id)?'':'')+gs.map(g=>'<option value="'+esc(g.id)+'"'+(g.emerg===a.id?' selected':'')+'>'+esc(g.nombre)+(g.emerg===a.id?' (ya atiende esta emergencia)':' (disponible)')+'</option>').join('')+'<option value="_nuevo"'+((VIVO.grupos||[]).filter(g=>g.estado==='activo'&&(g.emerg===a.id||!g.emerg)).length?'':' selected')+'>➕ Crear un grupo de intervención nuevo</option>'})()+'</select></label>'+
-    '<label>Buscar unidad (nombre o código)<input id="ds-bq" type="search" placeholder="Nombre o código…" autocomplete="off"></label><p class="derived" style="margin:6px 0 2px">Personal que va en el vehículo (los ya asignados a una emergencia aparecen marcados):</p><div class="chk" id="ds-per">'+ROSTERD.personal.map(p=>'<label><input type="checkbox" value="'+esc(p.usuario)+'" data-n="'+esc(p.nombre)+'" '+(ocup.has(p.usuario)?'disabled':'')+'>'+(p.codigo?esc(p.codigo)+' · ':'')+esc(p.nombre)+(ocup.has(p.usuario)?' · ocupado':'')+'</label>').join('')+'</div>'+
+    '<label>Buscar unidad (nombre o código)<input id="ds-bq" type="text" placeholder="Nombre o código…" autocomplete="off"></label><p class="derived" style="margin:6px 0 2px">Personal que va en el vehículo (los ya asignados a una emergencia aparecen marcados):</p><div class="chk" id="ds-per">'+ROSTERD.personal.map(p=>'<label><input type="checkbox" value="'+esc(p.usuario)+'" data-n="'+esc(p.nombre)+'" '+(ocup.has(p.usuario)?'disabled':'')+'>'+(p.codigo?esc(p.codigo)+' · ':'')+esc(p.nombre)+(ocup.has(p.usuario)?' · ocupado':'')+'</label>').join('')+'</div>'+
     '<div class="tools"><label>Comandante de incidentes<select id="ds-cmd"><option value="">— sin asignar —</option></select></label><label>Maquinista (conductor del vehículo)<select id="ds-maq"><option value="">— sin asignar —</option></select></label></div>'+'<label>Nota (opcional)<input id="ds-nota"></label><div class="derived" id="ds-out" role="status"></div><div class="dl"><button class="btn" id="ds-ok">Asignar</button><button class="btn alt" id="ds-no">Cerrar</button></div>',d=>{
       $('ds-no').onclick=dlgCerrar;
       {const sin=z=>String(z||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''),bq=$('ds-bq');if(bq)bq.oninput=()=>{const q=sin(bq.value.trim());d.querySelectorAll('#ds-per label').forEach(l=>{const i=l.querySelector('input');l.hidden=!!q&&!i.checked&&!sin(l.textContent).includes(q)})}}
@@ -2150,11 +2183,11 @@ async function despachoUI(a){
         const pers=[...d.querySelectorAll('#ds-per input:checked')].map(i=>({u:i.value,n:i.dataset.n}));
         if(!pers.length){$('ds-out').textContent='Marque al menos una persona.';return}
         $('ds-ok').disabled=true;$('ds-out').textContent='Asignando…';
-        try{const r=need(await call('despAsignar',{emerg:a.id,veh:$('ds-veh').value,pers,nota:$('ds-nota').value,...grpArg()}));
-          await aplicarRoles(r);toast('Asignado y confirmado por el servidor: '+r.personal+' persona(s) en '+r.despacho.veh+'.'+(r.push&&r.push.enviados?' Avisados '+r.push.enviados+' teléfono(s).':' Sin push: lo verán al abrir la aplicación.'));ROSTERD=null;dlgCerrar();pollVivo()}
+        try{const r=need(await call('despAsignar',{emerg:a.id,veh:$('ds-veh').value,pers,nota:$('ds-nota').value,...grpArg(),cmd:$('ds-cmd').value,maq:$('ds-maq').value}));
+          if(r.rolesError)toast('Asignado, pero no se pudieron fijar los roles: '+r.rolesError,1);toast('Asignado y confirmado por el servidor: '+r.personal+' persona(s) en '+r.despacho.veh+'.'+(r.push&&r.push.enviados?' Avisados '+r.push.enviados+' teléfono(s).':' Sin push: lo verán al abrir la aplicación.'));ROSTERD=null;dlgCerrar();pollVivo()}
         catch(e){
           if(/duplicada/i.test(String(e.message))&&confirm(String(e.message).replace(/^Asignación duplicada: /,'')+'\n\n¿Reasignarlos a esta emergencia? Saldrán de la otra.')){
-            try{const r=need(await call('despAsignar',{emerg:a.id,veh:$('ds-veh').value,pers,nota:$('ds-nota').value,...grpArg(),mover:true}));await aplicarRoles(r);toast('Reasignado: '+r.personal+' persona(s) en '+(r.despacho.veh||'sin vehículo')+'.');ROSTERD=null;dlgCerrar();pollVivo();return}catch(e2){e=e2}
+            try{const r=need(await call('despAsignar',{emerg:a.id,veh:$('ds-veh').value,pers,nota:$('ds-nota').value,...grpArg(),cmd:$('ds-cmd').value,maq:$('ds-maq').value,mover:true}));if(r.rolesError)toast('Asignado, pero no se pudieron fijar los roles: '+r.rolesError,1);toast('Reasignado: '+r.personal+' persona(s) en '+(r.despacho.veh||'sin vehículo')+'.');ROSTERD=null;dlgCerrar();pollVivo();return}catch(e2){e=e2}
           }
           $('ds-out').textContent='No se asignó: '+humanErr(e);$('ds-ok').disabled=false}};
     });
@@ -2169,10 +2202,12 @@ function drawGeoResumen(){
   let d=$('uni-geo');if(!d){d=document.createElement('div');d.id='uni-geo';card.insertBefore(d,card.querySelector('.scroll'))}
   if(VIVO.geoOn&&!VIVO.geoMostrar){d.innerHTML='';return}
   if(!VIVO.geoOn){d.innerHTML='<p class="derived">El geocerco de la estación no está configurado (Administración → Geocerco), por eso no se sabe quién está dentro o fuera por ubicación.</p>';return}
-  const us=VIVO.usuarios||[],den=us.filter(u=>u.geo&&u.geo.e==='dentro'),fue=us.filter(u=>u.geo&&u.geo.e==='fuera');
+  /* solo cuentan quienes están compartiendo ubicación ahora: si nadie comparte, no se dice quién está dentro o fuera */
+  const us=(VIVO.usuarios||[]).filter(u=>u.estado==='compartiendo'),den=us.filter(u=>u.geo&&u.geo.e==='dentro'),fue=us.filter(u=>u.geo&&u.geo.e==='fuera');
   const lg=VIVO.geoLog||[];
-  d.innerHTML='<p><b>En la estación ('+den.length+'):</b> '+(den.map(u=>esc(u.n)).join(', ')||'<span class="derived">nadie</span>')+'<br><b>Fuera de la estación ('+fue.length+'):</b> '+(fue.map(u=>esc(u.n)).join(', ')||'<span class="derived">nadie</span>')+'</p>'+
-    (lg.length?'<details><summary class="derived">Últimas entradas y salidas ('+lg.length+')</summary><ul style="margin:4px 0 8px 18px;padding:0">'+lg.map(x=>'<li>'+hmGeo(x.t)+' · '+esc(x.n)+' '+(x.e==='entro'?'<b>entró</b> a la estación':'<b>salió</b> de la estación')+'</li>').join('')+'</ul></details>':'')+
+  const hoyT=new Date().toDateString(),fh=t=>(new Date(t).toDateString()===hoyT?'':new Date(t).toLocaleDateString('es-CO',{day:'2-digit',month:'2-digit'})+' ')+hmGeo(t);
+  d.innerHTML=(us.length?'<p><b>En la estación ('+den.length+'):</b> '+(den.map(u=>esc(u.n)).join(', ')||'<span class="derived">nadie</span>')+'<br><b>Fuera de la estación ('+fue.length+'):</b> '+(fue.map(u=>esc(u.n)).join(', ')||'<span class="derived">nadie</span>')+'</p>':'<p class="derived">Nadie está compartiendo ubicación ahora: no se puede saber quién está dentro o fuera de la estación.</p>')+
+    (lg.length?'<details><summary class="derived">Últimas entradas y salidas ('+lg.length+') · se limpian cada 2 días</summary><ul style="margin:4px 0 8px 18px;padding:0">'+lg.map(x=>'<li>'+fh(x.t)+' · '+esc(x.n)+' '+(x.e==='entro'?'<b>entró</b> a la estación':'<b>salió</b> de la estación')+'</li>').join('')+'</ul></details>':'')+
     '<p class="derived">Sólo se conoce la posición de quienes tienen la aplicación abierta y comparten su ubicación.</p>';
 }
 function drawUnidades(){
@@ -2776,7 +2811,7 @@ function drawGrupos(){
     h+='<div class="gi" data-g="'+esc(g.id)+'" style="border-left-color:'+esc(g.color)+'"><h4><span class="dot" style="background:'+esc(g.color)+'"></span>'+esc(g.nombre)+'<span class="derived">'+(g.emerg?'→ '+esc(nomE(g.emerg)||'emergencia'):'Disponible')+'</span></h4>'+
       (us.length?us.map(x=>'<div class="un"><b>'+esc(x.veh||'Sin vehículo')+'</b> · '+esc(EST_DESP[x.estado]||x.estado)+(x.conf&&x.conf.length?' · confirmó '+x.conf.length:'')+'<br>'+x.pers.map(p=>esc(p.n)+' '+rol(p)).join(' · ')+(ed?' <button class="btn alt sm" data-corr="'+esc(x.id)+'">Corregir vehículo y personal</button>':'')+(ed?'<br><label class="derived">Unir recurso a grupo de intervención: <select data-mv="'+esc(x.id)+'"><option value="">elegir grupo…</option>'+gs.filter(o=>o.id!==g.id).map(o=>'<option value="'+esc(o.id)+'">'+esc(o.nombre)+'</option>').join('')+'<option value="_nuevo">Nuevo grupo de intervención '+(gs.length+1)+'</option><option value="_ninguno">Sin grupo</option></select></label>':'')+'</div>').join(''):'<p class="derived">Sin unidades. Asígnelas desde «Despachar» en una emergencia.</p>')+
       (g.pre&&g.pre.length?'<div class="derived">En cola: '+g.pre.map(id=>'<span class="pill info">'+esc(nomE(id)||id)+(ed?' <a href="#" data-prx="'+esc(id)+'">✕</a>':'')+'</span>').join(' ')+'</div>':'')+
-      (ed?'<div class="tools" style="margin-top:6px"><label>Emergencia<select data-em>'+optE(g.emerg)+'</select></label><label>Líder de equipo<select data-cmd><option value="">— sin asignar —</option>'+miembros.map(p=>'<option value="'+esc(p.u)+'"'+(p.u===g.cmd?' selected':'')+'>'+esc(p.n)+'</option>').join('')+'</select></label><label>Maquinista<select data-maq><option value="">— sin asignar —</option>'+miembros.map(p=>'<option value="'+esc(p.u)+'"'+(p.u===g.maq?' selected':'')+'>'+esc(p.n)+'</option>').join('')+'</select></label><label>Pre-asignar<select data-pre><option value="">emergencia siguiente…</option>'+al.filter(a=>a.id!==g.emerg&&!(g.pre||[]).includes(a.id)).map(a=>'<option value="'+esc(a.id)+'">'+esc(nomE(a.id))+'</option>').join('')+'</select></label></div><div class="dl"><button class="btn alt sm" data-gpers="'+esc(g.id)+'">Personal del grupo</button><button class="btn alt sm" data-ren="1">Nombre y color</button><button class="btn alt sm" data-gterm="1">Terminar labores</button><button class="btn alt sm danger" data-dis="1">Disolver grupo</button></div>':'')+'</div>';
+      (ed?'<div class="tools" style="margin-top:6px"><label>Emergencia<select data-em>'+optE(g.emerg)+'</select></label><label>Líder de equipo<select data-cmd><option value="">— sin asignar —</option>'+miembros.map(p=>'<option value="'+esc(p.u)+'"'+(p.u===g.cmd?' selected':'')+'>'+esc(p.n)+'</option>').join('')+'</select></label><label>Maquinista<select data-maq><option value="">— sin asignar —</option>'+miembros.map(p=>'<option value="'+esc(p.u)+'"'+(p.u===g.maq?' selected':'')+'>'+esc(p.n)+'</option>').join('')+'</select></label><label>Pre-asignar<select data-pre><option value="">preasignar emergencia ('+(g.pre||[]).length+'/5)…</option>'+al.filter(a=>a.id!==g.emerg&&!(g.pre||[]).includes(a.id)).map(a=>'<option value="'+esc(a.id)+'">'+esc(nomE(a.id))+'</option>').join('')+'</select></label></div><div class="dl"><button class="btn alt sm" data-gpers="'+esc(g.id)+'">Personal del grupo</button><button class="btn alt sm" data-ren="1">Nombre y color</button><button class="btn alt sm" data-gterm="1">Terminar labores</button><button class="btn alt sm danger" data-dis="1">Disolver grupo</button></div>':'')+'</div>';
   });
   const sin=ds.filter(x=>!x.grupo||!gs.some(g=>g.id===x.grupo));
   if(sin.length)h+='<div class="gi" style="border-left-color:#6b7280"><h4>Unidades sin grupo</h4>'+sin.map(x=>'<div class="un"><b>'+esc(x.veh||'—')+'</b> · '+x.pers.map(p=>esc(p.n)).join(' · ')+(ed&&gs.length?' <label class="derived">Pasar a: <select data-mv="'+esc(x.id)+'"><option value="">elegir grupo…</option>'+gs.map(o=>'<option value="'+esc(o.id)+'">'+esc(o.nombre)+'</option>').join('')+'</select></label>':'')+'</div>').join('')+(ed?'<div class="dl"><button class="btn alt sm danger" data-lib="">Disolver: liberar estas unidades</button></div>':'')+'</div>';
@@ -2788,7 +2823,9 @@ function drawGrupos(){
     const em=c.querySelector('[data-em]');if(em)em.onchange=()=>{if(em.value&&!confirm('¿Mover TODO el grupo a esa emergencia? Cada unidad recibirá el aviso y deberá confirmar.'))return drawGrupos();act(g,{emerg:em.value},'Grupo movido; las unidades fueron avisadas.')};
     const cm=c.querySelector('[data-cmd]');if(cm)cm.onchange=()=>act(g,{cmd:cm.value},'Líder de equipo actualizado.');
     const mq=c.querySelector('[data-maq]');if(mq)mq.onchange=()=>act(g,{maq:mq.value},'Maquinista actualizado.');
-    const pr=c.querySelector('[data-pre]');if(pr)pr.onchange=async()=>{if(!pr.value)return;try{need(await call('grupoPre',{id:g,emerg:pr.value}));toast('Emergencia pre-asignada al grupo.');pollVivo()}catch(e){toast('No se pudo: '+humanErr(e),1)}};
+    const pr=c.querySelector('[data-pre]');if(pr)pr.onchange=async()=>{if(!pr.value)return;try{let r=await call('grupoPre',{id:g,emerg:pr.value});
+      if(r&&r.aviso){if(!confirm(r.error+'\n\n¿Preasignarla de todos modos a este grupo?')){pr.value='';return}r=await call('grupoPre',{id:g,emerg:pr.value,confirmar:true})}
+      need(r);toast('Emergencia pre-asignada al grupo.'+(r.wa&&String(r.wa).startsWith('enviado')?' WhatsApp enviado al comandante de incidentes.':r.wa==='sin_telefono'?' (El líder no tiene teléfono registrado para WhatsApp.)':r.wa==='sin_comandante'?' (El grupo no tiene líder/comandante: asígnelo para avisarle.)':''));pollVivo()}catch(e){toast('No se pudo: '+humanErr(e),1)}};
     c.querySelectorAll('[data-prx]').forEach(x=>x.onclick=async ev=>{ev.preventDefault();try{need(await call('grupoPre',{id:g,emerg:x.dataset.prx,op:'del'}));pollVivo()}catch(e){toast('No se pudo: '+humanErr(e),1)}});
     const rn=c.querySelector('[data-ren]');if(rn)rn.onclick=()=>{const gg=gs.find(x=>x.id===g);dlg('<h3>Grupo de intervención</h3><label>Nombre<input id="gr-n" value="'+esc(gg.nombre)+'"></label><label>Color<input type="color" id="gr-c" value="'+esc(gg.color)+'"></label><div class="dl"><button class="btn" id="gr-ok">Guardar</button><button class="btn alt" id="gr-no">Cancelar</button></div>',()=>{$('gr-no').onclick=dlgCerrar;$('gr-ok').onclick=()=>{dlgCerrar();act(g,{nombre:$('gr-n').value,color:$('gr-c').value})}})};
     const gt_=c.querySelector('[data-gterm]');if(gt_)gt_.onclick=()=>terminarGrupo(g);
@@ -2835,12 +2872,13 @@ const ES_ASK=t=>/LABORES DE PREVENCI/i.test(String(t||''));
 const ES_INST=t=>/CAPACITACI|REUNI[ÓO]N|SERVICIO SOCIAL|SUMINISTRO|VISITA|ACTIVIDAD|INSTITUCIONAL|LOG[ÍI]STIC/i.test(String(t||''));
 const claseDeAlerta=a=>a.clase||(ES_INST(a.msg)?'institucional':'emergencia');
 function rutaTxt(clase,aud){
+  if(aud==='silencioso')return '🔕 Llamado SILENCIOSO: no avisa a las unidades (ni por la app ni por WhatsApp); solo queda registrado y visible en Emergencias activas';
   const emp=aud==='empleados',inst=clase==='institucional';
   const gr=emp?'Empleados':(inst?'Bomberos':'Emergencias y Bomberos');
   return (inst?'📋 Actividad institucional (aviso tranquilo, sin sirena)':'🚨 Emergencia (aviso con sonido y confirmación)')+' · '+(emp?'🏷 SOLO EMPLEADOS':'👥 Todo el personal')+' · WhatsApp: grupo '+gr;
 }
 function audHtml(p){
-  return '<fieldset class="aud"><legend>¿A quién va el llamado?</legend><label><input type="radio" name="'+p+'-aud" value="general" checked> 👥 Llamado general</label><label><input type="radio" name="'+p+'-aud" value="empleados"> 🏷 Llamado solo empleados</label></fieldset>'+
+  return '<fieldset class="aud"><legend>¿A quién va el llamado?</legend><label><input type="radio" name="'+p+'-aud" value="general" checked> 👥 Llamado general</label><label><input type="radio" name="'+p+'-aud" value="empleados"> 🏷 Llamado solo empleados</label>'+(puedeF('llamadoSilencioso')?'<label><input type="radio" name="'+p+'-aud" value="silencioso"> 🔕 Llamado silencioso (sin alertas; solo aparece en Emergencias activas)</label>':'')+'</fieldset>'+
     '<label id="'+p+'-clw" hidden>Este llamado es una… <select id="'+p+'-cl"><option value="">Elija…</option><option value="emergencia">Emergencia</option><option value="institucional">Solo acompañamiento o prevención (actividad institucional)</option></select></label>'+
     '<p class="ruta-llamado" id="'+p+'-ruta" role="status"></p>';
 }
@@ -2859,11 +2897,12 @@ function audBind(p,selId){
 function bindLlamado(){
   const b=$('ll-send');if(!b||b._b)return;b._b=1;
   const sel=$('ll-tipo');if(sel&&!sel.options.length)sel.innerHTML='<option value="">Elija el tipo de emergencia…</option>'+CATS.map(c=>'<option>'+esc(c)+'</option>').join('');
-  $('ll-extra').innerHTML=audHtml('ll')+'<label>Observaciones<textarea id="ll-obs" rows="2" placeholder="Qué se sabe, riesgos, indicaciones…"></textarea></label>';
+  $('ll-extra').innerHTML='<label>Observaciones<textarea id="ll-obs" rows="2" placeholder="Qué se sabe, riesgos, indicaciones…"></textarea></label>'+audHtml('ll');
+  $('ll-extra').insertAdjacentElement('afterend',b);   /* el botón queda debajo de las observaciones y de «¿A quién va?» */
   audBind('ll','ll-tipo');
   b.onclick=async()=>{const a=audLeer('ll',sel.value);if(a.err){$('ll-out').textContent=a.err;return}
-    const ok=await enviarLlamado({tipo:sel.value,lugar:$('ll-lugar').value,co:$('ll-co').value,tel:$('ll-tel').value,obs:$('ll-obs').value,aud:a.aud,clase:a.clase},$('ll-out'),b);
-    if(ok){sel.value='';$('ll-lugar').value='';$('ll-co').value='';$('ll-tel').value='';$('ll-obs').value='';$('ll-cl').value='';audBind('ll','ll-tipo')}};
+    const ok=await enviarLlamado({tipo:sel.value,lugar:$('ll-lugar').value,co:$('ll-co').value,tel:$('ll-tel').value,quien:($('ll-quien')||{}).value,obs:$('ll-obs').value,aud:a.aud,clase:a.clase},$('ll-out'),b);
+    if(ok){sel.value='';$('ll-lugar').value='';$('ll-co').value='';$('ll-tel').value='';if($('ll-quien'))$('ll-quien').value='';$('ll-obs').value='';$('ll-cl').value='';audBind('ll','ll-tipo')}};
   const fab=$('fab-ll');if(fab&&!fab._b){fab._b=1;fab.onclick=()=>abrirLlamadoRapido()}
 }
 {const el1=enviarLlamado;enviarLlamado=async function(v,out,btn,despues){
@@ -2938,6 +2977,8 @@ function drawResumenAct(){
   const ids=new Set(llamList().map(a=>a.id)),ds=(VIVO.despachos||[]).filter(x=>ids.has(x.emerg));
   const per=new Set(ds.flatMap(x=>x.pers.map(p=>p.u||p.n))),veh=new Set(ds.map(x=>x.veh).filter(Boolean));
   r.innerHTML='<div><b>'+ids.size+'</b><span>emergencias</span></div><div><b>'+per.size+'</b><span>personas activadas</span></div><div><b>'+veh.size+'</b><span>vehículos</span></div>';
+  let v=$('act-veh');if(!v){v=document.createElement('p');v.id='act-veh';r.insertAdjacentElement('afterend',v)}
+  v.className='derived';v.innerHTML=veh.size?'<b>Vehículos activos ('+veh.size+'):</b> '+[...veh].map(esc).join(', '):'Vehículos activos: ninguno por ahora.';
 }
 {const d1=decorarEmergencias;decorarEmergencias=function(){d1();try{drawResumenAct()}catch(e){}}}
 
@@ -3083,9 +3124,27 @@ async function elegirPersona(titulo,actual,cb,volver){
     $('ep-no').onclick=()=>volver?volver():dlgCerrar();
     $('ep-ok').onclick=async()=>{const o=$('ep-p').selectedOptions[0];$('ep-ok').disabled=true;try{await cb(o.value,(o.dataset&&o.dataset.n)||'');volver?volver():dlgCerrar()}catch(e){$('ep-out').textContent='No se pudo: '+humanErr(e);$('ep-ok').disabled=false}}});
 }
-function asignarRol(id,rol,etq,actual,volver){
-  elegirPersona(etq+' de esta emergencia',actual,async(u,n)=>{
-    need(await call('emergRol',{id,rol,persona:u,nombre:n}));toast(u?(n||u)+' quedó como '+etq.toLowerCase()+'. Se le avisó.':etq+' sin asignar.');pollVivo();pollPend()},volver);
+async function asignarRol(id,rol,etq,actual,volver){
+  /* solo se ofrecen las unidades que salieron en los grupos de intervención de esta emergencia */
+  let un=[];try{un=(need(await call('emergUnidades',{id})).unidades)||[]}catch(e){}
+  let pr=[];if(rol==='cmd'){try{pr=(need(await call('repBorradoresDe',{emerg:id})).borradores)||[]}catch(e){}}
+  let opts='',nota='';
+  if(un.length){
+    const gr={};un.forEach(p=>{const k=(p.grupo?p.grupo+' · ':'')+(p.veh||'sin vehículo');(gr[k]=gr[k]||[]).push(p)});
+    opts=Object.keys(gr).map(k=>'<optgroup label="'+esc(k)+'">'+gr[k].map(p=>'<option value="'+esc(p.u)+'" data-n="'+esc(p.n)+'">'+esc(p.n)+'</option>').join('')+'</optgroup>').join('');
+  }else{
+    const ro=await roster();opts=((ro&&ro.personal)||[]).map(p=>'<option value="'+esc(p.usuario)+'" data-n="'+esc(p.nombre)+'">'+esc((p.grado?p.grado+' ':'')+p.nombre)+'</option>').join('');
+    nota='<p class="derived">Esta emergencia no tiene unidades en grupos; se muestra todo el personal.</p>';
+  }
+  const trf=pr.length?'<fieldset class="aud" id="ar-tr"><legend>Pasar el borrador de reporte al nuevo comandante</legend><p class="derived">Quien lo llevaba hasta ahora tiene estos borradores. Marque los que debe continuar el nuevo comandante: conservan toda la información ya registrada.</p>'+pr.map(b=>'<label><input type="checkbox" value="'+esc(b.tmp)+'"'+(b.llam===id||pr.length===1?' checked':'')+'> '+esc((b.num||'sin número')+' · '+tc(b.cat||'')+' · '+(b.dir||'sin dirección')+(b.llam===id?' · vinculado a esta emergencia':''))+'</label>').join('')+'</fieldset>':'';
+  dlg('<h3>'+esc(etq)+' de esta emergencia</h3>'+nota+'<label>Unidad / persona<select id="ep-p"><option value="">— sin asignar —</option>'+opts+'</select></label>'+trf+'<div class="derived" id="ep-out" role="status"></div><div class="dl"><button class="btn" id="ep-ok">Guardar</button><button class="btn alt" id="ep-no">Cancelar</button></div>',()=>{
+    if(actual)[...$('ep-p').options].forEach(o=>{if(o.dataset.n===actual||o.value===actual)o.selected=true});
+    $('ep-no').onclick=()=>volver?volver():dlgCerrar();
+    $('ep-ok').onclick=async()=>{const o=$('ep-p').selectedOptions[0],u=o.value,n=(o.dataset&&o.dataset.n)||'';$('ep-ok').disabled=true;
+      try{need(await call('emergRol',{id,rol,persona:u,nombre:n}));
+        let tr=0;if(u&&rol==='cmd'){for(const c of document.querySelectorAll('#ar-tr input:checked')){need(await call('repTransferir',{tmp:c.value,a:u,an:n,emerg:id}));tr++}}
+        toast(u?(n||u)+' quedó como '+etq.toLowerCase()+'. Se le avisó.'+(tr?' Se le transfirió '+tr+' borrador(es) de reporte.':''):etq+' sin asignar.');pollVivo();pollPend();
+        volver?volver():dlgCerrar()}catch(e){$('ep-out').textContent='No se pudo: '+humanErr(e);$('ep-ok').disabled=false}}});
 }
 const asignarComandante=(id,volver)=>asignarRol(id,'cmd','Comandante de incidentes','',volver);
 
@@ -3112,26 +3171,13 @@ function pendFilaLlamado(x){
     '<div class="dl"><button class="btn alt sm pa" data-k="abrir" data-t="'+esc(x.id)+'">Abrir la emergencia</button>'+(can?'<button class="btn alt sm pa" data-k="asig" data-t="'+esc(x.id)+'">'+(x.resp?'Cambiar comandante de incidentes':'Asignar comandante de incidentes')+'</button>'+(x.resp?'<button class="btn alt sm pa" data-k="recll" data-t="'+esc(x.id)+'">Enviar recordatorio con enlace</button>':'')+'<button class="btn alt sm pa" data-k="vinc" data-t="'+esc(x.id)+'">Vincular un reporte ya hecho</button><button class="btn alt sm pa" data-k="comp" data-t="'+esc(x.id)+'">Marcar como completada</button>':'')+(esMaster()&&!PREVIEW?'<button class="btn alt sm danger pa" data-k="emel" data-t="'+esc(x.id)+'">Eliminar emergencia</button>':'')+'</div></div></div>';
 }
 
-/* ---------- emergencias atendidas ---------- */
-const AT={lista:[],t:0,pg:0,fk:''};
+/* ---------- emergencias con llamado: se unen a la tabla de Registros (Estado, Comandante, Reporte) ---------- */
+const AT={lista:[],t:0};
 async function pintarAtendidas(forzar){
-  const tab=$('at-tab');if(!tab||!puedeF('pendientes')&&!puedeF('llamados')&&!esMaster())return;
-  if(forzar||Date.now()-AT.t>60000){try{const r=need(await call('emergLista'));AT.lista=r.emergencias||[];AT.t=Date.now()}catch(e){tab.innerHTML='<tr><td>No se pudo cargar: '+esc(humanErr(e))+'</td></tr>';return}}
-  const q=($('at-q').value||'').trim().toLowerCase(),sin=$('at-sin').checked;{const fk=q+'|'+sin;if(fk!==AT.fk){AT.fk=fk;AT.pg=0}}
-  const l=AT.lista.filter(x=>(!q||[x.num,x.msg,x.lugar].join(' ').toLowerCase().includes(q))&&(!sin||!x.reporte));if(AT.pg>=Math.max(1,Math.ceil(l.length/10)))AT.pg=Math.max(0,Math.ceil(l.length/10)-1);
-  tab.innerHTML='<tr><th>Consecutivo</th><th>Fecha</th><th>Emergencia</th><th>Estado</th><th>Comandante</th><th>Reporte</th><th></th></tr>'+(l.length?l.slice(AT.pg*10,AT.pg*10+10).map(x=>{
-    const rp=x.reporte,ok=rp&&String(rp.cat||x.msg).toUpperCase()===String(x.msg).toUpperCase();
-    const repTxt=rp?'<b>'+esc(rp.num||'')+'</b> '+(rp.estado==='final'?'<span class="pill on">terminado</span>':'<span class="pill warn">en elaboración</span>')+(ok?'':' <span class="pill warn" title="La categoría del reporte no coincide con la de la emergencia">revisar vínculo</span>'):(x.completada?'<span class="pill info">Completada sin reporte</span>':x.vencido?'<span class="pill bad">Pendiente · vencido</span>':x.estado==='activa'?'<span class="derived">en curso</span>':'<span class="pill warn">Pendiente</span>');
-    return '<tr><td class="m">'+esc(x.num||'—')+'</td><td>'+fechaHora(x.cuando)+'</td><td><b>'+esc(x.msg)+'</b>'+(x.lugar?'<br><span class="m">'+esc(x.lugar)+'</span>':'')+'</td><td>'+(x.estado==='activa'?'<span class="pill on">Activa</span>':'<span class="pill off">Terminada</span>')+'</td><td>'+esc(x.cmdn||'—')+'</td><td>'+repTxt+'</td><td><button class="btn alt sm" data-at="'+esc(x.id)+'">Abrir</button>'+(puedeF('pendientes')&&!rp?' <button class="btn alt sm" data-atv="'+esc(x.id)+'">Vincular reporte</button>':'')+(esMaster()&&!PREVIEW?' <button class="btn alt sm danger" data-atd="'+esc(x.id)+'">Eliminar</button>':'')+'</td></tr>'}).join(''):'<tr><td colspan="7" class="derived">No hay emergencias que coincidan.</td></tr>');
-  const pgs=Math.max(1,Math.ceil(l.length/10));
-  $('at-pg').innerHTML='<div class="tools"><button class="btn alt sm" id="at-ant" '+(AT.pg<=0?'disabled':'')+'>Anterior</button><span>Página '+(AT.pg+1)+' de '+pgs+' · '+l.length+' emergencia(s)</span><button class="btn alt sm" id="at-sig" '+(AT.pg>=pgs-1?'disabled':'')+'>Siguiente</button></div>';
-  $('at-ant').onclick=()=>{AT.pg--;pintarAtendidas()};$('at-sig').onclick=()=>{AT.pg++;pintarAtendidas()};
-  tab.querySelectorAll('[data-at]').forEach(b=>b.onclick=()=>emergResumen(b.dataset.at));
-  tab.querySelectorAll('[data-atv]').forEach(b=>b.onclick=()=>vincularReporteUI(b.dataset.atv));
-  tab.querySelectorAll('[data-atd]').forEach(b=>b.onclick=()=>eliminarEmergenciaUI(b.dataset.atd));
+  if(!puedeF('registros')&&!puedeF('pendientes')&&!puedeF('llamados')&&!esMaster())return;
+  if(forzar||Date.now()-AT.t>60000){try{const r=need(await call('emergLista'));AT.lista=r.emergencias||[];AT.t=Date.now();try{renderRecs()}catch(e){}}catch(e){}}
 }
 {const dp0=drawPend;drawPend=function(){dp0.apply(this,arguments);try{pintarAtendidas()}catch(e){}}}
-{const q=$('at-q');if(q){q.oninput=()=>pintarAtendidas();$('at-sin').onchange=()=>pintarAtendidas();$('at-rec').onclick=()=>pintarAtendidas(true)}}
 
 /* ---------- repetir llamado: general o solo empleados ---------- */
 repetirLlamado=function(a,btn){
@@ -3486,8 +3532,8 @@ async function admGeo(){
     need(await call('cfgSet',{clave:'geo',valor:{lat:la,lon:lo,radio:+$('ge-r').value||80,registrar:$('ge-reg').checked,avisar:$('ge-avi').checked,mostrar:$('ge-mos').checked,terminar:$('ge-ter').checked,apagarSola:$('ge-aps').checked}}));$('ge-out').textContent='Guardado. Desde ahora las salidas y llegadas de la estación se detectan con ese círculo.'}catch(e){$('ge-out').textContent='No se pudo guardar: '+humanErr(e)}};
   $('ge-no').onclick=async()=>{if(!confirm('¿Quitar el geocerco? Las salidas y llegadas volverán a registrarse solo a mano.'))return;try{need(await call('cfgSet',{clave:'geo',valor:{lat:'',lon:'',radio:80}}));$('ge-la').value=$('ge-lo').value='';$('ge-out').textContent='Geocerco quitado.'}catch(e){$('ge-out').textContent='No se pudo: '+humanErr(e)}};
 }
-const LY_MENU=[['reg','Realizar registro'],['emg','Emergencias activas'],['mis','Mis registros'],['apo','Apoyos para emergencias'],['map','Mapa'],['cen','Panel de la central (solo personal de la central)'],['cfg','Configuración (siempre visible)']];
-const LY_TABS=[['est','Estadística'],['reg','Registros'],['vivo','Operación'],['calor','Mapa de calor'],['per','Personal'],['aud','Auditoría'],['cfg','Conexión'],['adm','Administración (siempre visible)'],['ser','Histórico']];
+const LY_MENU=[['reg','Realizar registro'],['emg','Emergencias activas'],['mis','Mis registros'],['apo','Apoyos para emergencias'],['map','Mapa'],['cen','Panel de la central (solo personal de la central)'],['asg','Asignación (grupo del usuario)'],['cfg','Configuración (siempre visible)']];
+const LY_TABS=[['est','Estadística'],['vivo','Operación'],['reg','Registros'],['calor','Mapa de calor'],['per','Personal'],['aud','Auditoría'],['cfg','Conexión'],['vpv','Vista previa'],['adm','Administración (siempre visible)'],['ser','Histórico']];
 async function admDis(){
   if(!esMaster()){$('a-box').innerHTML='<div class="card"><p>Solo el superadministrador puede cambiar el diseño.</p></div>';return}
   const cur=(need(await call('cfgGet')).cfg||{}).layout||{};
@@ -3937,6 +3983,37 @@ async function vistaPreviaEst(){
   }catch(e){}});
   try{parent.postMessage({tipo:'vp-listo-est'},'*')}catch(e){}
 }
+
+/* ================= Vista previa para todos los roles: se ve cómo quedan el celular y la plataforma; el superadministrador además arrastra los botones para reordenarlos ================= */
+const VPV={w:'cel'};
+function renderVpv(){
+  const box=$('p-vpv');if(!box)return;
+  if(!box._ok){box._ok=1;
+    box.innerHTML='<div class="card"><h3>Vista previa</h3><p class="derived expl">Así se ven hoy la <b>aplicación del celular</b> y <b>esta plataforma</b> con el diseño configurado. Es una demostración: no modifica datos.'+(esMaster()?' Como superadministrador puede <b>arrastrar los botones</b> del menú o de las pestañas dentro de la vista previa y el nuevo orden se guarda solo.':'')+'</p><div class="tools"><label>Qué ver<select id="vpv-w"><option value="cel">Aplicación del celular</option><option value="est">Esta plataforma</option></select></label><button class="btn alt sm" id="vpv-rf" type="button">Actualizar vista previa</button></div><div id="vpv-fr"></div><div class="derived" id="vpv-out"></div></div>';
+    $('vpv-w').onchange=()=>{VPV.w=$('vpv-w').value;vpvCargar()};$('vpv-rf').onclick=vpvCargar}
+  vpvCargar();
+}
+function vpvCargar(){
+  const fr=$('vpv-fr');if(!fr)return;
+  fr.innerHTML=VPV.w==='est'?'<div class="dz-fr-est vpv-est"><iframe title="Vista previa de la plataforma" src="estadistica.html?vistaprevia=1"></iframe></div>':'<div class="dz-fr-cel"><iframe title="Vista previa del celular" src="index.html?vistaprevia=1"></iframe></div>';
+  if(VPV.w==='est'){const w=fr.querySelector('.vpv-est'),f=w.querySelector('iframe');const k=Math.min(1,w.clientWidth/1280);f.style.transform='scale('+k+')';w.style.height=Math.round(800*k)+'px'}
+}
+window.addEventListener('message',async ev=>{const m=ev.data||{};if(!m)return;
+  if((m.tipo==='vp-listo'||m.tipo==='vp-listo-est')&&$('vpv-fr')&&$('vpv-fr').querySelector('iframe')&&$('p-vpv')&&!$('p-vpv').hidden){const f=$('vpv-fr').querySelector('iframe');try{f.contentWindow.postMessage({tipo:'cfg',cfg:CFGP||{}},'*')}catch(e){}}
+  if(m.tipo==='vp-orden'&&Array.isArray(m.orden)&&$('p-vpv')&&!$('p-vpv').hidden){
+    if(!esMaster()){$('vpv-out').textContent='Solo el superadministrador puede guardar cambios de orden.';return}
+    try{const L=Object.assign({},CFGP.layout||{});if(m.cual==='menu'){const rest=LY_MENU.map(x=>x[0]).filter(k=>!m.orden.includes(k));L.menu=m.orden.concat(rest)}else{const rest=LY_TABS.map(x=>x[0]).filter(k=>!m.orden.includes(k));L.tabs=m.orden.concat(rest)}
+      need(await call('cfgSet',{clave:'layout',valor:L}));CFGP.layout=L;tabsPorRol();$('vpv-out').textContent='Orden guardado.'}catch(e){$('vpv-out').textContent='No se pudo guardar: '+humanErr(e)}}
+});
+{const st0=showTab;showTab=function(k){st0.apply(this,arguments);if(k==='vpv')renderVpv()}}
+{const vpe=vistaPreviaEst;vistaPreviaEst=async function(){await vpe.apply(this,arguments);
+  const bar=$('ptabs');if(!bar)return;let drag=null;
+  const marca=()=>{const vv=bar.querySelector('[data-p=vpv]');if(vv)vv.hidden=true;[...bar.querySelectorAll('button')].forEach(b=>{b.draggable=true;
+    b.ondragstart=e=>{drag=b;try{e.dataTransfer.setData('text/plain',b.dataset.p)}catch(x){}};
+    b.ondragover=e=>e.preventDefault();
+    b.ondrop=e=>{e.preventDefault();if(!drag||drag===b)return;const a=[...bar.children];if(a.indexOf(drag)<a.indexOf(b))b.after(drag);else b.before(drag);
+      try{parent.postMessage({tipo:'vp-orden',cual:'tabs',orden:[...bar.querySelectorAll('button')].map(x=>x.dataset.p)},'*')}catch(x){}}})};
+  marca();setInterval(marca,1500)}}
 
 $('flogin').onsubmit=login;$('docs-bulk').onclick=docsBulk;
 $('atabs').onclick=e=>{const b=e.target.closest('button');if(b)renderAdm(b.dataset.a)};
