@@ -22,15 +22,23 @@
   /* Los 8 pasos del primer respondedor al llegar a la escena (SCI) */
   const SCI_PASOS = ['Informar a su base de su arribo a la escena','Asumir el mando y establecer el Puesto de Comando (PC)','Evaluar la situación','Establecer su perímetro de seguridad','Establecer sus objetivos','Determinar las estrategias','Determinar la necesidad de recursos y posibles instalaciones','Preparar la información para transferir el mando'];
   const CANAL = ['Llamada telefónica','Radio','Personal en la estación','Policía o autoridad','Redes o WhatsApp','De oficio'];
-  const PTIPO = ['Vivienda','Finca','Comercial','Agrícola','Vía pública','Lote baldío','Industrial','Otro'];
+  const TDOC = [['CC','Cédula de Ciudadanía (CC)'],['TI','Tarjeta de Identidad (TI)'],['RC','Registro Civil de Nacimiento (RC)'],['PP','Pasaporte (PP)'],['CE','Cédula de Extranjería (CE)'],['PPT','Permiso por Protección Temporal (PPT)'],['PEP','Permiso Especial de Permanencia (PEP)']];
+const PTIPO = ['Vivienda','Finca','Comercial','Agrícola','Vía pública','Lote baldío','Industrial','Otro'];
   const INST = [['dc','Defensa Civil'],['cr','Cruz Roja'],['pn','Policía Nacional'],['pcar','Policía de Carreteras'],['hosp','Hospitales']];
   const LISTAS = {
-    les:  { max: 6,  cols: [['n','Nombre'],['d','Documento'],['e','Edad','number'],['t','Trasladado a'],['p','Trasladado por']], no: 'No hubo lesionados' },
-    vimp: { max: 4,  cols: [['c','Conductor'],['d','Documento'],['v','Vehículo'],['col','Color'],['pl','Placa']], no: 'No hubo vehículos implicados' },
-    acc:  { max: 57, cols: [['h','Hora','time'],['a','Acción realizada','area']], no: '' }
+    les:  { max: 6,  cols: [['n','Nombre'],['td','Tipo de documento','tdoc'],['d','Número de documento'],['e','Edad','number'],['t','Trasladado a'],['p','Trasladado por']], no: 'No hubo lesionados' },
+    vimp: { max: 4,  cols: [['c','Conductor'],['td','Tipo de documento','tdoc'],['d','Número de documento'],['v','Vehículo'],['col','Color'],['pl','Placa']], no: 'No hubo vehículos implicados' },
+    acc:  { max: 57, cols: [['h','Hora','time'],['a','Acción realizada','area']], no: '' },
+    hall: { max: 12, cols: [['a','Área o aspecto'],['h','Hallazgo','area'],['r','Recomendación o requerimiento','area'],['p','Plazo (ej.: inmediato, 15 días)']], no: 'Sin hallazgos que requieran intervención' }
   };
   /* Actividades logísticas o institucionales: formulario simplificado (secciones 1, 2, 4 y 5; la numeración original se conserva). */
-  const SIMPLE_CATS = ['CAPACITACIONES','REUNIÓN EN LA ALCALDÍA','REUNIONES DE SERVICIO SOCIAL','SUMINISTROS DE AGUA','VISITAS DE SEGURIDAD'];
+  const SIMPLE_CATS = ['CAPACITACIONES','REUNIÓN EN LA ALCALDÍA','REUNIONES DE SERVICIO SOCIAL','SUMINISTROS DE AGUA'];
+  /* Visitas de seguridad: no generan constancia de emergencia sino un INFORME TÉCNICO DE INSPECCIÓN (formulario propio) */
+  const INS_CAT = 'VISITAS DE SEGURIDAD';
+  const CUMPLE = ['CUMPLE','NO CUMPLE','NO APLICA'];
+  const CK = (p, l, hint) => ({ p: 'rpt.ins.' + p, l, t: 'chip1', o: CUMPLE, naOk: false, opt: true, hint: hint || '' });
+  const SH_ITEMS = [['evac','Rutas y medios de evacuación libres, continuos y señalizados'],['sal','Salidas de emergencia: suficientes, sin obstrucción y con apertura en sentido de la evacuación'],['pas','Pasillos y escaleras: ancho libre, pasamanos y superficie antideslizante'],['sen','Señalización de seguridad y evacuación'],['ilu','Iluminación de emergencia'],['plan','Plan de emergencias, brigada y simulacros'],['aforo','Aforo / ocupación acorde con la capacidad']];
+  const PCI_ITEMS = [['ext','Extintores: tipo, ubicación, carga y mantenimiento vigente'],['det','Detección y alarma de incendio'],['extf','Extinción fija (rociadores, gabinetes, red contra incendios)'],['elec','Instalaciones eléctricas (tableros, cableado, conexiones)'],['comb','Materiales combustibles y orden y aseo'],['ign','Fuentes de ignición (cocción, calor, chispas)'],['sust','Almacenamiento de sustancias peligrosas, gas o combustibles']];
   const ASK_CATS = ['LABORES DE PREVENCION O ACOMPAÑAMIENTO EN GESTION DEL RIESGO'];
   const MODO_SIMPLE = 'ACOMPAÑAMIENTO O PREVENCIÓN', MODO_EMERG = 'ATENCIÓN DE EMERGENCIA';
   const SIMPLE_STEPS = ['esencial','quien','tiempos','fotos'];
@@ -48,7 +56,8 @@
     { id: 'r_prop', t: '2 · Propiedad afectada y propietario', f: [
       F('rpt.prop.tipo', 'Tipo de propiedad', 'sel', { o: PTIPO }),
       F('rpt.prop.nom', 'Nombre del propietario', 'text'),
-      F('rpt.prop.doc', 'Documento del propietario', 'text'),
+      F('rpt.prop.td', 'Tipo de documento del propietario', 'selv', { o: TDOC }),
+      F('rpt.prop.doc', 'Número de documento del propietario', 'text'),
       F('rpt.prop.tel', 'Teléfono de contacto', 'text') ] },
     { id: 'r_eval', t: '6c · Evaluación inicial de la situación', f: [
       F('rpt.dinc', 'Descripción del incidente', 'area', { hint: 'Qué encuentra el comandante de incidentes al llegar. No es el resumen de las acciones: ese va en la descripción de los hechos.' }),
@@ -69,13 +78,12 @@
       F('uni', 'N° de unidades que asistieron', 'auto', { naOk: false, hint: 'Se calcula solo con las personas seleccionadas arriba.' }),
       F('veh', 'Vehículo(s)', 'chipsN', { hint: VEH_INFO }) ] },
     { id: 'r_sci', t: '6i · Estructura organizacional del incidente (SCI)', f: [ 
-      F('rpt.cmd.nom', 'Nombre del comando de incidentes', 'text', { naOk: true, hint: 'Nombre o referencia con que se identificó el comando de incidentes de esta emergencia (ej.: «Comando Incendio Vereda El Retiro» o «PMU Vía Panorama»). No es el nombre de la persona.' }),
       F('rpt.sci', 'Funciones activadas', 'sci', { naOk: false, hint: 'Es opcional: marque solo las funciones que se activaron. Las que no se marquen las asume el Comandante del incidente.' }),
       F('rpt.cmd.g', 'Grado', 'text'),
       F('rpt.cmd.c', 'Cargo', 'text') ] },
     { id: 'r_pc', t: '6b · Puesto de comando y áreas operativas', f: [
       F('rpt.pc', 'Ubicación del puesto de comando', 'text'),
-      F('rpt.pcid', 'Identificación del puesto', 'text'),
+      F('rpt.pcid', 'Identificación del comando de incidentes', 'text', { hint: 'Nombre o referencia con que se identificó el comando de incidentes (ej.: «Comando Incendio Vereda El Retiro»).' }),
       F('rpt.ae', 'Área de espera', 'text'),
       F('rpt.acv', 'A.C.V.', 'text') ] },
     { id: 'quepaso', t: '3 · Descripción y características del evento', f: [
@@ -102,5 +110,47 @@
     { id: 'r_obs', t: '6k · Observaciones adicionales (opcional)', f: [ F('rpt.obs', 'Observaciones adicionales', 'area', { naOk: false, opt: true, hint: 'Opcional. NO repita el relato de los hechos ni la bitácora. Use este espacio solo para observaciones legales, disciplinarias o normativas y para requerimientos o necesidades (material gastado, apoyo que faltó, novedades con terceros).' }) ] },
     { id: 'fotos', t: '5 · Registro fotográfico', f: [ F('fotos', 'Registro fotográfico del evento', 'photos', { hint: 'Recomendado: mínimo 3 fotografías: 1) la situación al llegar, 2) el personal trabajando y 3) los vehículos en la escena.' }) ] }
   ];
-  g.CBV_ESQ = { SIMPLE_CATS, ASK_CATS, MODO_SIMPLE, MODO_EMERG, SIMPLE_STEPS, RANGOS_ORDEN, CATS, TIPOS, VEH, SNIF, YN, CANAL, PTIPO, INST, LISTAS, STEPS, SCI_ROLES, SCI_FUNC, SCI_NOACT, SCI_PASOS, SCI_INST, VEH_INFO };
+  const INS_STEPS = [
+    { id: 'esencial', t: '1 · Identificación y localización del evento', f: [
+      F('cat', 'Incidente o actividad', 'cat', { naOk: false }),
+      F('fecha', 'Día de la inspección', 'date', { naOk: false }),
+      F('lat', 'Ubicación (GPS)', 'gps', { naOk: false, hint: 'Obligatoria. Tómela estando en el establecimiento.' }),
+      F('dir', 'Dirección del establecimiento', 'text'),
+      F('bar', 'Barrio, corregimiento o vereda', 'text') ] },
+    { id: 'i_est', t: '2 · Establecimiento, responsable e inspectores', f: [
+      F('rpt.ins.rs', 'Nombre o razón social del establecimiento', 'text', { naOk: false }),
+      F('rpt.ins.nit', 'NIT o documento del propietario', 'text'),
+      F('rpt.ins.act', 'Actividad económica', 'text'),
+      F('rpt.ins.motivo', 'Motivo de la visita', 'sel', { o: ['Solicitud del establecimiento','Programada por el Cuerpo de Bomberos','Seguimiento de una inspección anterior','Requisito para licencia o permiso','Otro'] }),
+      F('rpt.ins.resp', 'Responsable del establecimiento (quien atendió)', 'text'),
+      F('rpt.ins.respc', 'Cargo del responsable', 'text'),
+      F('rpt.ins.respt', 'Teléfono del responsable', 'text'),
+      F('hora', 'Hora de inicio de la inspección', 'time', { naOk: false }),
+      F('hfin', 'Hora de terminación', 'time'),
+      F('pers', 'Inspector(es) que realizaron la visita', 'pers', { naOk: false }) ] },
+    { id: 'i_ant', t: '3 · Antecedentes', f: [
+      F('rpt.ins.ant', 'Inspecciones anteriores y hallazgos previos', 'area', { hint: 'Fecha y resultado, si existen. Si no hay, marque «No aplica».' }),
+      F('rpt.ins.antev', 'Eventos asociados (incendios, emergencias previas)', 'area'),
+      F('rpt.ins.antrec', 'Recomendaciones anteriores y medidas correctivas ejecutadas', 'area') ] },
+    { id: 'i_alc', t: '4 · Objeto, alcance y áreas evaluadas', f: [
+      F('rpt.ins.obj', 'Propósito de la inspección (opcional)', 'area', { naOk: false, opt: true, hint: 'Si lo deja vacío, el informe usa el texto estándar: verificar de forma visual las condiciones de seguridad humana y protección contra incendios.' }),
+      F('rpt.ins.areas', 'Áreas evaluadas', 'area', { naOk: false, hint: 'Ej.: recepción, bodega, cocina, segundo piso, parqueadero.' }),
+      F('rpt.ins.lim', 'Limitaciones o áreas no inspeccionadas (opcional)', 'area', { naOk: false, opt: true, hint: 'Ej.: zona cerrada con llave, sin acceso a la cubierta. El informe ya aclara que es una inspección visual.' }) ] },
+    { id: 'i_desc', t: '5 · Descripción del establecimiento', f: [
+      F('rpt.ins.uso', 'Uso principal de la edificación', 'sel', { o: ['Comercial','Industrial','Institucional o educativo','Salud','Reunión o gran concurrencia','Vivienda','Mixto','Almacenamiento','Otro'] }),
+      F('rpt.ins.niv', 'Niveles o pisos', 'text'),
+      F('rpt.ins.m2', 'Área aproximada (m²)', 'text'),
+      F('rpt.ins.ocup', 'Ocupación aproximada (personas) y horario', 'text'),
+      F('rpt.ins.dg', 'Características e instalaciones (distribución, materiales, condiciones generales)', 'area') ] },
+    { id: 'i_sh', t: '6 · Seguridad humana', f: SH_ITEMS.map(x => CK(x[0], x[1])).concat([F('rpt.ins.shobs', 'Observaciones de seguridad humana', 'area', { hint: 'Solo lo que explique un «No cumple» o un dato importante.' })]) },
+    { id: 'i_pci', t: '7 · Protección contra incendios', f: PCI_ITEMS.map(x => CK(x[0], x[1])).concat([F('rpt.ins.pciobs', 'Observaciones de protección contra incendios', 'area')]) },
+    { id: 'i_hall', t: '8 · Hallazgos, riesgo y concepto', f: [
+      F('rpt.ins.hall', 'Hallazgos que requieren intervención', 'list', { lista: 'hall', hint: 'Los «No cumple» de las listas se incluyen solos en el informe; aquí agregue hallazgos adicionales, o detalle el plazo y la recomendación de cada uno.' }),
+      F('rpt.ins.riesgo', 'Nivel preliminar de riesgo', 'chip1', { o: ['BAJO','MEDIO','ALTO','NO VALORADO'], naOk: false, opt: true }),
+      F('rpt.ins.restr', 'Restricciones de uso o acceso (si las hay)', 'area'),
+      F('rpt.ins.concepto', 'Concepto técnico', 'chip1', { o: ['FAVORABLE','FAVORABLE CON REQUERIMIENTOS','NO FAVORABLE','NO EMITIDO'], naOk: false, opt: true, hint: 'Si no lo marca, el informe lo propone según las listas y queda sujeto a su firma.' }),
+      F('rpt.ins.concl', 'Conclusión adicional del inspector (opcional)', 'area', { naOk: false, opt: true }) ] },
+    { id: 'fotos', t: '9 · Registro fotográfico', f: [ F('fotos', 'Registro fotográfico', 'photos', { hint: 'Fotografíe los hallazgos y las áreas inspeccionadas; describa cada foto.' }) ] }
+  ];
+  g.CBV_ESQ = { INS_CAT, INS_STEPS, SH_ITEMS, PCI_ITEMS, SIMPLE_CATS, ASK_CATS, MODO_SIMPLE, MODO_EMERG, SIMPLE_STEPS, RANGOS_ORDEN, CATS, TIPOS, VEH, SNIF, YN, CANAL, PTIPO, TDOC, INST, LISTAS, STEPS, SCI_ROLES, SCI_FUNC, SCI_NOACT, SCI_PASOS, SCI_INST, VEH_INFO };
 })(typeof window !== 'undefined' ? window : globalThis);

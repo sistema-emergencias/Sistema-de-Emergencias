@@ -17,6 +17,7 @@
     return h + (h === 1 ? ' HORA' : ' HORAS') + (m ? ' Y ' + m + ' MINUTOS' : '');
   }
   /* hora siempre como HH:mm (24 h), venga como venga */
+  const dtxt = (t, d) => (d ? (t ? t + ' ' : '') + d : '');
   const h24 = v => {
     if (v == null || v === '') return '';
     if (v instanceof Date) return String(v.getUTCHours()).padStart(2, '0') + ':' + String(v.getUTCMinutes()).padStart(2, '0');
@@ -268,7 +269,7 @@
     const prop = rp.prop || {};
     const pm = { 'Vivienda': 'J12', 'Finca': 'J13', 'Comercial': 'J14', 'Agrícola': 'J15', 'Vía pública': 'N12', 'Lote baldío': 'N13', 'Industrial': 'N14', 'Otro': 'N15' };
     if (pm[prop.tipo]) s = put(s, pm[prop.tipo], 'X');
-    s = pn(s, 'I16', prop.nom); s = pn(s, 'I17', prop.doc); s = pn(s, 'M17', prop.tel);
+    s = pn(s, 'I16', prop.nom); s = pn(s, 'I17', dtxt(prop.td, prop.doc)); s = pn(s, 'M17', prop.tel);
     // 2. incidente
     s = pn(s, 'N20', h24(r.hlle));
     if (rp.zona === 'URBANA') s = put(s, 'D23', 'X'); if (rp.zona === 'RURAL') s = put(s, 'G23', 'X');
@@ -286,15 +287,15 @@
     });
     // 5. lesionados (hasta 6)
     if (!(rp.les || []).length) { s = put(s, 'A54', 'NO HUBO LESIONADOS'); ['H54', 'J54', 'K54', 'M54'].forEach(c => { s = put(s, c, 'N/A'); }); }
-    (rp.les || []).slice(0, 6).forEach((x, i) => { const n = 54 + i; s = put(s, 'A' + n, x.n); s = put(s, 'H' + n, x.d); s = put(s, 'J' + n, x.e === '' || x.e == null ? '' : +x.e); s = put(s, 'K' + n, x.t); s = put(s, 'M' + n, x.p); });
+    (rp.les || []).slice(0, 6).forEach((x, i) => { const n = 54 + i; s = put(s, 'A' + n, x.n); s = put(s, 'H' + n, dtxt(x.td, x.d)); s = put(s, 'J' + n, x.e === '' || x.e == null ? '' : +x.e); s = put(s, 'K' + n, x.t); s = put(s, 'M' + n, x.p); });
     // 6. vehículos implicados (hasta 4)
     if (!(rp.vimp || []).length) { s = put(s, 'P3', 'NO HUBO VEHÍCULOS IMPLICADOS'); ['Q3', 'R3', 'T3', 'U3'].forEach(c => { s = put(s, c, 'N/A'); }); }
-    (rp.vimp || []).slice(0, 4).forEach((x, i) => { const n = 3 + i; s = put(s, 'P' + n, x.c); s = put(s, 'Q' + n, x.d); s = put(s, 'R' + n, x.v); s = put(s, 'T' + n, x.col); s = put(s, 'U' + n, x.pl); });
+    (rp.vimp || []).slice(0, 4).forEach((x, i) => { const n = 3 + i; s = put(s, 'P' + n, x.c); s = put(s, 'Q' + n, dtxt(x.td, x.d)); s = put(s, 'R' + n, x.v); s = put(s, 'T' + n, x.col); s = put(s, 'U' + n, x.pl); });
     // 9. resumen de acciones (hasta 57 filas)
     // descripción de los hechos (tercera persona) + una línea + resumen de acciones; si no cabe, sigue en la hoja CONTINUACIÓN
     const lineas = [];
     /* primero la cronología / bitácora, después una casilla y la descripción de los hechos */
-    (rp.acc || []).slice().sort((a, b) => h24(a.h).localeCompare(h24(b.h))).forEach(x => wrapAll(x.a, 72).forEach((t, k) => lineas.push({ h: k === 0 ? h24(x.h) : '', a: t })));
+    (rp.acc || []).slice().forEach(x => wrapAll(x.a, 72).forEach((t, k) => lineas.push({ h: k === 0 ? h24(x.h) : '', a: t })));
     if (!blank(r.desc)) { if (lineas.length) lineas.push({ h: '', a: '' }); lineas.push({ h: '', a: 'DESCRIPCIÓN DE LOS HECHOS' }); wrapAll(r.desc, 78).forEach(t => lineas.push({ h: '', a: t })); }
     // 10. unidad que comandó
     const cm = rp.cmd || {}; const gradosDe = r.grados || {};
@@ -339,7 +340,7 @@
     s = crecer(s, [15, 16, 17, 18, 19, 20], lineasDe(obsRef, anchoRango(s, 'AD', 'AK')) * LH + 4);
     // 7. organización del incidente (SCI) dentro de los recuadros del formato
     let dr = await zip.file('xl/drawings/drawing1.xml').async('string');
-    dr = organigrama(dr, rp.sci || {}, rp.cmd || {}, r);
+    dr = organigrama(dr, rp.sci || {}, Object.assign({}, rp.cmd || {}, { nom: (rp.cmd && rp.cmd.nom) || rp.pcid || '' }), r);
     // 14. registro fotográfico
     const fotos = (r.fotos || []).filter(f => f && f.data);
     if (fotos.length) s = await fotosReporte(zip, s, dr, fotos, r);
@@ -494,7 +495,7 @@
     const vehs = String(r.veh || '').split(/[,/;]+/).map(x => x.trim()).filter(Boolean);
     const pers = (r.pers || []).slice(0, 24);
     const lat = gmsLat(r.lat), lon = gmsLon(r.lon);
-    const acc = (rp.acc || []).slice().sort((a, b) => h24(a.h).localeCompare(h24(b.h)));
+    const acc = (rp.acc || []).slice();
     const fotos = o.fotos || r.fotos || [];
     const css = `@page{size:21.59cm 27.94cm;margin:.5cm}*{box-sizing:border-box}body{font:10.5px/1.3 Arial,Helvetica,sans-serif;color:#000;margin:0;zoom:.95}h1,h2{margin:0}.hd{display:grid;grid-template-columns:80px 1fr 80px;align-items:center;border:1.5px solid #000;padding:4px}.hd img{max-height:64px;max-width:76px}.hd .t{text-align:center;font-weight:700;font-size:13px}table{border-collapse:collapse;width:100%;margin-top:4px;page-break-inside:avoid}th,td{border:1px solid #000;padding:3px 5px;vertical-align:top;text-align:left}th{background:#eee;width:23%;font-weight:700}.sec{background:#222;color:#fff;font-weight:700;text-align:center;padding:3px;margin-top:6px;border:1px solid #000;page-break-after:avoid}.ck{margin-right:12px;white-space:nowrap}.org{display:grid;gap:6px;justify-items:center;border:1px solid #000;padding:6px;margin-top:4px;page-break-inside:avoid}.bx{border:1.5px solid #000;padding:4px 8px;text-align:center;min-width:130px}.bx b{display:block;font-size:9px}.row{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}.ph{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}.ph figure{margin:0;border:1px solid #000;padding:4px;text-align:center;page-break-inside:avoid}.ph img{max-width:100%;max-height:230px}.ph figcaption{font-size:9.5px}.sign{height:46px}`;
     const gr = (sci.grupos || []).map(g => `<div class="bx"><b>Unidad ${E(g.u)}</b>${E(g.f || '')}${g.n ? '<br>' + E(g.n) : ''}${(g.p || []).length ? '<br><small>' + E(g.p.join(', ')) + '</small>' : ''}</div>`).join('');
@@ -509,7 +510,7 @@
 <tr><th>Dirección</th><td colspan="3">${v(r.dir)}</td></tr><tr><th>Barrio / vereda</th><td colspan="3">${v(r.bar) || 'N/A'}</td></tr>
 <tr><th>Zona</th><td>${chk(rp.zona === 'URBANA', 'URBANA')}${chk(rp.zona === 'RURAL', 'RURAL')}</td><th>Departamento / municipio</th><td>VALLE DEL CAUCA · LA UNIÓN</td></tr>
 <tr><th>Coordenadas</th><td colspan="3">Latitud: <b>${E(lat)}</b> &nbsp; Longitud: <b>${E(lon)}</b></td></tr>
-${row('Ubicación del puesto de comando', v(rp.pc))}${row('Identificación del puesto de comando', v(rp.pcid))}${row('Ubicación del área de espera', v(rp.ae))}${row('Ubicación del A.C.V.', v(rp.acv))}</table>
+${row('Ubicación del puesto de comando', v(rp.pc))}${row('Identificación del comando de incidentes', v(rp.pcid))}${row('Ubicación del área de espera', v(rp.ae))}${row('Ubicación del A.C.V.', v(rp.acv))}</table>
 <div class="sec">3. EVALUACIÓN INICIAL DEL INCIDENTE</div>
 <table>${row('Descripción del incidente', v(rp.dinc))}${row('Amenazas del incidente', v(rp.amen))}${row('Objetivos iniciales', v(rp.obj))}
 <tr><th>Hubo alteración en la escena antes de la llegada de bomberos</th><td>${chk(esc.alt === 'SI', 'SI')}${chk(esc.alt === 'NO', 'NO')}</td><th>Cómo se alteró</th><td>${v(esc.altc)}</td></tr>
@@ -518,11 +519,11 @@ ${row('Ubicación del puesto de comando', v(rp.pc))}${row('Identificación del p
 <div class="sec">4. INSTITUCIONES QUE INTERVIENEN Y APOYAN EN EL INCIDENTE</div>
 <table><tr><th>Defensa Civil</th><td>${insV('dc')}</td><th>Policía Carreteras</th><td>${insV('pcar')}</td></tr><tr><th>Cruz Roja</th><td>${insV('cr')}</td><th>Hospitales</th><td>${insV('hosp')}</td></tr><tr><th>Policía Nacional</th><td>${insV('pn')}</td><th></th><td></td></tr></table>
 <div class="sec">5. INFORMACIÓN DE LESIONADOS EN EL INCIDENTE</div>
-<table><tr><th>Nombre</th><th>Doc. identidad</th><th>Edad</th><th>Trasladado a / por</th></tr>${(rp.les || []).map(x => `<tr><td>${v(x.n)}</td><td>${v(x.d)}</td><td>${v(x.e)}</td><td>${v(x.t)}${x.p ? ' · ' + v(x.p) : ''}</td></tr>`).join('') || '<tr><td colspan="4">N/A</td></tr>'}</table>
+<table><tr><th>Nombre</th><th>Doc. identidad</th><th>Edad</th><th>Trasladado a / por</th></tr>${(rp.les || []).map(x => `<tr><td>${v(x.n)}</td><td>${v(dtxt(x.td, x.d))}</td><td>${v(x.e)}</td><td>${v(x.t)}${x.p ? ' · ' + v(x.p) : ''}</td></tr>`).join('') || '<tr><td colspan="4">N/A</td></tr>'}</table>
 <div class="sec">6. INFORMACIÓN DE VEHÍCULOS IMPLICADOS</div>
-<table><tr><th>Conductor</th><th>Doc. identidad</th><th>Vehículo</th><th>Color / placa</th></tr>${(rp.vimp || []).map(x => `<tr><td>${v(x.c)}</td><td>${v(x.d)}</td><td>${v(x.v)}</td><td>${v(x.col)} ${v(x.pl)}</td></tr>`).join('') || '<tr><td colspan="4">N/A</td></tr>'}</table>
+<table><tr><th>Conductor</th><th>Doc. identidad</th><th>Vehículo</th><th>Color / placa</th></tr>${(rp.vimp || []).map(x => `<tr><td>${v(x.c)}</td><td>${v(dtxt(x.td, x.d))}</td><td>${v(x.v)}</td><td>${v(x.col)} ${v(x.pl)}</td></tr>`).join('') || '<tr><td colspan="4">N/A</td></tr>'}</table>
 <div class="sec">7. ORGANIZACIÓN DEL INCIDENTE (SCI)</div>
-<div class="org"><div class="bx"><b>COMANDANTE DEL INCIDENTE${cmd.nom ? " · " + E(cmd.nom) : ""}</b>${E(sci.ci || cmd.n || '')}</div>
+<div class="org"><div class="bx"><b>COMANDANTE DEL INCIDENTE${(cmd.nom||rp.pcid) ? " · " + E(cmd.nom||rp.pcid) : ""}</b>${E(sci.ci || cmd.n || '')}</div>
 <div class="row"><div class="bx"><b>Oficial de seguridad</b>${E(nm('seg'))}</div><div class="bx"><b>Oficial de información pública</b>${E(nm('inf'))}</div><div class="bx"><b>Oficial de enlace</b>${E(nm('enl'))}</div></div>
 <div class="row"><div class="bx"><b>JEFE DE OPERACIONES</b>${E(nm('ops'))}</div><div class="bx"><b>JEFE DE PLANIFICACIÓN</b>${E(nm('pla'))}</div><div class="bx"><b>JEFE DE LOGÍSTICA</b>${E(nm('log'))}</div><div class="bx"><b>JEFE DE ADMON. Y FINANZAS</b>${E(nm('adm'))}</div></div>
 ${gr ? `<div><b>Función de cada unidad</b></div><div class="row">${gr}</div>` : ''}</div>
@@ -1018,14 +1019,24 @@ ${fotos.length ? `<div class="sec" style="page-break-before:always">14. REGISTRO
     org: t => '<w:p><w:pPr><w:spacing w:before="0"/><w:ind w:left="338" w:right="334" w:firstLine="0"/><w:jc w:val="center"/><w:rPr><w:b/><w:sz w:val="24"/></w:rPr></w:pPr>' + run(t, { b: 1, sz: 24 }) + '</w:p>',
     vacio: () => '<w:p><w:pPr><w:spacing w:before="0"/></w:pPr></w:p>',
     cuerpo: (t, wm) => '<w:p><w:pPr><w:pStyle w:val="BodyText"/><w:spacing w:line="276" w:lineRule="auto" w:before="120"/><w:ind w:left="338" w:right="334"/><w:jc w:val="both"/></w:pPr>' + (wm || '') + run(t) + '</w:p>',
-    h2: t => '<w:p><w:pPr><w:pStyle w:val="Heading2"/><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr><w:tabs><w:tab w:pos="606" w:val="left" w:leader="none"/></w:tabs><w:spacing w:line="240" w:lineRule="auto" w:before="200" w:after="0"/><w:ind w:left="606" w:right="0" w:hanging="268"/><w:jc w:val="both"/></w:pPr>' + run(t) + '</w:p>',
+    h2: t => '<w:p><w:pPr><w:pStyle w:val="Heading2"/><w:keepNext/><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr><w:tabs><w:tab w:pos="606" w:val="left" w:leader="none"/></w:tabs><w:spacing w:line="240" w:lineRule="auto" w:before="200" w:after="0"/><w:ind w:left="606" w:right="0" w:hanging="268"/><w:jc w:val="both"/></w:pPr>' + run(t) + '</w:p>',
     sub: t => '<w:p><w:pPr><w:keepNext/><w:spacing w:before="165"/><w:ind w:left="338" w:right="0" w:firstLine="0"/><w:jc w:val="both"/><w:rPr><w:b/><w:sz w:val="24"/></w:rPr></w:pPr>' + run(t, { b: 1, sz: 24 }) + '</w:p>',
     pun: (lab, val, hb) => '<w:p><w:pPr><w:pStyle w:val="ListParagraph"/><w:numPr><w:ilvl w:val="1"/><w:numId w:val="1"/></w:numPr><w:tabs><w:tab w:pos="1058" w:val="left" w:leader="none"/></w:tabs><w:spacing w:line="240" w:lineRule="auto" w:before="80" w:after="0"/><w:ind w:left="1058" w:right="334" w:hanging="360"/><w:jc w:val="both"/><w:rPr><w:sz w:val="24"/></w:rPr></w:pPr>' + (lab ? run(lab + ' ', { b: 1, sz: 24 }) : '') + run(val, { sz: 24 }) + '</w:p>',
     firmaN: t => '<w:p><w:pPr><w:pStyle w:val="Heading1"/><w:ind w:left="338"/><w:jc w:val="both"/></w:pPr>' + run(t) + '</w:p>',
     firmaC: t => '<w:p><w:pPr><w:pStyle w:val="BodyText"/><w:spacing w:before="44"/><w:ind w:left="338" w:right="334"/><w:jc w:val="both"/></w:pPr>' + run(t) + '</w:p>',
-    anexos: () => '<w:p><w:pPr><w:pStyle w:val="Heading1"/><w:pageBreakBefore/><w:spacing w:before="178"/><w:ind w:right="1635"/></w:pPr>' + run('ANEXOS') + '</w:p>',
+    anexos: t => '<w:p><w:pPr><w:pStyle w:val="Heading1"/><w:pageBreakBefore/><w:spacing w:before="178"/><w:ind w:right="1635"/></w:pPr>' + run(t || 'ANEXOS') + '</w:p>',
     cap: (n, t) => '<w:p><w:pPr><w:pStyle w:val="BodyText"/><w:keepNext/><w:spacing w:before="47"/><w:ind w:left="338" w:right="334"/><w:jc w:val="center"/></w:pPr>' + run('Figura ' + n + ': ', { b: 1 }) + run(t) + '</w:p>',
     fuente: org => '<w:p><w:pPr><w:pStyle w:val="BodyText"/><w:spacing w:before="44"/><w:ind w:left="1" w:right="1"/><w:jc w:val="center"/></w:pPr>' + run('Fuente: ', { b: 1 }) + run(org + '.') + '</w:p>'
+  };
+  /* tabla sencilla con bordes (informes técnicos); w: anchos en dxa que suman ~9400 */
+  const celda = (t, w, o) => { o = o || {}; return '<w:tc><w:tcPr><w:tcW w:w="' + w + '" w:type="dxa"/>' + (o.sh ? '<w:shd w:val="clear" w:color="auto" w:fill="' + o.sh + '"/>' : '') + '</w:tcPr>' + String(t == null ? '' : t).split('\n').map(l => '<w:p><w:pPr><w:spacing w:before="20" w:after="20" w:line="240" w:lineRule="auto"/><w:jc w:val="' + (o.c ? 'center' : 'left') + '"/></w:pPr>' + run(l, { b: o.b, sz: 18 }) + '</w:p>').join('') + '</w:tc>'; };
+  const tbl = (head, rows, w, o) => {
+    o = o || {};
+    const bd = '<w:tblBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="808080"/><w:left w:val="single" w:sz="4" w:space="0" w:color="808080"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="808080"/><w:right w:val="single" w:sz="4" w:space="0" w:color="808080"/><w:insideH w:val="single" w:sz="4" w:space="0" w:color="808080"/><w:insideV w:val="single" w:sz="4" w:space="0" w:color="808080"/></w:tblBorders>';
+    let x = '<w:tbl><w:tblPr><w:tblW w:w="' + w.reduce((a, b) => a + b, 0) + '" w:type="dxa"/><w:jc w:val="center"/>' + bd + '<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>' + w.map(n => '<w:gridCol w:w="' + n + '"/>').join('') + '</w:tblGrid>';
+    if (head) x += '<w:tr><w:trPr><w:cantSplit/><w:tblHeader/></w:trPr>' + head.map((h, i) => celda(h, w[i], { b: 1, sh: 'E7E6E6', c: 1 })).join('') + '</w:tr>';
+    rows.forEach(r => { x += '<w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="' + (o.alto || 0) + '"/></w:trPr>' + r.map((c, i) => celda(c, w[i], { b: o.b1 && i === 0, c: o.ctr && o.ctr.indexOf(i) >= 0 })).join('') + '</w:tr>'; });
+    return x + '</w:tbl><w:p><w:pPr><w:spacing w:before="0" w:after="60"/></w:pPr></w:p>';
   };
   /* mantiene el párrafo unido al siguiente y sin cortarse entre páginas (para que la firma no quede sola) */
   const keep = p => {
@@ -1052,6 +1063,21 @@ ${fotos.length ? `<div class="sec" style="page-break-before:always">14. REGISTRO
     const org = d.org || 'CUERPO DE BOMBEROS VOLUNTARIOS DE LA UNIÓN, VALLE DEL CAUCA';
     const ciudad = d.ciudad || 'La Unión, Valle del Cauca';
     const b = [];
+    if (d.secs) {
+      /* informe técnico: título, institución y secciones numeradas armadas por la central */
+      b.push(P.titulo(d.titulo));
+      b.push(P.org(org.toUpperCase()));
+      b.push(P.cuerpo('Informe No. ' + d.num + ' · ' + (d.fechaTxt || '')));
+      d.secs.forEach(sc => {
+        b.push(P.h2(sc.t));
+        (sc.items || []).forEach(it => {
+          if (it.k === 'p') b.push(P.cuerpo(it.t));
+          else if (it.k === 'bul') it.list.forEach(t => b.push(P.pun('', t)));
+          else if (it.k === 'kv') it.rows.forEach(x => b.push(P.pun(x[0] + ':', x[1])));
+          else if (it.k === 'tbl') b.push(tbl(it.head, it.rows, it.w, it.o));
+        });
+      });
+    } else {
     b.push(P.titulo('CONSTANCIA DE ATENCIÓN DE INCIDENTE ' + d.num));
     b.push(P.org(org.toUpperCase()));
     b.push(P.vacio());
@@ -1072,6 +1098,7 @@ ${fotos.length ? `<div class="sec" style="page-break-before:always">14. REGISTRO
     b.push(P.cuerpo('La presente constancia se expide con fundamento en los registros oficiales del servicio. La información corresponde a lo observado y registrado por el personal que atendió el incidente; no constituye dictamen técnico pericial ni reemplaza los informes emitidos por otras autoridades competentes.'));
     if ((d.recomend || []).length) sec('Recomendaciones', () => d.recomend.forEach(t => b.push(P.pun('', t))));
     if ((d.fotos || []).length) b.push(P.cuerpo('Se anexan registros fotográficos como evidencia documental de la atención prestada.'));
+    }
     /* bloque de firma: el último párrafo del texto, la fecha de expedición, el espacio, el nombre y el cargo van siempre en la misma página */
     if (b.length) b[b.length - 1] = keep(b[b.length - 1]);
     b.push(keep(P.cuerpo(d.expide)));
@@ -1082,7 +1109,7 @@ ${fotos.length ? `<div class="sec" style="page-break-before:always">14. REGISTRO
     let rels = await zip.file('word/_rels/document.xml.rels').async('string');
     let ct = await zip.file('[Content_Types].xml').async('string');
     if ((d.fotos || []).length) {
-      b.push(P.anexos());
+      b.push(P.anexos(d.anexosTit));
       let id = 9100;
       d.fotos.forEach((f, i) => {
         const nm = 'media/anexo' + (i + 1) + '.jpeg', rid = 'rIdAnexo' + (i + 1);

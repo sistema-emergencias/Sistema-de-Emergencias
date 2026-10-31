@@ -148,7 +148,8 @@ svg text.val{fill:var(--fg)}
 .chatlist{max-height:16rem;overflow:auto;border:1px solid var(--line,#ccc);border-radius:8px;padding:8px;margin-bottom:8px}
 .chatm{padding:4px 8px;margin:4px 0;border-radius:8px;background:rgba(127,127,127,.12)}.chatm.mio{background:rgba(30,120,60,.18)}
 
-.bell{position:relative;background:var(--surface,#fff);border:1px solid var(--line,#ccc);border-radius:10px;font-size:20px;padding:6px 10px;cursor:pointer}
+.bell{position:relative;background:var(--surface,#fff);border:1px solid var(--line,#ccc);border-radius:10px;font-size:20px;padding:6px 10px;cursor:pointer;color:var(--fg,#1b2127)}
+#refresh{color:var(--fg,#1b2127);font-weight:700}
 .bell span{position:absolute;top:-6px;right:-6px;background:#d62a1c;color:#fff;border-radius:10px;font-size:11px;min-width:18px;padding:1px 4px;font-weight:700}
 .fab{position:fixed;right:16px;bottom:16px;z-index:60;background:#b4251b;color:#fff;border:0;border-radius:28px;padding:14px 20px;font-size:16px;font-weight:700;box-shadow:0 4px 14px rgba(0,0,0,.35);cursor:pointer}
 #toasts{position:fixed;left:50%;transform:translateX(-50%);bottom:76px;z-index:80;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;max-width:92vw}
@@ -2030,6 +2031,114 @@ async function admSeg(){
     card(msg));
 }
 
+/* ================= Informe técnico de inspección visual (VISITAS DE SEGURIDAD): reemplaza a la constancia de emergencia ================= */
+const INS_REF={
+  evac:['Dificultad o retraso de la evacuación en una emergencia.','NSR-10 Título J; NTC 1700','Despejar y mantener libres y señalizadas las rutas de evacuación.','Inmediato'],
+  sal:['Bloqueo de la salida y atrapamiento de ocupantes.','NSR-10 Título J; NTC 1700','Garantizar salidas de emergencia sin obstrucción ni candados, con apertura en el sentido de la evacuación.','Inmediato'],
+  pas:['Caídas y congestión durante la evacuación.','NSR-10 Título J; NTC 1700','Corregir pasillos y escaleras (ancho libre, pasamanos, superficie antideslizante).','30 días'],
+  sen:['Desorientación de los ocupantes durante la evacuación.','NTC 1867; NTC 1461','Instalar o reponer la señalización de seguridad y evacuación.','30 días'],
+  ilu:['Pérdida de visibilidad en la evacuación ante una falla eléctrica.','NSR-10 Título J; RETIE','Instalar o reparar la iluminación de emergencia y verificar su autonomía.','30 días'],
+  plan:['Respuesta desorganizada ante una emergencia.','Decreto 1072 de 2015; Resolución 0256 de 2014','Elaborar o actualizar el plan de emergencias, conformar y capacitar la brigada y realizar simulacros.','30 días'],
+  aforo:['Sobreocupación que dificulta la evacuación.','Ley 1801 de 2016; NSR-10 Título J','Ajustar la ocupación al aforo permitido.','Inmediato'],
+  ext:['Imposibilidad de controlar un fuego incipiente.','NTC 2885; NSR-10 Título J','Instalar, recargar o dar mantenimiento a los extintores y ubicarlos en sitios visibles y accesibles.','15 días'],
+  det:['Detección tardía del fuego y alerta tardía a los ocupantes.','NSR-10 Título J','Instalar o reparar el sistema de detección y alarma de incendio.','30 días'],
+  extf:['Falta de control automático o manual del incendio.','NSR-10 Título J','Instalar o reparar los sistemas de extinción fija y mantener su certificación de mantenimiento.','30 días'],
+  elec:['Sobrecalentamiento, cortocircuito e ignición.','RETIE vigente','Solicitar revisión de las instalaciones eléctricas por personal competente y corregir las deficiencias.','15 días'],
+  comb:['Propagación rápida del fuego por carga combustible.','NSR-10 Título J; Resolución 2400 de 1979','Retirar o reubicar los materiales combustibles y mantener orden y aseo.','15 días'],
+  ign:['Inicio de un incendio por fuentes de calor sin control.','NSR-10 Título J','Controlar o aislar las fuentes de ignición identificadas.','15 días'],
+  sust:['Incendio, explosión o intoxicación por sustancias peligrosas.','Decreto 1496 de 2018; Decreto 1072 de 2015','Almacenar las sustancias peligrosas en áreas adecuadas, rotuladas y ventiladas, con su hoja de seguridad.','Inmediato']
+};
+async function inspeccionDatos(r){
+  const rp=r.rpt||{},I=rp.ins||{},na=r.na||{};
+  const E_=CBV_ESQ,SH=E_.SH_ITEMS,PCI=E_.PCI_ITEMS;
+  const val=(k)=>{const v=I[k];if(v!=null&&String(v).trim()!=='')return String(v).trim();return na['rpt.ins.'+k]?'No aplica':''};
+  const hh=GEN.h24,fila=(l,v)=>v?[l,v]:null;
+  const ros=n=>(ROSTER||[]).find(p=>String(p.nombre||'').trim().toLowerCase()===String(n||'').trim().toLowerCase())||{};
+  const insp=(r.pers||[]).map(n=>{const p=ros(n);return {nombre:p.nombre||n,grado:p.grado||'',cargo:p.cargo||'',doc:p.cedula||''}});
+  const inspTxt=insp.map(p=>[p.grado,p.nombre].filter(Boolean).join(' ')+(p.doc?' (C.C. '+p.doc+')':'')).join('; ');
+  const ev=k=>String(I[k]||'').toUpperCase();
+  const itemsAll=SH.concat(PCI);
+  const evaluados=k=>ev(k)&&ev(k)!=='NO APLICA';
+  const nc=itemsAll.filter(x=>ev(x[0])==='NO CUMPLE'),cu=itemsAll.filter(x=>ev(x[0])==='CUMPLE'),npl=itemsAll.filter(x=>ev(x[0])==='NO APLICA'),sv=itemsAll.filter(x=>!ev(x[0]));
+  const dir=[r.dir,r.bar&&r.bar!=='N/A'?r.bar:''].filter(Boolean).join(', ');
+  const secs=[];
+  /* 1 */
+  secs.push({t:'IDENTIFICACIÓN DEL ESTABLECIMIENTO',items:[{k:'kv',rows:[fila('Nombre o razón social',val('rs')),fila('NIT o documento',val('nit')),fila('Dirección',(dir||'No registrada')+', La Unión, Valle del Cauca'),fila('Actividad económica',val('act')),fila('Motivo de la visita',val('motivo')),fila('Responsable del establecimiento',[val('resp'),val('respc')].filter(Boolean).join(', ')+(val('respt')?' · Tel. '+val('respt'):'')),fila('Fecha de la inspección',GEN.dmy(r.fecha)),fila('Hora',(hh(r.hora)||'—')+(r.hfin?' a '+hh(r.hfin)+' h':' h')),fila('Inspector(es)',inspTxt||'No registrado')].filter(Boolean)}]});
+  /* 2 */
+  const ant=[['Inspecciones anteriores y hallazgos previos',val('ant')],['Eventos asociados',val('antev')],['Recomendaciones anteriores y medidas correctivas ejecutadas',val('antrec')]].filter(x=>x[1]&&x[1]!=='No aplica');
+  secs.push({t:'ANTECEDENTES',items:ant.length?[{k:'kv',rows:ant}]:[{k:'p',t:'No se registraron inspecciones anteriores, eventos asociados, hallazgos previos ni medidas correctivas para este establecimiento.'}]});
+  /* 3 */
+  const lim=val('lim');
+  secs.push({t:'OBJETO, ALCANCE Y METODOLOGÍA',items:[{k:'kv',rows:[['Objeto',val('obj')&&val('obj')!=='No aplica'?val('obj'):'Verificar de manera visual las condiciones de seguridad humana y de protección contra incendios del establecimiento, identificar condiciones de riesgo y formular recomendaciones, en ejercicio de las competencias del Cuerpo de Bomberos (Ley 1575 de 2012).'],fila('Áreas evaluadas',val('areas')),['Metodología','Recorrido de las áreas con acompañamiento del responsable, inspección visual no invasiva, lista de verificación de seguridad humana y de protección contra incendios (cumple / no cumple / no aplica) y registro fotográfico.'],['Limitaciones','La inspección es exclusivamente visual: no incluye ensayos ni pruebas de funcionamiento de los sistemas, mediciones, revisión de planos o memorias de cálculo, ni evaluación estructural o de instalaciones ocultas o no accesibles. Las conclusiones se refieren únicamente a lo observado en la fecha y hora de la visita.'+(lim&&lim!=='No aplica'?' Adicionalmente: '+lim:'')]].filter(Boolean)}]});
+  /* 4 */
+  const uso=val('uso'),publico=/Comercial|Reuni|Instituc|Salud/i.test(uso);
+  const nor=[['Ley 1575 de 2012','Ley General de Bomberos de Colombia: competencia de los cuerpos de bomberos en la prevención y en las inspecciones técnicas de seguridad contra incendios.'],['NSR-10 (Decreto 926 de 2010, compilado en el Decreto 1077 de 2015), Títulos J y K','Requisitos de protección contra incendios en edificaciones y requisitos complementarios.']];
+  if(publico)nor.push(['Ley 1801 de 2016','Código Nacional de Seguridad y Convivencia Ciudadana: condiciones de seguridad de los establecimientos abiertos al público.']);
+  if(SH.some(x=>['evac','sal','pas'].includes(x[0])&&evaluados(x[0])))nor.push(['NTC 1700','Medidas de seguridad en edificaciones: medios de evacuación.']);
+  if(evaluados('sen'))nor.push(['NTC 1867 y NTC 1461','Sistemas de señales contra incendio y colores y señales de seguridad.']);
+  if(evaluados('ext'))nor.push(['NTC 2885','Extintores portátiles contra incendios: selección, ubicación, inspección y mantenimiento.']);
+  if(evaluados('plan'))nor.push(['Decreto 1072 de 2015 y Resolución 0256 de 2014','Plan de prevención, preparación y respuesta ante emergencias del SG-SST y conformación, capacitación y entrenamiento de brigadas contra incendio.']);
+  if(evaluados('elec')||evaluados('ilu'))nor.push(['RETIE vigente','Reglamento Técnico de Instalaciones Eléctricas.']);
+  if(evaluados('sust'))nor.push(['Decreto 1496 de 2018','Sistema Globalmente Armonizado de clasificación y etiquetado de productos químicos.']);
+  nor.push(['Resolución 2400 de 1979','Estatuto de Seguridad Industrial: orden, aseo y almacenamiento (cuando aplique al establecimiento).']);
+  secs.push({t:'MARCO NORMATIVO APLICABLE',items:[{k:'tbl',head:['Norma','Alcance aplicado'],rows:nor,w:[3400,6000]},{k:'p',t:'Las normas se citan a título general según el uso y las condiciones verificadas; su versión vigente y su aplicabilidad al establecimiento (fecha de construcción, uso y carga de ocupación) deben confirmarse al momento de exigir correctivos.'}]});
+  /* 5 */
+  secs.push({t:'DESCRIPCIÓN GENERAL DEL ESTABLECIMIENTO',items:[{k:'kv',rows:[fila('Uso principal',uso),fila('Niveles o pisos',val('niv')),fila('Área aproximada',val('m2')?val('m2')+(/\d$/.test(val('m2'))?' m²':''):''),fila('Ocupación y horario',val('ocup'))].filter(Boolean)}].concat(val('dg')&&val('dg')!=='No aplica'?[{k:'p',t:val('dg')}]:[])});
+  /* 6 y 7 */
+  const R=x=>({'CUMPLE':'Cumple','NO CUMPLE':'No cumple','NO APLICA':'No aplica'}[ev(x[0])]||'No verificado');
+  const tabla=L=>({k:'tbl',head:['Aspecto verificado','Resultado','Referencia técnica'],rows:L.map(x=>[x[1],R(x),(INS_REF[x[0]]||[])[1]||'']),w:[5000,1500,2900],o:{ctr:[1]}});
+  const obsSh=val('shobs'),obsPci=val('pciobs');
+  secs.push({t:'VERIFICACIÓN DE LAS CONDICIONES DE SEGURIDAD HUMANA',items:[tabla(SH)].concat(obsSh&&obsSh!=='No aplica'?[{k:'p',t:'Observaciones: '+obsSh}]:[])});
+  secs.push({t:'VERIFICACIÓN DE LAS CONDICIONES DE PROTECCIÓN CONTRA INCENDIOS',items:[tabla(PCI)].concat(obsPci&&obsPci!=='No aplica'?[{k:'p',t:'Observaciones: '+obsPci}]:[])});
+  /* 8 */
+  const manual=(Array.isArray(I.hall)?I.hall:[]).filter(x=>x&&(x.h||x.a));
+  const filasH=[];nc.forEach(x=>filasH.push([x[1].split(':')[0],'No cumple: '+x[1],(INS_REF[x[0]]||[])[0]||'',(INS_REF[x[0]]||[])[1]||'']));
+  manual.forEach(x=>filasH.push([x.a||'—',x.h||'—','','']));
+  secs.push({t:'HALLAZGOS DE LA INSPECCIÓN VISUAL',items:filasH.length?[{k:'tbl',head:['N°','Área o aspecto','Hallazgo','Riesgo asociado','Referencia técnica'],rows:filasH.map((f,i)=>[String(i+1)].concat(f)),w:[500,1700,3000,2300,1900],o:{ctr:[0]}}]:[{k:'p',t:'No se identificaron condiciones que requieran intervención dentro del alcance de la inspección visual.'}]});
+  /* 9 */
+  const rest=val('restr');
+  const gen9=[{k:'p',t:'Aspectos verificados: '+(cu.length+nc.length)+' (cumplen '+cu.length+', no cumplen '+nc.length+'); no aplican '+npl.length+'; no verificados '+sv.length+'.'}];
+  if(nc.length)gen9.push({k:'p',t:'Factores de riesgo identificados: '+nc.map(x=>x[1].split(':')[0].toLowerCase()).join('; ')+'.'});
+  if(cu.length)gen9.push({k:'p',t:'Medidas de control existentes: '+cu.map(x=>x[1].split(':')[0].toLowerCase()).join('; ')+'.'});
+  gen9.push({k:'p',t:rest&&rest!=='No aplica'?'Restricciones de uso o acceso: '+rest:'Con base en lo observado no se establecen restricciones de uso o acceso.'});
+  secs.push({t:'CONDICIONES GENERALES DE SEGURIDAD',items:gen9});
+  /* 10 */
+  const rg=String(I.riesgo||'').toUpperCase();
+  secs.push({t:'CLASIFICACIÓN O NIVEL PRELIMINAR DE RIESGO',items:[{k:'p',t:(rg&&rg!=='NO VALORADO')?'Nivel preliminar de riesgo: '+rg+'. Es una valoración técnica preliminar basada únicamente en las condiciones observadas visualmente; no sustituye un análisis de riesgo detallado ni una evaluación con la metodología que corresponda al uso del establecimiento.':'No se asigna un nivel de riesgo: la valoración queda fuera del alcance de esta inspección visual o no fue determinada por el inspector.'}]});
+  /* 11 */
+  let con=String(I.concepto||'').toUpperCase(),sug=false;
+  if(!con){sug=true;con=nc.length===0?(sv.length>itemsAll.length/2?'NO EMITIDO':'FAVORABLE'):(nc.length>=3||rg==='ALTO'?'NO FAVORABLE':'FAVORABLE CON REQUERIMIENTOS')}
+  const concl=val('concl');
+  secs.push({t:'CONCEPTO TÉCNICO Y CONCLUSIONES',items:[{k:'p',t:'Concepto técnico: '+con+(sug?' (propuesto según los resultados de la lista de verificación; queda sujeto a la firma del inspector).':'.')},{k:'p',t:'Dentro del alcance de la inspección visual se verificaron '+(cu.length+nc.length)+' aspectos de seguridad humana y protección contra incendios; '+(nc.length?nc.length+' presentan incumplimiento y requieren intervención.':'no se encontraron incumplimientos.')}].concat(concl&&concl!=='No aplica'?[{k:'p',t:concl}]:[])});
+  /* 12 */
+  const resp=val('resp')||'Propietario o responsable del establecimiento';
+  const filasR=[];nc.forEach(x=>filasR.push([(INS_REF[x[0]]||[])[2]||x[1],resp,(INS_REF[x[0]]||[])[3]||'30 días']));
+  manual.forEach(x=>{if(x.r)filasR.push([x.r,resp,x.p||'Por definir']);});
+  if(rest&&rest!=='No aplica')filasR.push(['Restricción: '+rest,resp,'Hasta su subsanación']);
+  secs.push({t:'RECOMENDACIONES Y REQUERIMIENTOS',items:filasR.length?[{k:'tbl',head:['N°','Acción correctiva o medida preventiva','Responsable','Plazo'],rows:filasR.map((f,i)=>[String(i+1)].concat(f)),w:[500,5600,1900,1400],o:{ctr:[0]}},{k:'p',t:'Los plazos de las acciones derivadas de la lista de verificación son orientativos y los confirma el Cuerpo de Bomberos conforme al procedimiento aplicable. Una vez subsanadas las condiciones, el responsable debe solicitar la verificación.'}]:[{k:'p',t:'No se formulan requerimientos. Se recomienda mantener las condiciones verificadas y realizar inspecciones periódicas.'}]});
+  /* 13 */
+  secs.push({t:'IDENTIFICACIÓN Y FIRMA DE LOS RESPONSABLES',items:[{k:'tbl',head:['Nombre','Grado o cargo','Identificación','Firma'],rows:(insp.length?insp:[{nombre:'Inspector no registrado'}]).map(p=>[p.nombre,[p.grado,p.cargo].filter(Boolean).join(' · ')||'Inspector',p.doc?'C.C. '+p.doc:'',' ']),w:[3000,2400,1700,2300],o:{alto:700}},{k:'p',t:'Elaboró: '+(r.por||'inspector')+'. Responsables de la inspección en campo: los inspectores relacionados.'}]});
+  const fs=await fotosBajadas(r),fotos=[];
+  for(const f of fs.slice(0,12)){try{fotos.push(await reducir(f.d,f.desc||('Registro fotográfico de la inspección · '+GEN.dmy(r.fecha))))}catch(e){}}
+  if(!fotos.length)secs.push({t:'ANEXOS (REGISTRO FOTOGRÁFICO)',items:[{k:'p',t:'No se anexaron registros fotográficos. Las listas de verificación de los numerales 6 y 7 forman parte integral de este informe.'}]});
+  const M=MARCA(),hoy=new Date();
+  return {informe:1,secs,titulo:'INFORME TÉCNICO DE INSPECCIÓN VISUAL DE SEGURIDAD HUMANA Y PROTECCIÓN CONTRA INCENDIOS',num:r.id,fechaTxt:diaLargo(r.fecha),org:ORG_NOM(),orgNombre:ORG_NOM(),anexosTit:'14. ANEXOS (REGISTRO FOTOGRÁFICO)',tituloFoto:'Inspección de seguridad',fotos,
+    expide:'Se expide en La Unión, Valle del Cauca, a los '+hoy.getDate()+' días del mes de '+MES_L[hoy.getMonth()]+' del '+hoy.getFullYear()+'. Aprueba:',
+    firma:firmaConstancia(M),nit:M.nit||'',orgHeader:(M.nombre&&!/La Unión/i.test(M.nombre))?M.nombre.replace(/^Cuerpo de Bomberos /i,''):'',direccion:(M.direccion&&M.direccion!=='Calle 14 # 6-01 Barrio Las Lajas')?M.direccion:'',telefono:(M.telefono&&M.telefono!=='3117694047')?M.telefono:'',correo:(M.correo&&M.correo!=='cbvlaunionv@gmail.com')?M.correo:'',autor:'Sistema CBV · Cristhian Steven Blandón Henao'};
+}
+const esInspeccionReg=r=>String(r.cat||'')==='VISITAS DE SEGURIDAD';
+async function inspeccionBlob(r){return new Blob([await GEN.constancia(JSZip,await tpl('constancia.docx'),await inspeccionDatos(r))])}
+{const SD2=showDetail;showDetail=async function(r){
+  await SD2(r);
+  const d=$('detail');if(!d||d.hidden||r.src!=='app'||r.borrador||!esInspeccionReg(r))return;
+  /* las visitas de seguridad no generan constancia ni reporte de emergencia: generan el informe técnico */
+  [...d.querySelectorAll('button')].forEach(b=>{if(/Constancia de atención|Descargar Reporte de Emergencias|Imprimir reporte/.test(b.textContent))b.remove()});
+  if(!(esMaster()||puedeF('informes')))return;
+  const b=document.createElement('button');b.className='btn';b.textContent='Informe técnico de inspección (.docx)';
+  b.onclick=()=>run($('d-msg'),async()=>{await save('INFORME TECNICO INSPECCION '+r.id+'.docx',await inspeccionBlob(r))});
+  (d.querySelector('.dl:last-of-type')||d).append(b);
+}}
+
 /* ================= V2: operación de la central, permisos por función, notificaciones, despacho y perfiles ================= */
 let PREVIEW=null;
 const puedeF=f=>PREVIEW?PREVIEW.includes(f):(ROL==='master'||(PERM||[]).includes(f));
@@ -2925,10 +3034,10 @@ function bindLlamado(){
   finally{if(btn)btn.disabled=false}
 }}
 async function abrirLlamadoRapido(){
-  dlg('<h3>Llamado rápido</h3><div class="tools" style="flex-direction:column;align-items:stretch"><label>Tipo de emergencia<select id="d-tipo"><option value="">Elija…</option>'+CATS.map(c=>'<option>'+esc(c)+'</option>').join('')+'</select></label><label>Lugar<input id="d-lugar" placeholder="Dirección o referencia"></label><label>Coordenadas (opcional)<input id="d-co" placeholder="4°31\'50&quot;N 76°06\'29&quot;W o 4.5306, -76.1082"></label><label>Teléfono de quien reporta<input id="d-tel" inputmode="tel"></label><label>Observaciones<textarea id="d-obs" rows="2" placeholder="Qué se sabe, riesgos, indicaciones…"></textarea></label>'+audHtml('d')+'</div><div class="derived" id="d-out" role="status"></div><div class="dl"><button class="btn" id="d-ok">Enviar llamado</button><button class="btn alt" id="d-no">Cancelar</button></div>',()=>{
+  dlg('<h3>Llamado rápido</h3><div class="tools" style="flex-direction:column;align-items:stretch"><label>Tipo de emergencia<select id="d-tipo"><option value="">Elija…</option>'+CATS.map(c=>'<option>'+esc(c)+'</option>').join('')+'</select></label><label>Lugar<input id="d-lugar" placeholder="Dirección o referencia"></label><label>Coordenadas (opcional)<input id="d-co" placeholder="4°31\'50&quot;N 76°06\'29&quot;W o 4.5306, -76.1082"></label><label>Nombre de quien avisó<input id="d-quien" placeholder="Nombre (opcional)"></label><label>Teléfono de quien reporta<input id="d-tel" inputmode="tel"></label><label>Observaciones<textarea id="d-obs" rows="2" placeholder="Qué se sabe, riesgos, indicaciones…"></textarea></label>'+audHtml('d')+'</div><div class="derived" id="d-out" role="status"></div><div class="dl"><button class="btn" id="d-ok">Enviar llamado</button><button class="btn alt" id="d-no">Cancelar</button></div>',()=>{
     $('d-no').onclick=dlgCerrar;audBind('d','d-tipo');
     $('d-ok').onclick=async()=>{const a=audLeer('d',$('d-tipo').value);if(a.err){$('d-out').textContent=a.err;return}
-      const ok=await enviarLlamado({tipo:$('d-tipo').value,lugar:$('d-lugar').value,co:$('d-co').value,tel:$('d-tel').value,obs:$('d-obs').value,aud:a.aud,clase:a.clase,_ir:true},$('d-out'),$('d-ok'));if(ok)setTimeout(dlgCerrar,700)};
+      const ok=await enviarLlamado({tipo:$('d-tipo').value,lugar:$('d-lugar').value,co:$('d-co').value,tel:$('d-tel').value,quien:$('d-quien').value,obs:$('d-obs').value,aud:a.aud,clase:a.clase,_ir:true},$('d-out'),$('d-ok'));if(ok)setTimeout(dlgCerrar,700)};
   });
 }
 /* repetir: siempre se ve a quién se envía */
@@ -3576,7 +3685,7 @@ function aplicarLayoutTabs(){
   const box=$('a-box');if(!box||box.querySelector('#pp-card'))return;
   const c=document.createElement('div');c.className='card';c.id='pp-card';
   c.innerHTML='<h3>Recuperar la clave del superadministrador</h3><p class="derived expl">En la pantalla de entrada, «¿Olvidó su clave?» envía un código de 6 dígitos a este correo. Si lo deja vacío se usan los correos de avisos. Los demás usuarios deben pedirle a usted que les restablezca la clave (Usuarios → Restablecer clave); cuando la piden, le llega un aviso al sistema.</p><label>Correo de recuperación<input id="cm-c" type="email" placeholder="correo@dominio.com" autocomplete="off"></label><div class="dl"><button class="btn alt sm" id="cm-ok">Guardar correo</button></div><div class="derived" id="cm-out" role="status"></div>'+
-   '<h3 style="margin-top:18px">Papelera: recuperar lo eliminado</h3><p class="derived expl">Aquí aparecen los reportes y las emergencias que se eliminaron. «Recuperar» los devuelve al sistema (los reportes con sus fotos de Drive si todavía están en la papelera de Drive, que guarda 30 días).</p><div class="dl"><button class="btn alt sm" id="pp-ver">Ver lo eliminado</button></div><div id="pp-lst"></div>';
+   '<h3 style="margin-top:18px">Papelera: recuperar lo eliminado</h3><p class="derived expl">Aquí aparecen los reportes y las emergencias que se eliminaron. «Recuperar» los devuelve al sistema (los reportes con sus fotos de Drive si todavía están en la papelera de Drive, que guarda 30 días).</p><div class="dl"><button class="btn alt sm" id="pp-ver">Ver lo eliminado</button><button class="btn danger sm" id="pp-vac">Vaciar papelera</button></div><div id="pp-lst"></div>';
   box.append(c);
   try{const g=need(await call('cfgGet'));$('cm-c').value=(g.cfg&&g.cfg.correoMaster)||''}catch(e){}
   $('cm-ok').onclick=async()=>{try{need(await call('cfgSet',{clave:'correoMaster',valor:$('cm-c').value.trim()}));$('cm-out').textContent='Guardado.'}catch(e){$('cm-out').textContent='No se pudo: '+humanErr(e)}};
@@ -3589,6 +3698,8 @@ function aplicarLayoutTabs(){
       l.querySelectorAll('[data-re]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{need(await call('emergRestaurar',{id:b.dataset.re}));toast('Emergencia recuperada.');try{pintarAtendidas(true)}catch(e){}pintar()}catch(e){toast('No se pudo: '+humanErr(e),1);b.disabled=false}})
     }catch(e){l.innerHTML='<p class="derived">No se pudo cargar: '+esc(humanErr(e))+'</p>'}};
   $('pp-ver').onclick=pintar;
+  $('pp-vac').onclick=async()=>{if(!confirm('¿Vaciar la papelera? Se borran DEFINITIVAMENTE todos los reportes y emergencias eliminados; ya no se podrán recuperar.'))return;if(!confirm('Última confirmación: esta acción no se puede deshacer. ¿Vaciar la papelera ahora?'))return;
+    try{const r=need(await call('papeleraVaciar'));toast('Papelera vaciada ('+r.registros+' reportes, '+r.emergencias+' emergencias).');pintar()}catch(e){toast('No se pudo: '+humanErr(e),1)}};
 }}
 
 

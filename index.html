@@ -273,6 +273,10 @@ html,body{overflow-x:hidden}
 .lrow.acc textarea{width:100%;min-height:96px;font-size:1.05rem;line-height:1.35;resize:vertical}
 .lrow.acc .btnrow{display:flex;gap:8px}.lrow.acc .btnrow .btn{flex:1}
 
+.chip.used{background:var(--ok-soft,#e1f1e8)!important;border-color:var(--ok,#1f7a4d)!important;color:var(--ok,#1f7a4d)!important}
+.chip.used::before{content:'✓ '}
+.lrow.acc .btnrow{display:flex;gap:6px;flex-wrap:wrap}
+
 </style>
 </head>
 <body>
@@ -472,8 +476,9 @@ const optv=o=>(o||[]).map(x=>Array.isArray(x)?x:[x,x]);
 const simpleCats=()=>(CF.form&&CF.form.simpleCats)||E.SIMPLE_CATS;
 const askCats=()=>(CF.form&&CF.form.askCats)||E.ASK_CATS;
 const esAsk=()=>askCats().includes(D&&D.cat);
+const esInspeccion=()=>!!(D&&D.cat===E.INS_CAT);
 function modoSimple(){
-  const c=D&&D.cat;if(!c)return false;
+  const c=D&&D.cat;if(!c)return false;if(c===E.INS_CAT)return false;
   if(simpleCats().includes(c))return true;
   if(askCats().includes(c))return getP(D,'extra._modo')===E.MODO_SIMPLE;
   return false;
@@ -493,6 +498,7 @@ function stepsEff(){
 function stepsEff0(){
   const fo=CF.form||{},L=fo.labels||{},H=fo.hide||{},N=fo.naOk||{},O=fo.opts||{};
   const HS=fo.hideSteps||{};
+  if(esInspeccion()){const o=E.INS_STEPS.map(s=>({id:s.id,t:s.t,f:s.f.map(f=>Object.assign({},f,{naOk:f.naOk!==false}))}));numerarPasos(o);return o}
   const out=E.STEPS.filter(s=>!HS[s.id]&&!(s.id==='tiempos'&&!modoSimple())).map(s=>({id:s.id,t:L['step.'+s.id]||s.t,f:s.f.filter(f=>!H[f.p]).map(f=>Object.assign({},f,{l:L[f.p]||f.l,naOk:N[f.p]!=null?!!N[f.p]:f.naOk!==false,o:O[f.p]||f.o}))}));
   (fo.extraSteps||[]).forEach(es=>{if(es&&es.id&&!HS[es.id])out.push({id:es.id,t:L['step.'+es.id]||es.t||'Paso adicional',f:[]})});
   (fo.extras||[]).forEach(x=>{if(!x||!x.id||H['extra.'+x.id])return;const s=out.find(s=>s.id===x.step)||out[out.length-1];s.f.push({p:'extra.'+x.id,l:x.l||x.id,t:x.t||'text',o:x.o,naOk:x.naOk!==false,extra:true})});
@@ -814,22 +820,25 @@ function accList(){const a=getP(D,'rpt.acc');return Array.isArray(a)?a:[]}
 function logAdd(h,a,k){
   a=String(a||'').trim();if(!a||!h)return false;
   const l=accList().slice();l.push(k?{h,a,k}:{h,a});
-  l.sort((x,y)=>String(x.h).localeCompare(String(y.h)));
   setV('rpt.acc',l);try{derivarTiempos()}catch(e){}return true;
 }
+const quickIdx=(l,t,k,tx)=>l.findIndex(x=>(k&&x.k===k)||String(x.a||'').trim()===(tx||t));
+function accMover(i,d){const l=accList().slice(),j=i+d;if(j<0||j>=l.length)return false;[l[i],l[j]]=[l[j],l[i]];setV('rpt.acc',l);try{derivarTiempos()}catch(e){}return true}
+function accQuitada0(l){/* si se quita la acción automática «Se recibió el llamado», no se vuelve a poner sola */D.extra=D.extra||{};D.extra._noHora0=!l.some(x=>x.k==='hora')}
 let LOGP=null;
 function drawLog(){
   const box=$('log_list');box.innerHTML='';const l=accList();
   if(!l.length)box.append(el('p','derived','Todavía no hay anotaciones. Escriba qué está pasando y toque «Agregar»; la hora se pone sola (puede cambiarla). La bitácora es obligatoria para terminar el reporte.'));
-  l.forEach((x,i)=>{const d=el('div','ent');d.append(el('b','',hmTxt(x.h)||'--'),el('span','',x.a));const q=el('button','btn alt sm','Quitar');q.type='button';q.onclick=()=>{const n=accList().slice();n.splice(i,1);setV('rpt.acc',n);try{derivarTiempos()}catch(e){}drawLog()};d.append(q);box.append(d)});
+  l.forEach((x,i)=>{const d=el('div','ent');d.append(el('b','',hmTxt(x.h)||'--'),el('span','',x.a));const q=el('button','btn alt sm','Quitar');q.type='button';q.onclick=()=>{const n=accList().slice();n.splice(i,1);setV('rpt.acc',n);accQuitada0(n);try{derivarTiempos()}catch(e){}drawLog()};const up=el('button','btn alt sm','▲'),dn=el('button','btn alt sm','▼');up.type=dn.type='button';up.title='Subir';dn.title='Bajar';up.disabled=i===0;dn.disabled=i===l.length-1;up.onclick=()=>{if(accMover(i,-1))drawLog()};dn.onclick=()=>{if(accMover(i,1))drawLog()};d.append(up,dn,q);box.append(d)});
   box.scrollTop=box.scrollHeight;
+  [...document.querySelectorAll('#log_quick .chip')].forEach((b,i)=>{const z=QUICK[i];if(z)b.classList.toggle('used',quickIdx(l,z[0],z[1],z[2])>=0)});
 }
 async function openLog(){
-  await asegurarReg();
+  await asegurarReg();try{sincronizarCrono()}catch(e){}
   if(!LOGP){LOGP=timePick(nowHM(),()=>{},false,{ahora:true});$('log_hwrap').innerHTML='';$('log_hwrap').append(LOGP)}
   LOGP.setVal(nowHM());
   const q=$('log_quick');q.innerHTML='';
-  QUICK.forEach(([t,k,tx])=>{const b=el('button','chip',t);b.type='button';b.onclick=()=>{const h=LOGP.getVal()||nowHM();logAdd(h,tx||t,k);autosave();drawLog();$('log_msg').textContent='Anotado: '+hmTxt(h)+' · '+t;LOGP.setVal(nowHM());if(currentStep())renderStep()};q.append(b)});
+  QUICK.forEach(([t,k,tx])=>{const b=el('button','chip'+(quickIdx(accList(),t,k,tx)>=0?' used':''),t);b.type='button';b.onclick=()=>{const l0=accList(),ix=quickIdx(l0,t,k,tx);if(ix>=0){if(!l0[ix].h){const n=l0.slice();n[ix]=Object.assign({},n[ix],{h:LOGP.getVal()||nowHM()});setV('rpt.acc',n);try{derivarTiempos()}catch(e){}autosave();drawLog();$('log_msg').textContent='Se puso la hora a: '+t;return}$('log_msg').textContent='«'+t+'» ya se registró.';return}const h=LOGP.getVal()||nowHM();if(k==='hora'){D.extra=D.extra||{};D.extra._noHora0=false}logAdd(h,tx||t,k);autosave();drawLog();$('log_msg').textContent='Anotado: '+hmTxt(h)+' · '+t;LOGP.setVal(nowHM());if(currentStep())renderStep()};q.append(b)});
   $('log_t').value='';$('log_msg').textContent='';
   $('logsheet').hidden=false;drawLog();
 }
@@ -865,6 +874,7 @@ function armarDescripcion(l){
   let ini='El '+FECHA_LARGA(D.fecha)+(D.hora?', a las '+hmTxt(D.hora):'')+', '+org+' recibió el aviso de un evento tipo «'+cat+'»'+(lug?' en '+lug:'')+(D.canal?', por medio de '+String(D.canal).toLowerCase():'')+(D.rep?', reportado por '+D.rep:'')+'.';
   const fr=l.map((x,i)=>{
     const pre=i===0?'Siendo las ':i===l.length-1&&l.length>2?'Finalmente, a las ':'A las ';
+    if(!x.h){const t0=terceraPersona(x.a);return (i===0?t0.charAt(0).toUpperCase()+t0.slice(1):'Posteriormente, '+t0)+'.'}
     return pre+hmTxt(x.h)+', '+terceraPersona(x.a)+'.';
   });
   return ini+' '+fr.join(' ');
@@ -998,8 +1008,9 @@ function soloDigitos(i){i.type='text';i.inputMode='numeric';i.pattern='[0-9]*';i
 function listUI(f,dis){
   const L=E.LISTAS[f.lista],wrap=el('div');wrap.style.display='grid';wrap.style.gap='8px';
   const rows=el('div');rows.style.display='grid';rows.style.gap='8px';
-  const read=()=>[...rows.children].map(d=>{const o={};d.querySelectorAll('input[data-k],textarea[data-k]').forEach(i=>o[i.dataset.k]=i.value.trim());(d._tp||[]).forEach(([k,p])=>o[k]=p.getVal());if(d.dataset.kk)o.k=d.dataset.kk;return o});
-  const commit=()=>{setV(f.p,read().filter(o=>Object.values(o).some(Boolean)));if(f.lista==='acc'){try{derivarTiempos()}catch(e){}}};
+  const read=()=>[...rows.children].map(d=>{const o={};d.querySelectorAll('input[data-k],textarea[data-k],select[data-k]').forEach(i=>o[i.dataset.k]=i.value.trim());(d._tp||[]).forEach(([k,p])=>o[k]=p.getVal());if(d.dataset.kk)o.k=d.dataset.kk;return o});
+  const commit=()=>{const nv=read().filter(o=>Object.values(o).some(Boolean));setV(f.p,nv);if(f.lista==='acc'){accQuitada0(nv);try{derivarTiempos()}catch(e){}try{pintaUsadas()}catch(e){}}};
+  let pintaUsadas=()=>{};
   const addRow=vals=>{if(rows.children.length>=L.max)return;const d=el('div','lrow');d._tp=[];
     if(f.lista==='acc'){
       /* hora, minutos y AM/PM en fila · acción amplia debajo · «Ahora» y «Quitar» uno al lado del otro */
@@ -1007,18 +1018,25 @@ function listUI(f,dis){
       const tp=timePick((vals&&vals.h)||'',commit,dis,{sinAhora:true});d._tp.push(['h',tp]);d.append(tp);
       const l2=el('label');l2.append(el('small','','Acción realizada'));const ta=el('textarea');ta.rows=3;ta.dataset.k='a';ta.value=(vals&&vals.a)||'';ta.disabled=dis;ta.oninput=commit;ta.placeholder='Qué se hizo o qué ocurrió';l2.append(ta);d.append(l2);
       const br=el('div','btnrow');const ba=el('button','btn alt sm','Ahora');ba.type='button';ba.disabled=!!dis;ba.onclick=()=>{tp.setVal(nowHM());commit()};
-      const bq=el('button','btn alt sm','Quitar');bq.type='button';bq.onclick=()=>{d.remove();commit()};br.append(ba,bq);d.append(br);rows.append(d);return}
+      const bq=el('button','btn alt sm','Quitar');bq.type='button';bq.onclick=()=>{d.remove();commit()};const bu=el('button','btn alt sm','▲'),bd=el('button','btn alt sm','▼');bu.type=bd.type='button';bu.title='Subir esta acción';bd.title='Bajar esta acción';bu.disabled=bd.disabled=!!dis;bu.onclick=()=>{const p=d.previousElementSibling;if(p){rows.insertBefore(d,p);commit()}};bd.onclick=()=>{const n=d.nextElementSibling;if(n){rows.insertBefore(n,d);commit()}};br.append(ba,bu,bd,bq);d.append(br);rows.append(d);return}
     L.cols.forEach(([k,lab,type])=>{const l=el('label');l.append(el('small','',lab));
-      if(type==='time'){const p=timePick((vals&&vals[k])||'',commit,dis);d._tp.push([k,p]);l.append(p);l.classList.add('wide')}
+      if(type==='tdoc'){const sl=el('select');sl.dataset.k=k;sl.disabled=!!dis;sl.append(new Option('Tipo…',''));E.TDOC.forEach(([a,b])=>sl.append(new Option(b,a)));sl.value=(vals&&vals[k])||'';sl.onchange=commit;l.append(sl)}
+      else if(type==='time'){const p=timePick((vals&&vals[k])||'',commit,dis);d._tp.push([k,p]);l.append(p);l.classList.add('wide')}
       else{const i=el('input');i.type=type||'text';if(k==='d')soloDigitos(i);i.dataset.k=k;i.value=(vals&&vals[k])||'';i.disabled=dis;i.oninput=commit;l.append(i)}
       d.append(l)});
     const q=el('button','btn alt sm','Quitar');q.type='button';q.onclick=()=>{d.remove();commit()};d.append(q);rows.append(d)};
   if(f.lista==='acc'){try{sincronizarCrono()}catch(e){}
     const qc=el('div','chips');qc.append(el('small','derived','Acciones rápidas (toque para anotar con la hora actual):'));
+    const chips=[];
+    const usada=(t,k,tx)=>[...rows.children].find(r=>{const a=(r.querySelector('textarea')||{}).value||'';return (k&&r.dataset.kk===k)||a.trim()===(tx||t)});
+    pintaUsadas=()=>chips.forEach(([b,t,k,tx])=>b.classList.toggle('used',!!usada(t,k,tx)));
     QUICK.forEach(([t,k,tx])=>{const b=el('button','chip',t);b.type='button';b.disabled=!!dis;b.onclick=()=>{
-      const ya=k&&[...rows.children].find(r=>r.dataset.kk===k);
-      if(ya){ya._tp[0][1].setVal(nowHM());commit();toast('Hora actualizada: '+t);return}
-      addRow({h:nowHM(),a:tx||t,k:k||''});commit();const ult=rows.lastElementChild;if(ult&&ult.scrollIntoView)ult.scrollIntoView({block:'center'})};qc.append(b)});
+      const ya=usada(t,k,tx);
+      if(ya){const tp=ya._tp[0][1];if(!tp.getVal()){tp.setVal(nowHM());commit();toast('Se puso la hora a: '+t)}else toast('«'+t+'» ya se registró. Si quiere cambiar su hora, hágalo en la fila.');return}
+      if(k==='hora'){D.extra=D.extra||{};D.extra._noHora0=false}
+      const fila={h:nowHM(),a:tx||t,k:k||''};
+      addRow(fila);if(k==='hora'){rows.insertBefore(rows.lastElementChild,rows.firstElementChild)}commit();const ult=rows.lastElementChild;if(ult&&ult.scrollIntoView)ult.scrollIntoView({block:'center'})};chips.push([b,t,k,tx]);qc.append(b)});
+    setTimeout(()=>{try{pintaUsadas()}catch(e){}},0);
     wrap.append(qc)}
   wrap.append(rows);
   (Array.isArray(getP(D,f.p))?getP(D,f.p):[]).forEach(addRow);
@@ -1377,7 +1395,7 @@ function renderDone(){
 function resetView(){$('done').hidden=true;$('stepbox').hidden=false;$('prog').hidden=false}
 async function nuevaEmergencia(silent){
   REG=null;FOTOS=[];lsSet('cbv_actual',null);
-  D={fecha:isoDate(new Date()),hora:nowHM(),na:{},extra:{},rpt:null,pers:[]};
+  D={fecha:isoDate(new Date()),hora:'',na:{},extra:{},rpt:null,pers:[]};
   const c=lsGet('cbv_cmd',{});if(c.n)setP(D,'rpt.cmd',c);
   if(!nonEmpty(getP(D,'rpt.cmd.c'))||/^comandante de incidentes?$/i.test(String(getP(D,'rpt.cmd.c'))))setP(D,'rpt.cmd.c','CI');   /* el cargo del comandante sale prellenado como CI */
   showBad=false;stepIdx=0;resetView();$('editbanner').hidden=true;msg('');
@@ -1570,7 +1588,9 @@ async function enviarSos(){
     const cuerpo={cid:s.cid,cuando:s.cuando,lat:p?p.lat:'',lon:p?p.lon:'',veh:D.veh||'',msg:''};
     const r=loggedIn()?await call('sos',cuerpo):await callPublic({a:'sosAnon',por:lsGet('cbv_ultnom','')||'',...cuerpo});
     if(!r.ok)throw new Error(r.error||'servidor');
-    const cur=SOSF();if(cur){cur.id=r.id;cur.err=false;cur.canales={whatsapp:r.whatsapp,correo:r.correo};lsSet('cbv_sos',cur)}
+    {const m=lsGet('cbv_sosmios',[]);m.push(r.id,s.cid);lsSet('cbv_sosmios',m.slice(-20))}
+    const cur=SOSF();if(!cur||cur.cid!==s.cid){sosSending=false;cancelarSosCid(s.cid,r.id);return}
+    if(cur){cur.id=r.id;cur.err=false;cur.canales={whatsapp:r.whatsapp,correo:r.correo};lsSet('cbv_sos',cur)}
     sendPos(true);
   }catch(e){const cur=SOSF();if(cur){cur.err=true;lsSet('cbv_sos',cur)}}
   sosSending=false;paintSos();
@@ -1580,9 +1600,14 @@ async function desactivarSos(){
   if(!confirm('¿Desactivar el SOS? Solo hágalo si ya está a salvo. Se apagan la alarma y la linterna y la central lo verá como cancelado.'))return;
   lsSet('cbv_sos',null);
   siren.stop();torch.stop();$('ov_sosa').hidden=true;paintSosBtn();
-  if(s.id&&!loggedIn()){try{await callPublic({a:'sosFinAnon',cid:s.cid})}catch(e){}}
+  {const m=lsGet('cbv_sosmios',[]);m.push(s.cid);lsSet('cbv_sosmios',m.slice(-20))}
+  if(!s.id||!loggedIn()){await cancelarSosCid(s.cid,s.id)}
   else if(s.id){try{await call('sosFin',{id:s.id,nota:'Desactivado por el propio bombero'})}catch(e){lsSet('cbv_sosfin',[...lsGet('cbv_sosfin',[]),s.id])}}
   updateTrackUI();toast('SOS desactivado.');
+}
+async function cancelarSosCid(cid,id){
+  try{const r=await callPublic({a:'sosFinAnon',cid});if(r&&(r.ok||r.error==='no existe')){if(!r.ok&&!id){const q=lsGet('cbv_soscid',[]);if(!q.includes(cid)&&sosSending)q.push(cid),lsSet('cbv_soscid',q)}return}}catch(e){}
+  const q=lsGet('cbv_soscid',[]);if(!q.includes(cid)){q.push(cid);lsSet('cbv_soscid',q)}
 }
 function sosCerradoCentral(){
   const s=SOSF();if(!s)return;
@@ -1600,6 +1625,7 @@ function posRapida(){
 async function flushSos(){
   if(!online||!loggedIn())return;
   const s=SOSF();if(s&&!s.id)enviarSos();
+  {const q=lsGet('cbv_soscid',[]);if(q.length){const rest=[];for(const c of q){try{const r=await callPublic({a:'sosFinAnon',cid:c});if(!(r&&(r.ok||r.error==='no existe')))rest.push(c)}catch(e){rest.push(c)}}lsSet('cbv_soscid',rest)}}
   const fin=lsGet('cbv_sosfin',[]);
   if(fin.length){const rest=[];for(const id of fin){try{const r=await call('sosFin',{id,nota:'Desactivado por el propio bombero'});if(!r.ok)rest.push(id)}catch(e){rest.push(id)}}lsSet('cbv_sosfin',rest)}
   const cq=lsGet('cbv_confq',[]);
@@ -1616,7 +1642,7 @@ function reanudarSos(){
 const SEEN=new Set(lsGet('cbv_seen',[]));
 const seeNow=id=>{SEEN.add(id);lsSet('cbv_seen',[...SEEN].slice(-80))};
 let ACT=[],ALM={id:null},LL={id:null};const LLV={};
-const esMia=a=>(AJ.usuario&&a.usuario===AJ.usuario)||(a.por&&a.por===AJ.nombre&&a.tipo==='sos');
+const esMia=a=>(AJ.usuario&&a.usuario===AJ.usuario)||(a.tipo==='sos'&&(lsGet('cbv_sosmios',[]).includes(a.id)||(a.cid&&lsGet('cbv_sosmios',[]).includes(a.cid))))||(a.por&&a.por===AJ.nombre&&a.tipo==='sos');
 const yaConf=a=>(a.conf||[]).some(c=>c.u===(AJ.usuario||AJ.nombre));
 function notify(title,body,tag,acciones,url){
   try{
@@ -2724,7 +2750,9 @@ preguntarVinculo=async function(actual){
 async function reporteDesdeAviso(id){
   await repPendPoll();
   const p=PEND.lista.find(x=>x.id===id);
-  if(p)hacerReportePend(p);else toast('Esa emergencia ya no tiene un reporte pendiente para usted.');
+  if(p)return hacerReportePend(p);
+  try{await traerMisRegs(true);const rs=await DB.all('regs');const r=rs.find(y=>y.estado!=='final'&&y.datos&&y.datos.extra&&y.datos.extra._llam===id);if(r)return abrir(r.tmp)}catch(e){}
+  toast('Esa emergencia ya no tiene un reporte pendiente para usted.');
 }
 /* los avisos de «pendiente» abren directamente el reporte */
 {const nd0=nfDetalle;nfDetalle=function(i){
@@ -2762,7 +2790,7 @@ async function blEnviar(){
   const id=await blEnlazar();
   if(!id){blEstado('Sin vincular: la central aún no ve esta bitácora. Elija la emergencia abajo.','warn');blSel();return}
   try{
-    const r=await call('bitLive',{id,items:accList(),cin:String(getP(D,'rpt.cmd.nom')||'')});
+    const r=await call('bitLive',{id,items:accList(),cin:String(getP(D,'rpt.pcid')||'')});
     if(r&&r.ok){if(BL.faseErr)blEstado(BL.faseErr,'warn');else blEstado('','ok')}
     else blEstado('⚠ La central no recibió la bitácora: '+((r&&r.error)||'error del servidor')+'.','warn');
   }catch(e){blEstado('⚠ No se pudo enviar a la central ('+String((e&&e.message)||e).slice(0,80)+'). Se reintenta al seguir escribiendo.','warn')}
@@ -2815,7 +2843,7 @@ window.addEventListener('online',()=>bitacoraLive(''));
 }}
 
 /* el nombre del comando de incidentes también viaja a la central apenas se escribe */
-{const sv0=setV;setV=function(p,v){const r=sv0.apply(this,arguments);if(p==='rpt.cmd.nom')bitacoraLive('');return r}}
+{const sv0=setV;setV=function(p,v){const r=sv0.apply(this,arguments);if(p==='rpt.pcid')bitacoraLive('');return r}}
 
 /* el panel se actualiza solo cuando llega o termina una emergencia (sin esperar el ciclo de 15 s) */
 {let ids0=null;const ha0=handleAlerts;handleAlerts=function(list){
@@ -3126,9 +3154,11 @@ function derivarTiempos(){
 }
 function sincronizarCrono(){
   if(!D||modoSimple())return;
-  const l=accList().slice();let cambio=false;
+  const l=accList().slice();let cambio=false;D.extra=D.extra||{};
+  /* «Se recibió el llamado de emergencia» va siempre de primera; si no hay hora conocida queda pendiente (obligatoria) salvo que se quite */
+  if(!l.some(x=>x.k==='hora')&&!D.extra._noHora0){l.unshift({h:getP(D,'hora')||'',a:CRONO_TX.hora,k:'hora'});cambio=true}
   CRONO_K.forEach(k=>{const v=getP(D,CRONO_P(k));if(v&&!l.some(x=>x.k===k)){l.push({h:v,a:CRONO_TX[k],k});cambio=true}});
-  if(cambio){l.sort((x,y)=>String(x.h).localeCompare(String(y.h)));setP(D,'rpt.acc',l);D.extra=D.extra||{};D.extra._bk=D.extra._bk||{};CRONO_K.forEach(k=>{if(l.some(x=>x.k===k))D.extra._bk[k]=getP(D,CRONO_P(k))})}
+  if(cambio){setP(D,'rpt.acc',l);D.extra=D.extra||{};D.extra._bk=D.extra._bk||{};CRONO_K.forEach(k=>{if(l.some(x=>x.k===k))D.extra._bk[k]=getP(D,CRONO_P(k))})}
 }
 
 
@@ -3144,6 +3174,15 @@ async function elimBorrador(r){
   }
   if(REG&&REG.tmp===r.tmp){REG=null;D={};lsSet('cbv_actual',null);await nuevaEmergencia();show('list')}
   toast('Borrador eliminado.');renderList();pintarBorradores();
+}
+/* un reporte que la central eliminó se puede quitar siempre del teléfono (también si ya estaba enviado) */
+async function elimMarcado(r){
+  if(!confirm('¿Quitar de este teléfono el reporte'+(r.num?' '+r.num:'')+' que eliminó la central?'))return;
+  try{for(const f of await DB.byTmp(r.tmp))await DB.del('fotos',f.key)}catch(e){}
+  try{await DB.del('regs',r.tmp)}catch(e){}
+  try{const m=lsGet('cbv_delq',[]);lsSet('cbv_delq',[...new Set(m.concat([r.tmp]))])}catch(e){}
+  if(REG&&REG.tmp===r.tmp){REG=null;D={};lsSet('cbv_actual',null);try{await nuevaEmergencia()}catch(e){}show('list')}
+  toast('Quitado de su teléfono.');renderList();try{pintarBorradores()}catch(e){}
 }
 async function flushDel(){
   const q=lsGet('cbv_delq',[]);if(!q.length||!online||!loggedIn())return;
@@ -3193,6 +3232,7 @@ async function renderList(){
     if(ubicPendiente(r.tmp))pill('ubicación por enviar a la central','off');
     if(!draft||hasContent(r)){const v=el('button','btn alt sm','Ver reporte');v.type='button';v.onclick=()=>verReporte(r);row.append(v)}
     if(draft){const q=el('button','btn alt sm danger','Eliminar borrador');q.type='button';q.onclick=()=>elimBorrador(r);row.append(q)}
+    if(r.eliminado){const q=el('button','btn alt sm danger','Eliminar');q.type='button';q.onclick=()=>elimMarcado(r);row.append(q)}
     c.append(row);box.append(c);
   }
 }
@@ -3425,6 +3465,7 @@ async function main(){
   const qp=new URLSearchParams(location.search);
   if(qp.get('llamado')){const id=qp.get('llamado'),ac=qp.get('acc')||'';history.replaceState(null,'',location.pathname);setTimeout(()=>atenderDesdeAviso(id,ac),800)}
   else if(qp.get('reporte')){const id=qp.get('reporte');history.replaceState(null,'',location.pathname);setTimeout(()=>reporteDesdeAviso(id),1200)}
+  else if(qp.get('borrador')){const id=qp.get('borrador');history.replaceState(null,'',location.pathname);setTimeout(async()=>{try{await traerMisRegs(true)}catch(e){}const r=await DB.get('regs',id);if(r&&r.estado!=='final')abrir(id);else toast('Ese borrador ya no está disponible para usted.')},1200)}
   else if(qp.get('mapa')){history.replaceState(null,'',location.pathname);setTimeout(()=>irA('mapa'),500)}
   else if(qp.get('chat')){history.replaceState(null,'',location.pathname);setTimeout(()=>irA('chat'),500)}
   else if(qp.get('alerta')){history.replaceState(null,'',location.pathname);setTimeout(()=>irA('alerta'),500)}
