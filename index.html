@@ -277,7 +277,10 @@ html,body{overflow-x:hidden}
 .chip.used::before{content:'✓ '}
 /* Ahora · ▲ · ▼ · Quitar siempre en una sola fila */
 .lrow.acc .btnrow{display:flex;flex-wrap:nowrap;gap:6px;align-items:stretch}.lrow.acc .btnrow .btn{flex:1 1 auto;min-width:0;padding-left:8px;padding-right:8px}.lrow.acc .btnrow .btn[title*="Subir"],.lrow.acc .btnrow .btn[title*="Bajar"]{flex:0 0 44px}
-#log_list .ent{display:flex;flex-wrap:wrap;gap:6px;align-items:center}#log_list .ent .btn{flex:0 0 auto}
+#log_list .ent{display:grid;grid-template-columns:1fr;gap:6px}#log_list .ent .entbtns{display:flex;flex-wrap:nowrap;gap:6px;justify-content:flex-end}#log_list .ent .entbtns .btn{flex:0 0 auto;min-width:44px}
+
+/* acciones de la bitácora en vivo: ▲ ▼ Quitar siempre juntos, en su propia fila bajo el texto */
+#log_list .ent .entbtns{grid-column:1/-1;display:flex!important;flex-wrap:nowrap!important;justify-content:flex-start}
 
 </style>
 </head>
@@ -831,7 +834,7 @@ let LOGP=null;
 function drawLog(){
   const box=$('log_list');box.innerHTML='';const l=accList();
   if(!l.length)box.append(el('p','derived','Todavía no hay anotaciones. Escriba qué está pasando y toque «Agregar»; la hora se pone sola (puede cambiarla). La bitácora es obligatoria para terminar el reporte.'));
-  l.forEach((x,i)=>{const d=el('div','ent');d.append(el('b','',hmTxt(x.h)||'--'),el('span','',x.a));const q=el('button','btn alt sm','Quitar');q.type='button';q.onclick=()=>{const n=accList().slice();n.splice(i,1);setV('rpt.acc',n);accQuitada0(n);try{derivarTiempos()}catch(e){}drawLog()};const up=el('button','btn alt sm','▲'),dn=el('button','btn alt sm','▼');up.type=dn.type='button';up.title='Subir';dn.title='Bajar';up.disabled=i===0;dn.disabled=i===l.length-1;up.onclick=()=>{if(accMover(i,-1))drawLog()};dn.onclick=()=>{if(accMover(i,1))drawLog()};d.append(up,dn,q);box.append(d)});
+  l.forEach((x,i)=>{const d=el('div','ent');d.append(el('b','',hmTxt(x.h)||'--'),el('span','',x.a));const q=el('button','btn alt sm','Quitar');q.type='button';q.onclick=()=>{const n=accList().slice();n.splice(i,1);setV('rpt.acc',n);accQuitada0(n);try{derivarTiempos()}catch(e){}drawLog()};const up=el('button','btn alt sm','▲'),dn=el('button','btn alt sm','▼');up.type=dn.type='button';up.title='Subir';dn.title='Bajar';up.onclick=()=>{if(accMover(i,-1))drawLog()};dn.onclick=()=>{if(accMover(i,1))drawLog()};const bb=el('div','entbtns');bb.append(up,dn,q);d.append(bb);box.append(d)});
   box.scrollTop=box.scrollHeight;
   [...document.querySelectorAll('#log_quick .chip')].forEach((b,i)=>{const z=QUICK[i];if(z)b.classList.toggle('used',quickIdx(l,z[0],z[1],z[2])>=0)});
 }
