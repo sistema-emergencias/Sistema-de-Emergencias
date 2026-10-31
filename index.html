@@ -275,7 +275,9 @@ html,body{overflow-x:hidden}
 
 .chip.used{background:var(--ok-soft,#e1f1e8)!important;border-color:var(--ok,#1f7a4d)!important;color:var(--ok,#1f7a4d)!important}
 .chip.used::before{content:'✓ '}
-.lrow.acc .btnrow{display:flex;gap:6px;flex-wrap:wrap}
+/* Ahora · ▲ · ▼ · Quitar siempre en una sola fila */
+.lrow.acc .btnrow{display:flex;flex-wrap:nowrap;gap:6px;align-items:stretch}.lrow.acc .btnrow .btn{flex:1 1 auto;min-width:0;padding-left:8px;padding-right:8px}.lrow.acc .btnrow .btn[title*="Subir"],.lrow.acc .btnrow .btn[title*="Bajar"]{flex:0 0 44px}
+#log_list .ent{display:flex;flex-wrap:wrap;gap:6px;align-items:center}#log_list .ent .btn{flex:0 0 auto}
 
 </style>
 </head>

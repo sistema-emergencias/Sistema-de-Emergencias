@@ -521,7 +521,7 @@ function aplicarCfg(c){
 
 /* ================= PANEL DE ESTADÍSTICA ================= */
 const TABS=['est','vivo','reg','calor','per','aud','cfg','vpv','adm','ser'];
-const TABS_ROL={central:['vivo','reg','vpv'],estadistica:['est','vivo','reg','calor','ser','vpv'],master:TABS};
+const TABS_ROL={central:['vivo','reg','vpv'],estadistica:['est','vivo','reg','calor','ser','vpv'],master:TABS.filter(x=>x!=='vpv')};
 function showTab(k){
   document.querySelectorAll('#ptabs button').forEach(x=>x.setAttribute('aria-selected',x.dataset.p===k));
   TABS.forEach(t=>{const e=$('p-'+t);if(e)e.hidden=t!==k});
@@ -2134,7 +2134,7 @@ async function inspeccionBlob(r){return new Blob([await GEN.constancia(JSZip,awa
   /* las visitas de seguridad no generan constancia ni reporte de emergencia: generan el informe técnico */
   [...d.querySelectorAll('button')].forEach(b=>{if(/Constancia de atención|Descargar Reporte de Emergencias|Imprimir reporte/.test(b.textContent))b.remove()});
   if(!(esMaster()||puedeF('informes')))return;
-  const b=document.createElement('button');b.className='btn';b.textContent='Informe técnico de inspección (.docx)';
+  const b=document.createElement('button');b.className='btn alt sm';b.textContent='Informe técnico de inspección (.docx)';
   b.onclick=()=>run($('d-msg'),async()=>{await save('INFORME TECNICO INSPECCION '+r.id+'.docx',await inspeccionBlob(r))});
   (d.querySelector('.dl:last-of-type')||d).append(b);
 }}
@@ -3669,7 +3669,7 @@ function aplicarLayoutTabs(){
   else{const base=TABS;bs.sort((a,b)=>base.indexOf(a.dataset.p)-base.indexOf(b.dataset.p)).forEach(b=>bar.append(b))}
 }
 {const tp0=tabsPorRol;tabsPorRol=function(){tp0.apply(this,arguments);const L=(CFGP&&CFGP.layout)||{};
-  document.querySelectorAll('#ptabs button').forEach(b=>{const p=b.dataset.p;if(p!=='adm'&&p!=='cfg'&&(L.hideTabs||[]).includes(p)&&ROL!=='master-preview')b.hidden=true});aplicarLayoutTabs();document.querySelectorAll('#atabs [data-solo=master]').forEach(b=>b.hidden=ROL!=='master')}}
+  document.querySelectorAll('#ptabs button').forEach(b=>{const p=b.dataset.p;if(p!=='adm'&&p!=='cfg'&&(L.hideTabs||[]).includes(p)&&ROL!=='master-preview')b.hidden=true;if(p==='vpv'&&ROL==='master')b.hidden=true});aplicarLayoutTabs();document.querySelectorAll('#atabs [data-solo=master]').forEach(b=>b.hidden=ROL!=='master')}}
 
 
 /* ---------- título de la página según el rol abierto ---------- */
@@ -4111,10 +4111,12 @@ function vpvCargar(){
 }
 window.addEventListener('message',async ev=>{const m=ev.data||{};if(!m)return;
   if((m.tipo==='vp-listo'||m.tipo==='vp-listo-est')&&$('vpv-fr')&&$('vpv-fr').querySelector('iframe')&&$('p-vpv')&&!$('p-vpv').hidden){const f=$('vpv-fr').querySelector('iframe');try{f.contentWindow.postMessage({tipo:'cfg',cfg:CFGP||{}},'*')}catch(e){}}
-  if(m.tipo==='vp-orden'&&Array.isArray(m.orden)&&$('p-vpv')&&!$('p-vpv').hidden){
-    if(!esMaster()){$('vpv-out').textContent='Solo el superadministrador puede guardar cambios de orden.';return}
+  const enDz=!!($('dz-root')&&!$('dz-root').hidden),enVp=!!($('p-vpv')&&!$('p-vpv').hidden);
+  const say=t=>{const o=$('vpv-out');if(enVp&&o)o.textContent=t;else toast(t)};
+  if(m.tipo==='vp-orden'&&Array.isArray(m.orden)&&(enVp||enDz)){
+    if(!esMaster()){say('Solo el superadministrador puede guardar cambios de orden.');return}
     try{const L=Object.assign({},CFGP.layout||{});if(m.cual==='menu'){const rest=LY_MENU.map(x=>x[0]).filter(k=>!m.orden.includes(k));L.menu=m.orden.concat(rest)}else{const rest=LY_TABS.map(x=>x[0]).filter(k=>!m.orden.includes(k));L.tabs=m.orden.concat(rest)}
-      need(await call('cfgSet',{clave:'layout',valor:L}));CFGP.layout=L;tabsPorRol();$('vpv-out').textContent='Orden guardado.'}catch(e){$('vpv-out').textContent='No se pudo guardar: '+humanErr(e)}}
+      need(await call('cfgSet',{clave:'layout',valor:L}));CFGP.layout=L;tabsPorRol();say('Orden guardado.');if(enDz){try{dzPreview()}catch(e){}}}catch(e){say('No se pudo guardar: '+humanErr(e))}}
 });
 {const st0=showTab;showTab=function(k){st0.apply(this,arguments);if(k==='vpv')renderVpv()}}
 {const vpe=vistaPreviaEst;vistaPreviaEst=async function(){await vpe.apply(this,arguments);
