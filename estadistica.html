@@ -1467,7 +1467,7 @@ function drawPers(){
     PFILT=q.value;const f=PFILT.trim().toLowerCase();
     body.innerHTML='';
     PLIST.forEach((p,i)=>{
-      if(f&&![p.nombre,p.grado,p.cedula,p.codigo].some(x=>String(x||'').toLowerCase().includes(f)))return;
+      if(f&&!pCoincide(p,f))return;
       const tr=H('tr');tr.append(H('td',{className:'m'},String(i+1)));
       PCOLS.forEach(c=>{const inp=H('input',{value:p[c[0]]||'',size:c[2]});inp.setAttribute('aria-label',c[1]+' de '+(p.nombre||'persona nueva'));inp.oninput=()=>{p[c[0]]=inp.value;marcar()};const td=H('td');td.append(inp);tr.append(td)});
       const op=H('select');[['auto','Automático por grado'],['si','Sí'],['no','No']].forEach(x=>op.append(new Option(x[1],x[0])));op.value=p.operativo==='si'||p.operativo==='no'?p.operativo:'auto';op.onchange=()=>{p.operativo=op.value;marcar()};
@@ -1569,6 +1569,19 @@ async function renderAud(){
 }
 
 /* --- Usuarios (cuentas de Estadística) --- */
+/* búsqueda de personal: con solo dígitos se busca por código exacto; si ninguno lo tiene, por el inicio del código y, al final, por cédula */
+function pCoincide(p,f){
+  if(/^#?\d+$/.test(f)){
+    const n=f.replace('#','');
+    const exacto=PLIST.some(x=>String(x.codigo||'').trim()===n);
+    if(exacto)return String(p.codigo||'').trim()===n;
+    if(f[0]==='#')return String(p.codigo||'').trim().startsWith(n);
+    const ini=PLIST.some(x=>String(x.codigo||'').trim().startsWith(n));
+    if(ini)return String(p.codigo||'').trim().startsWith(n);
+    return String(p.cedula||'').includes(n);
+  }
+  return [p.nombre,p.grado,p.cargo,p.cedula,p.codigo].some(x=>String(x||'').toLowerCase().includes(f));
+}
 async function admUsr(){
   let us;try{us=need(await call('usersGet')).users}catch(e){setBox(card(H('p',{className:'err'},'No se pudo leer: '+humanErr(e))));return}
   const msg=H('div',{className:'derived',role:'status'});
@@ -1579,13 +1592,15 @@ async function admUsr(){
     H('label',{style:'display:flex;gap:8px;align-items:center;flex-direction:row'},act,'Activo'),
     (()=>{const b=H('button',{className:'btn sm',textContent:'Guardar cuenta'});b.onclick=async()=>{try{need(await call('userSet',{usuario:us_.value,nombre:nm.value,rol:rol.value,clave:cl.value,activo:act.checked}));admUsr()}catch(e){msg.textContent=humanErr(e)}};return b})());
   const t=H('table');t.innerHTML='<tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Origen</th><th>Estado</th><th></th></tr>';
-  us.forEach(u=>{const tr=H('tr');tr.innerHTML='<td class="m">'+esc(u.usuario)+'</td><td>'+esc(u.nombre)+'</td><td>'+({master:'Superadministrador',estadistica:'Central con estadística',central:'Central operativa'}[u.rol]||'Usuario normal')+'</td><td>'+(u.origen==='personal'?'Personal':'Manual')+'</td><td>'+(u.activo?'<span class="pill on">activo</span>':'<span class="pill off">desactivado</span>')+'</td>';
+  const uq=H('input',{placeholder:'Buscar por usuario, nombre o rol',type:'search'});const filas=[];
+  us.forEach(u=>{const tr=H('tr');tr._txt=[u.usuario,u.nombre,({master:'superadministrador',estadistica:'central con estadística',central:'central operativa'}[u.rol]||'usuario normal')].join(' ').toLowerCase();filas.push(tr);tr.innerHTML='<td class="m">'+esc(u.usuario)+'</td><td>'+esc(u.nombre)+'</td><td>'+({master:'Superadministrador',estadistica:'Central con estadística',central:'Central operativa'}[u.rol]||'Usuario normal')+'</td><td>'+(u.origen==='personal'?'Personal':'Manual')+'</td><td>'+(u.activo?'<span class="pill on">activo</span>':'<span class="pill off">desactivado</span>')+'</td>';
     const td=H('td');
     const e=H('button',{className:'btn alt sm',textContent:'Editar'});e.onclick=()=>{us_.value=u.usuario;nm.value=u.nombre;rol.value=u.rol;act.checked=u.activo;cl.value='';cl.placeholder='Clave nueva (vacío = no cambiar)';form.scrollIntoView({behavior:'smooth'})};
     const rs=H('button',{className:'btn alt sm',textContent:'Restablecer clave'});rs.onclick=()=>resetClave({cedula:u.usuario,nombre:u.nombre},msg);
     const d=H('button',{className:'btn alt sm',textContent:'Eliminar'});d.onclick=async()=>{if(!confirm('¿Eliminar al usuario '+u.usuario+'?'))return;try{need(await call('userDel',{usuario:u.usuario}));admUsr()}catch(x){alert(humanErr(x))}};
     td.append(e,' ',rs,' ',d);tr.append(td);t.append(tr)});
-  setBox(info,form,card(H('div',{className:'scroll'},t)));
+  uq.oninput=()=>{const f=uq.value.trim().toLowerCase();filas.forEach(r=>r.hidden=!!f&&!r._txt.includes(f))};
+  setBox(info,form,card(H('div',{className:'tools'},lbl('Buscar',uq)),H('div',{className:'scroll'},t)));
 }
 
 /* --- Aplicación y alertas --- */
