@@ -349,9 +349,9 @@ table th{position:relative}
           <div class="scroll"><table id="c_tab"></table></div>
         </div>
         <div class="card">
-          <h3>Guardar en Drive los reportes que faltan</h3>
+          <h3>Guardar en Drive y en el PC los reportes que faltan</h3>
           <p class="derived expl">Cada Reporte de Emergencias se guarda solo en la carpeta de su emergencia cuando el teléfono termina de enviar. Si alguno quedó sin guardar (por ejemplo, registros anteriores), este botón los genera desde aquí y los deja en su carpeta.</p>
-          <div class="dl"><button class="btn alt" id="docs-bulk">Guardar los reportes pendientes</button></div>
+          <div class="dl"><button class="btn alt" id="docs-bulk">Guardar los reportes pendientes (Drive y PC)</button></div>
           <div class="derived" id="docs-msg" role="status"></div>
         </div>
       </div>
@@ -1265,12 +1265,12 @@ async function showDetail(r){
     [['Día',GEN.dmy(r.fecha)],['Alerta',hh(r.hora)],['Salida de estación',hh(r.hsal)],['Llegada al sitio',hh(r.hlle)],['Terminación de la emergencia',hh(r.hfin)],['Llegada a la estación',hh(r.hreg)],['Respuesta (alerta a llegada)',lapse(r.hora,r.hlle)!=null?lapse(r.hora,r.hlle)+' min':''],['Aviso recibido por',r.canal],['Quién reportó',r.rep],['Personal que atendió',(r.pers||[]).join(', ')],['Tipo',tc(r.tipo||'')],['Duración',dur],['Lugar',r.dir],['Barrio o vereda',r.bar],['Coordenadas',co?gms(co[0],co[1]):(r.coord||'')],['Área',r.area],['Incendio forestal',incTxt],['Unidades',r.uni],['Vehículo',r.veh],['Descripción',r.desc],['Registró',(r._nombre||'')+(r.usuario?' ('+r.usuario+')':'')],['Lesionados',r.les?r.les+(r.tras?' · trasladados a '+r.tras:''):''],['Puntos marcados «No aplica»',naL?String(naL):''],['Otros datos',r.extraTxt],['Formulario de Google',app?r.form||'':'']]
       .filter(x=>x[1]!=null&&x[1]!=='').map(x=>'<dt>'+x[0]+'</dt><dd>'+esc(x[1])+'</dd>').join('')+'</dl><div id="d-ub"></div>'+
     (app?'<p>'+(!co&&r.dir?'<a href="https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(r.dir+', La Unión, Valle del Cauca')+'" target="_blank" rel="noopener">Buscar la dirección en el mapa (el registro no trae coordenadas)</a> · ':'')+(r.carpeta?'<a href="'+esc(r.carpeta)+'" target="_blank" rel="noopener">Carpeta de la emergencia en Drive</a>':'')+(r.doc?' · <a href="'+esc(r.doc)+'" target="_blank" rel="noopener">Reporte de Emergencias en Drive</a>':' · <span class="derived">el reporte aún no está en Drive</span>')+'</p>':'')+
-    '<div class="fotos" id="dfotos"></div><div class="dl"><button class="btn sm" id="d-print">Imprimir reporte</button><button class="btn alt sm" id="d-rep">Descargar Reporte de Emergencias (.xlsx)</button>'+(app&&r.nfotos?'<button class="btn alt sm" id="d-foto">Registro fotográfico (.docx)</button>':'')+(app&&!r.borrador?'<button class="btn alt sm" id="d-drive">Guardar el reporte en Drive</button>':'')+(app&&esMaster()?'<button class="btn alt sm" id="d-edit">Corregir datos (superadministrador)</button>'+(r.anulado?'<button class="btn alt sm" id="d-anul">Restaurar registro</button>':'')+'<button class="btn alt sm" id="d-del">Eliminar registro</button>':'')+'</div><div id="d-form"></div><div class="derived" id="d-msg"></div><div id="d-tl"></div></div>';
+    '<div class="fotos" id="dfotos"></div><div class="dl"><button class="btn sm" id="d-print">Imprimir reporte</button><button class="btn alt sm" id="d-rep">Descargar Reporte de Emergencias (.xlsx)</button>'+(app&&r.nfotos?'<button class="btn alt sm" id="d-foto">Registro fotográfico (.docx)</button>':'')+(app&&!r.borrador?'<button class="btn alt sm" id="d-drive">Guardar en Drive y en el PC</button>':'')+(app&&esMaster()?'<button class="btn alt sm" id="d-edit">Corregir datos (superadministrador)</button>'+(r.anulado?'<button class="btn alt sm" id="d-anul">Restaurar registro</button>':'')+'<button class="btn alt sm" id="d-del">Eliminar registro</button>':'')+'</div><div id="d-form"></div><div class="derived" id="d-msg"></div><div id="d-tl"></div></div>';
   if(co)$('d-ub').append(ubicActs(co[0],co[1],r.id));
   d.scrollIntoView({behavior:'smooth',block:'nearest'});
   $('d-print').onclick=async()=>{$('d-print').disabled=true;await imprimirReporte(r);$('d-print').disabled=false};
   $('d-rep').onclick=()=>run($('d-msg'),async()=>{await save('REPORTE DE EMERGENCIAS '+r.id+'.xlsx',await GEN.reporteEmergencia(JSZip,await tpl('reporte_emergencias.xlsx'),await repData(r)))});
-  if($('d-drive'))$('d-drive').onclick=()=>run($('d-msg'),async()=>{const u=await subirDoc(r);r.doc=u;$('d-msg').textContent='Guardado en la carpeta de la emergencia en Drive.'});
+  if($('d-drive')){$('d-drive').onclick=()=>{const pp=pcPrepararPermiso();run($('d-msg'),async()=>{await pp;const x=await guardarDrivePC(r);r.doc=x.url;$('d-msg').textContent='Guardado en la carpeta de la emergencia en Drive'+(x.pc===true?' y en la carpeta del computador.':x.pc===false?'. En el computador NO se pudo (revise el permiso de la carpeta).':'. (No hay carpeta del computador elegida.)')})}}
   if(app&&r.nfotos){
     let fotos=null;const get=async()=>{if(fotos)return fotos;const m=(await metaDe([r.tmp]))[r.tmp]||[];fotos=await bajar(m);return fotos};
     get().then(fs=>{window._dfs=fs.filter(f=>f.d);$('dfotos').innerHTML=_dfs.map(f=>'<img class="zoomf" alt="'+esc(f.desc||'Fotografía')+'" title="Toque para ver en grande" src="'+f.d+'">').join('')||'<span class="derived">Las fotos aún no han llegado a la central.</span>'}).catch(()=>{$('dfotos').innerHTML='<span class="derived">No se pudieron traer las fotos.</span>'});
@@ -1402,12 +1402,21 @@ async function subirDoc(r){
   const j=need(await call('doc',{tmp:r.tmp,d:await bytesB64(u8),nombre:'REPORTE DE EMERGENCIAS '+r.id+'.xlsx'},{ms:120000}));
   const o=REGS.get(r.tmp);if(o)o.doc=j.url;return j.url;
 }
+/* un solo botón: Drive y carpeta del computador (si está elegida). El permiso de la carpeta se pide primero, mientras el clic todavía cuenta. */
+async function pcPrepararPermiso(){try{const h=await pcGet();if(h)await pcPermiso(h,true)}catch(e){}}
+async function guardarDrivePC(r){
+  const u=await subirDoc(r);const o=REGS.get(r.tmp),v=String((o&&(o.actualizado||o.creado))||'');let pc=null;
+  ponMarca('cbv_cdrive',r.tmp,v);
+  try{const h=await pcGet();if(h){pc=await carpetaPC(r,false);if(pc)ponMarca('cbv_cpc',r.tmp,v)}}catch(e){PC_ERR=String(e&&e.message||e).slice(0,120);pc=false}
+  return {url:u,pc:pc};
+}
 async function docsBulk(){
   const m=$('docs-msg'),b=$('docs-bulk');b.disabled=true;
-  const falta=[...REGS.values()].filter(o=>o.estado==='final'&&!o.doc&&!o.anulado&&o.num);
-  if(!falta.length){m.textContent='Todos los reportes ya están en Drive.';b.disabled=false;return}
+  await pcPrepararPermiso();const conPC=!!(await pcGet());
+  const falta=[...REGS.values()].filter(o=>o.estado==='final'&&!o.anulado&&o.num&&(!o.doc||(conPC&&marcaCopia('cbv_cpc')[o.tmp]!==String(o.actualizado||o.creado||''))));
+  if(!falta.length){m.textContent='Todos los reportes ya están en Drive'+(conPC?' y en la carpeta del computador':'')+'.';b.disabled=false;return}
   let ok=0,mal=0,ult='';
-  for(let i=0;i<falta.length;i++){m.textContent='Guardando '+(i+1)+' de '+falta.length+'…';try{await subirDoc(toRow(falta[i]));ok++}catch(e){mal++;ult=humanErr(e)}}
+  for(let i=0;i<falta.length;i++){m.textContent='Guardando '+(i+1)+' de '+falta.length+'…';try{await guardarDrivePC(toRow(falta[i]));ok++}catch(e){mal++;ult=humanErr(e)}}
   m.textContent='Listo: '+ok+' guardados'+(mal?', '+mal+' con error ('+ult+')':'')+'.';b.disabled=false;
 }
 /* ================= FORMATO DE INCENDIOS FORESTALES (SNIF) ================= */
@@ -1992,7 +2001,7 @@ async function autoCopias(tmp){
 async function pcElegir(){
   const o=$('pc-msg');
   if(!window.showDirectoryPicker){o.textContent='Este navegador no permite elegir una carpeta. Use Chrome o Edge en el computador de la central.';return}
-  try{const h=await window.showDirectoryPicker({mode:'readwrite',id:'cbv-copias'});await pcSet(h);o.textContent='Listo: cada reporte nuevo o modificado se guardará completo (reporte y fotos, en EMERGENCIAS <año>/<mes>) en «'+h.name+'» mientras esta página esté abierta.';$('pc-est').textContent='Carpeta: '+h.name}catch(e){if(e&&e.name!=='AbortError')o.textContent='No se pudo: '+(e.message||e)}
+  try{const h=await window.showDirectoryPicker({mode:'readwrite',id:'cbv-copias'});await pcSet(h);o.textContent='Listo: cada reporte nuevo o modificado se guardará completo (reporte y fotos, en EMERGENCIAS <año>/<mes>) en «'+h.name+'» mientras esta página esté abierta.';$('pc-est').textContent='Carpeta: '+h.name;pcEstadoUI();barridoCopias()}catch(e){if(e&&e.name!=='AbortError')o.textContent='No se pudo: '+(e.message||e)}
 }
 async function pcTodo(){
   const o=$('pc-msg'),h=await pcGet();
@@ -2000,7 +2009,7 @@ async function pcTodo(){
   if(!(await pcPermiso(h,true))){o.textContent='El navegador no dio permiso a la carpeta.';return}
   const l=[...REGS.values()].filter(x=>x.estado==='final'&&!x.anulado&&x.num);let n=0;
   for(const x of l){o.textContent='Guardando '+(++n)+' de '+l.length+'…';try{await carpetaPC(toRow(x),true)}catch(e){}}
-  o.textContent='Listo: '+l.length+' emergencias en la carpeta «'+h.name+'».';
+  o.textContent='Listo: '+l.length+' emergencias en la carpeta «'+h.name+'».';pcEstadoUI();
 }
 /* ---------- arranque V1 ---------- */
 function v1Init(){
@@ -2614,10 +2623,11 @@ function drawPend(){
   const bd=$('pd-drive');if(bd)bd.onclick=async()=>{bd.disabled=true;$('docs-msg')||0;await docsBulkOp($('pd-msg'));bd.disabled=false;pollPend()};
 }
 async function docsBulkOp(m){
-  const falta=[...REGS.values()].filter(o=>o.estado==='final'&&!o.doc&&!o.anulado&&o.num);
-  if(!falta.length){m.textContent='Todo ya está en Drive.';return}
+  await pcPrepararPermiso();const conPC=!!(await pcGet());
+  const falta=[...REGS.values()].filter(o=>o.estado==='final'&&!o.anulado&&o.num&&(!o.doc||(conPC&&marcaCopia('cbv_cpc')[o.tmp]!==String(o.actualizado||o.creado||''))));
+  if(!falta.length){m.textContent='Todo ya está en Drive'+(conPC?' y en el computador':'')+'.';return}
   let ok=0,mal=0,ult='';
-  for(let i=0;i<falta.length;i++){m.textContent='Cargando '+(i+1)+' de '+falta.length+'…';try{await subirDoc(toRow(falta[i]));ok++}catch(e){mal++;ult=humanErr(e)}}
+  for(let i=0;i<falta.length;i++){m.textContent='Cargando '+(i+1)+' de '+falta.length+'…';try{await guardarDrivePC(toRow(falta[i]));ok++}catch(e){mal++;ult=humanErr(e)}}
   m.textContent=ok+' cargado(s) y confirmado(s)'+(mal?'; '+mal+' con error ('+ult+')':'')+'.';
   toast(ok+' reporte(s) cargados a Drive'+(mal?'; '+mal+' con error':'')+'.',!!mal&&!ok);
 }
@@ -4796,17 +4806,32 @@ autoCopias=async function(tmp,forzar){
   const o=REGS.get(tmp);if(!o||o.estado!=='final'||o.anulado||!o.num)return;
   const v=String(o.actualizado||o.creado||''),r=toRow(o);
   if(forzar||marcaCopia('cbv_cdrive')[tmp]!==v){try{await subirDoc(r);ponMarca('cbv_cdrive',tmp,v)}catch(e){}}
-  if(forzar||marcaCopia('cbv_cpc')[tmp]!==v){try{if(await carpetaPC(r,false))ponMarca('cbv_cpc',tmp,v)}catch(e){}}
+  if(forzar||marcaCopia('cbv_cpc')[tmp]!==v){try{if(await carpetaPC(r,false))ponMarca('cbv_cpc',tmp,v)}catch(e){PC_ERR=String(e&&e.message||e).slice(0,120)}}
 };
 let BARRIDO_T=null,BARRIDO_BUSY=false;
+let PC_ERR='';
+/* estado de la carpeta del computador: el navegador pide de nuevo el permiso cada vez que se reabre la página; sin un clic de una persona no puede dárselo solo */
+async function pcEstadoUI(){
+  const h=await pcGet(),est=$('pc-est');let ban=document.getElementById('pc-ban');
+  if(!h||!TOKEN){if(ban)ban.remove();return}
+  let ok=false;try{ok=(await h.queryPermission({mode:'readwrite'}))==='granted'}catch(e){}
+  if(est)est.textContent='Carpeta: '+h.name+(ok?' · ✔ con permiso':' · ⚠ SIN permiso: toque «Dar permiso»')+(PC_ERR?' · Último error: '+PC_ERR:'');
+  if(ok){if(ban)ban.remove();return}
+  if(!ban){ban=document.createElement('button');ban.id='pc-ban';ban.type='button';ban.style.cssText='position:fixed;left:12px;right:12px;bottom:12px;z-index:50;padding:12px 14px;background:#b4251b;color:#fff;border:0;border-radius:10px;font:600 14px Arial;cursor:pointer;box-shadow:0 2px 10px #0006';
+    ban.onclick=async()=>{const hh=await pcGet();if(hh&&await pcPermiso(hh,true)){await pcEstadoUI();barridoCopias()}else pcEstadoUI()};document.body.append(ban)}
+  ban.textContent='⚠ La copia automática en el computador está en pausa. Toque aquí para dar permiso a la carpeta «'+h.name+'» y se guardan las que faltan.';
+}
 async function barridoCopias(){
   if(BARRIDO_BUSY||!TOKEN||document.visibilityState!=='visible')return;BARRIDO_BUSY=true;
-  try{const h=await pcGet();if(!h)return;await loadAll();let n=0;
-    for(const o of REGS.values()){if(o.estado!=='final'||o.anulado||!o.num)continue;const v=String(o.actualizado||o.creado||'');if(marcaCopia('cbv_cpc')[o.tmp]===v&&marcaCopia('cbv_cdrive')[o.tmp]===v)continue;await autoCopias(o.tmp);if(++n>=6)break}
-  }catch(e){}finally{BARRIDO_BUSY=false}
+  try{const h=await pcGet();if(!h)return;if(!(await pcPermiso(h,false))){pcEstadoUI();return}await loadAll();let n=0;
+    for(const o of REGS.values()){if(o.estado!=='final'||o.anulado||!o.num)continue;const v=String(o.actualizado||o.creado||'');if(marcaCopia('cbv_cpc')[o.tmp]===v&&marcaCopia('cbv_cdrive')[o.tmp]===v)continue;await autoCopias(o.tmp);if(++n>=10)break}
+    PC_ERR='';pcEstadoUI();
+  }catch(e){PC_ERR=String(e&&e.message||e).slice(0,120);pcEstadoUI()}finally{BARRIDO_BUSY=false}
 }
-if(!BARRIDO_T)BARRIDO_T=setInterval(barridoCopias,240000);
-setTimeout(barridoCopias,20000);
+if(!BARRIDO_T)BARRIDO_T=setInterval(barridoCopias,120000);
+/* primer clic en la página tras reabrirla: se pide el permiso de la carpeta (el navegador solo lo permite con un gesto de una persona) */
+{let pedido=false;document.addEventListener('pointerdown',async()=>{if(pedido||!TOKEN)return;pedido=true;try{const h=await pcGet();if(h&&(await h.queryPermission({mode:'readwrite'}))!=='granted'){await h.requestPermission({mode:'readwrite'});pcEstadoUI();barridoCopias()}}catch(e){}},{capture:true})}
+setTimeout(pcEstadoUI,4000);setTimeout(barridoCopias,8000);
 
 /* visor de fotos dentro de la plataforma (sin pestañas nuevas): ◀ ▶ para pasar, Esc o ✕ para volver */
 function lightbox(items,k0){

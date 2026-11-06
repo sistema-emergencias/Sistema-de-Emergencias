@@ -1014,7 +1014,7 @@ function renderField(f){
       const codDe=n=>((AJ.plantilla||[]).find(x=>x.n===n)||{}).k||'';
       const pintar=()=>{
         box.innerHTML='';const gr={};ordenarPorRango(nombres).filter(n=>!sel.has(n)).filter(n=>!fq||(/^\d+$/.test(fq)?norm(codDe(n)).replace(/^0+(?=\d)/,'')===fq.replace(/^0+(?=\d)/,''):norm(n).includes(fq))).forEach(n=>{const g=gradoDe(n)||'Otros / sin grado';(gr[g]=gr[g]||[]).push(n)});
-        const mk=(n,row)=>{const b=chipBtn(n,sel.has(n),()=>{sel.has(n)?sel.delete(n):sel.add(n);setV(f.p,ordenarPorRango([...sel]));pintar()});b.disabled=dis;if(codDe(n))b.title='Código '+codDe(n);row.append(b)};
+        const mk=(n,row)=>{const b=chipBtn(n,sel.has(n),()=>{const nuevo=!sel.has(n);nuevo?sel.add(n):sel.delete(n);setV(f.p,ordenarPorRango([...sel]));if(nuevo&&fq){fq='';try{bq.value=''}catch(e){}}pintar();if(nuevo){try{bq.focus({preventScroll:true})}catch(e){}}});b.disabled=dis;if(codDe(n))b.title='Código '+codDe(n);row.append(b)};
         if(sel.size){box.append(el('div','derived','Seleccionados ('+sel.size+')'));const r0=el('div','chips');ordenarPorRango([...sel]).forEach(n=>mk(n,r0));box.append(r0)}
         Object.keys(gr).sort((a,b)=>rangoIdx(a)-rangoIdx(b)||a.localeCompare(b,'es')).forEach(g=>{
           box.append(el('div','derived',g));const row=el('div','chips');
@@ -1316,6 +1316,8 @@ function compress(file,opt){
 function copiaFotoTelefono(blob,n){
   try{
     if(lsGet('cbv_fcopia',true)===false)return;
+    /* iPhone/iPad: una descarga abre el archivo en otra ventana con vista previa; ahí no se hace la copia (la foto queda en el reporte y en la central) */
+    if(/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1))return;
     const a=document.createElement('a');const u=URL.createObjectURL(blob);
     const f=(D.fecha||isoDate(new Date())).replace(/-/g,'');
     a.href=u;a.download='CBV_'+f+'_'+((REG&&REG.num)||(REG&&REG.tmp)||'foto')+'_'+(n+1)+'.jpg';
@@ -3536,7 +3538,7 @@ async function renderList0(forzar){
     c.append(el('span','',tc(d.cat||'Sin categoría')+' · '+(d.fecha||'')+' '+hmTxt(d.hora)));
     c.append(el('span','derived',(d.dir||'')+' · '+(d.uni||'?')+' unid. · '+(d.veh||'')+' · '+n+' fotos'));
     const tieneU=coordValida(d.lat,d.lon);
-    c.append(el('span',tieneU?'derived':'derived sin-ubic',tieneU?'Ubicación: '+gms(d.lat,d.lon):'⚠ Falta registrar la ubicación del evento'));
+    if(tieneU)c.append(el('span','derived','Ubicación: '+gms(d.lat,d.lon)));else if(!draft)c.append(el('span','derived sin-ubic','⚠ Falta registrar la ubicación del evento'));
     if(r.eliminado)c.append(el('p','derived sin-ubic','🗑 Eliminado por la central'+(r.elimMotivo?': '+r.elimMotivo:'')+'. Se conserva aquí marcado; puede quitarlo con «Eliminar».'));
     const pills=el('div','pills');
     const pill=(t,k)=>pills.append(el('span','pill '+k,t));
