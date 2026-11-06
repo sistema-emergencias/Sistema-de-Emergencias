@@ -3075,7 +3075,7 @@ window.addEventListener('online',()=>bitacoraLive(''));
   const id=x&&x.emerg;
   if(id){try{
     const regs=await DB.all('regs');
-    const m=regs.filter(r=>r&&!r.eliminado&&r.estado!=='final'&&r.datos&&r.datos.extra&&r.datos.extra._llam===id).sort((p,q)=>(q.touch||q.creado||0)-(p.touch||p.creado||0))[0];
+    const m=regs.filter(r=>r&&!r.eliminado&&r.estado!=='final'&&r.datos&&r.datos.extra&&r.datos.extra._llam===id).sort((p,q)=>(JSON.stringify(q.datos.rpt||{}).length-JSON.stringify(p.datos.rpt||{}).length)||((q.touch||q.creado||0)-(p.touch||p.creado||0)))[0];
     if(m){await abrir(m.tmp);if(REG&&REG.tmp===m.tmp){toast('Se abrió el borrador que ya tenía de esta emergencia.');return}}
   }catch(er){}}
   return rd1.apply(this,arguments);
@@ -3235,7 +3235,8 @@ const llamDe=r=>(r&&r.datos&&r.datos.extra&&r.datos.extra._llam)||'';
   if(x&&x.emerg){
     try{if(online&&loggedIn())await traerMisRegs(true)}catch(e){}
     const regs=(await DB.all('regs')).filter(r=>llamDe(r)===x.emerg);
-    const bor=regs.filter(r=>r.estado!=='final'&&editable(r)).sort((a,b)=>b.touch-a.touch)[0];
+    const pesoR=r=>JSON.stringify((r.datos&&r.datos.rpt)||{}).length+JSON.stringify((r.datos&&r.datos.na)||{}).length+(r.datos&&r.datos.desc?String(r.datos.desc).length:0)+(r.datos&&r.datos.pers?r.datos.pers.length*50:0);
+    const bor=regs.filter(r=>r.estado!=='final'&&editable(r)).sort((a,b)=>(pesoR(b)-pesoR(a))||(b.touch-a.touch))[0];   /* si hay dos, se abre el que tiene más información */
     if(bor){await abrir(bor.tmp);toast('Se abrió el borrador que ya llevaba de esta emergencia.');return}
     const fin=regs.filter(r=>r.estado==='final').sort((a,b)=>b.touch-a.touch)[0];
     if(fin&&editable(fin)){await abrir(fin.tmp);toast('Esta emergencia ya tiene su reporte terminado: puede corregirlo.');return}
@@ -3300,6 +3301,12 @@ async function traerMisRegs(fuerza){
       if(borr.has(s.tmp))continue;
       const loc=await DB.get('regs',s.tmp);
       if(loc){
+        /* vínculo hecho en la central (o desde otro equipo): el borrador de este teléfono toma la emergencia y el consecutivo, aunque tenga cambios por enviar */
+        try{const sl=s.datos&&s.datos.extra&&s.datos.extra._llam;const ll=loc.datos&&loc.datos.extra&&loc.datos.extra._llam;
+          if(sl&&sl!==ll&&s.estado!=='final'||(sl&&!ll)||(s.num&&loc.num&&s.num!==loc.num&&sl)){
+            await DB.upd('regs',loc.tmp,x=>{x.datos=x.datos||{};x.datos.extra=x.datos.extra||{};x.datos.extra._llam=sl||x.datos.extra._llam;if(s.num)x.num=s.num});
+            if(REG&&REG.tmp===loc.tmp){REG=await DB.get('regs',loc.tmp);if(D){D.extra=D.extra||{};if(sl)D.extra._llam=sl}}
+          }}catch(e){}
         /* si en otro equipo se avanzó más y aquí no hay cambios sin enviar, se trae la versión más reciente */
         const cambio=loc.srvAct?Number(s.actualizado)!==Number(loc.srvAct):Number(s.actualizado)>Number(loc.touch||0)+2000;
         if(loc.ver===loc.subida&&!loc.pedido&&cambio&&!(REG&&REG.tmp===loc.tmp&&VISTA==='form')&&JSON.stringify(s.datos||{})===JSON.stringify(loc.datos||{})&&s.estado===(loc.estado==='final'?'final':'borrador')){
