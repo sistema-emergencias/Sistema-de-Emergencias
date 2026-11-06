@@ -268,9 +268,9 @@
     let maxPx = 0; bloques.forEach(([a, b]) => { let px = 0; for (let c = colNum(a); c <= colNum(b); c++) px += Math.round(anchoCol(s, c) * 7 + 5); maxPx = Math.max(maxPx, px); });
     let hPt = 0; for (let r = 1; r <= 59; r++) hPt += altoDe(s, r);
     const sw = (19.59 / 2.54) / (maxPx / 96), sh = (25.94 / 2.54 * 72) / hPt;
-    /* El formato se imprime al 95 %. A 95 % las 59 filas no caben en Carta (ocupan ~31 cm), por eso la hoja es Oficio (21,59 × 35,56 cm); con PAPEL = 'carta' se vuelve al ajuste automático (≈ 82 %). */
-    const PAPEL = (g.CBV_PAPEL || 'oficio');
-    const esc = PAPEL === 'carta' ? Math.max(40, Math.min(100, Math.floor(Math.min(sw, sh) * 100) - 1)) : 95;
+    /* Carta (letter) al 95 %: así lo imprime la institución y cada página queda ajustada. */
+    const PAPEL = (g.CBV_PAPEL || 'carta');
+    const esc = 95;
     const M = (0.5 / 2.54).toFixed(5);
     s = s.replace(/<pageMargins[^>]*\/>/, `<printOptions horizontalCentered="1"/><pageMargins left="${M}" right="${M}" top="${M}" bottom="${M}" header="0" footer="0"/>`);
     s = s.replace(/<pageSetup[^>]*\/>/, `<pageSetup paperSize="${PAPEL === 'carta' ? 1 : 5}" scale="${esc}" pageOrder="overThenDown" orientation="portrait"/><colBreaks count="3" manualBreakCount="3"><brk id="15" max="1048575" man="1"/><brk id="21" max="1048575" man="1"/><brk id="29" max="1048575" man="1"/></colBreaks>`);

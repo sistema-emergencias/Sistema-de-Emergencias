@@ -1532,12 +1532,14 @@ function renderDone(){
   if(!REG)return;const d=$('done');
   const n=FOTOS.filter(f=>!f.del).length,fPend=FOTOS.filter(f=>!f.del&&!f.up).length,sent=REG.num&&REG.ver===REG.subida&&!fPend;
   const left=VENTANA_MIN*60000-(Date.now()-(REG.finAt||REG.creado));
-  d.innerHTML=(sent?'<p class="big-ok">Enviado a la central</p><p>Registro <b>'+esc(REG.num)+'</b> · '+esc(tc((REG.datos||{}).cat||''))+' · '+n+' foto(s).</p>':
+  const hh=(sent?'<p class="big-ok">Enviado a la central</p><p>Registro <b>'+esc(REG.num)+'</b> · '+esc(tc((REG.datos||{}).cat||''))+' · '+n+' foto(s).</p>':
     '<p class="big-ok" style="color:var(--warn)">Guardado en este teléfono</p><p>'+(fPend?'Faltan '+fPend+' foto(s) por llegar a la central; se envían solas ('+(online?'enviando…':'sin internet')+'). No cierre la aplicación hasta que diga «Enviado». ':'')+(online?'Enviando a la central…':'No hay internet. Se enviará solo cuando vuelva la señal (puede cerrar la aplicación).')+' · '+n+' foto(s).</p>')+
     (sent&&REG.docVer>=REG.ver?'<p class="derived">El Reporte de Emergencias ya quedó guardado en la carpeta de Drive de esta emergencia.</p>':(sent?'<p class="derived">Falta guardar el Reporte de Emergencias en Drive; se hará solo.</p>':''))+
     (REG.form&&REG.form.indexOf('enviado')===0?'<p class="derived">También se respondió el Formulario de Google.</p>':'')+
     (coordValida((REG.datos||{}).lat,(REG.datos||{}).lon)?'<p class="derived">Ubicación: '+esc(gms(REG.datos.lat,REG.datos.lon))+(ubicPendiente(REG.tmp)?' · por enviar a la central':'')+'</p>':'<p class="derived sin-ubic">⚠ Falta registrar la ubicación del evento</p>')+
     '<div class="chips" style="margin-top:8px">'+(coordValida((REG.datos||{}).lat,(REG.datos||{}).lon)?'':'<button type="button" class="btn alt" id="d-ubic">Agregar ubicación</button>')+(left>0?'<button type="button" class="btn alt" id="d-edit">Corregir (quedan '+leftTxt(left)+')</button>':'')+'<button type="button" class="btn" id="d-new">Nueva emergencia</button></div>';
+  if(d.__h===hh&&$('d-new'))return;   /* sin cambios: no se repinta */
+  d.__h=hh;d.innerHTML=hh;
   $('d-new').onclick=()=>nuevaEmergencia();
   if($('d-ubic'))$('d-ubic').onclick=()=>ubicReg(REG.tmp);
   if($('d-edit'))$('d-edit').onclick=()=>abrir(REG.tmp);
@@ -3501,17 +3503,24 @@ async function verReporte(reg){
     fr.srcdoc=html;$('pv_msg').textContent='Vista previa de solo lectura. Para cambiar algo, cierre y toque «Corregir».';
   }catch(e){$('pv_msg').textContent='No se pudo mostrar la vista previa: '+humanErr(e)}
 }
-async function renderList(){
+let RL_BUSY=false,RL_AGAIN=false,RL_SIG='';
+async function renderList(forzar){
+  if(RL_BUSY){RL_AGAIN=true;return}
+  RL_BUSY=true;
+  try{await renderList0(forzar)}finally{RL_BUSY=false;if(RL_AGAIN){RL_AGAIN=false;setTimeout(()=>renderList(),50)}}
+}
+async function renderList0(forzar){
   const todosR=(await DB.all('regs')).sort((a,b)=>b.creado-a.creado);
   const llamR=r=>(r.datos&&r.datos.extra&&r.datos.extra._llam)||'';
   const finR=new Set(todosR.filter(r=>r.estado==='final').map(llamR).filter(Boolean));
   const regs=todosR.filter(r=>!(r.estado!=='final'&&llamR(r)&&finR.has(llamR(r))));   /* sin borradores repetidos de una emergencia ya reportada */
   const dr=regs.filter(r=>r.estado!=='final'&&(hasContent(r)||r.num)).length;
   $('nlist').textContent=dr?'('+dr+' pendiente'+(dr>1?'s':'')+')':'';
-  const box=$('recs');box.innerHTML='';
-  if(!regs.length){box.innerHTML='<p class="derived">Todavía no hay registros en este teléfono.</p>';return}
+  const box=$('recs');const frag=document.createDocumentFragment();let sig=String(Math.floor(Date.now()/60000));
+  if(!regs.length){RL_SIG='vacio';box.innerHTML='<p class="derived">Todavía no hay registros en este teléfono.</p>';return}
   for(const r of regs){
     const fs=await DB.byTmp(r.tmp),d=r.datos||{},n=fs.filter(f=>!f.del).length,pend=fs.filter(f=>!f.up&&!f.del).length;
+    sig+='|'+r.tmp+':'+(r.ver||0)+':'+(r.subida||0)+':'+(r.docVer||0)+':'+(r.estado||'')+':'+(r.num||'')+':'+n+':'+pend+':'+(r.eliminado?1:0)+':'+(d.lat||'')+':'+(d.cat||'')+':'+(d.hora||'')+':'+(d.dir||'').length+':'+(ubicPendiente(r.tmp)?1:0);
     const left=VENTANA_MIN*60000-(Date.now()-(r.finAt||r.creado));
     const draft=r.estado!=='final',open=draft||left>0;
     const synced=r.num&&r.ver===r.subida&&!pend&&!r.pedido;
@@ -3539,8 +3548,10 @@ async function renderList(){
       if(!draft&&!open){v.disabled=true;v.title='La vista previa está disponible durante las 48 horas siguientes al envío; después el reporte se pide a la central.'}else v.onclick=()=>verReporte(r);row.append(v)}
     if(draft){const q=el('button','btn alt sm danger','Eliminar borrador');q.type='button';q.onclick=()=>elimBorrador(r);row.append(q)}
     if(r.eliminado){const q=el('button','btn alt sm danger','Eliminar');q.type='button';q.onclick=()=>elimMarcado(r);row.append(q)}
-    c.append(row);box.append(c);
+    c.append(row);frag.append(c);
   }
+  if(sig===RL_SIG&&!forzar&&box.childElementCount)return;   /* sin cambios: no se vuelve a pintar (evita el parpadeo) */
+  RL_SIG=sig;box.replaceChildren(frag);
 }
 
 /* ================= APOYOS PARA EMERGENCIAS ================= */
