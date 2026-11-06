@@ -713,7 +713,7 @@ function renderRecs(){
   const selPag=sl.filter(selOk);
   $('rtab').innerHTML='<tr>'+(SM?'<th style="width:28px"><input type="checkbox" id="selall" title="Seleccionar los de esta página"'+(selPag.length&&selPag.every(r=>SELREG.has(kOf(r)))?' checked':'')+'></th>':'')+'<th>N°</th><th>Día</th><th>Categoría</th><th>Lugar</th><th class="n">Unid.</th><th>Vehículo</th><th>Origen</th><th>Estado</th><th>Comandante</th><th>Reporte</th><th></th></tr>'+(sl.length?sl.map(r=>{const x=r.em;
     const est=x?(x.estado==='activa'?'<span class="pill on">Activa</span>':'<span class="pill off">Terminada</span>'):'<span class="derived">—</span>';
-    const rep=r.virtual?repEmerg(x):(r.src==='app'?estadoPill(r):'<span class="derived">Histórico</span>');
+    const rep=r.virtual?repEmerg(x):(r.src==='app'?estadoPill(r,1):'<span class="derived">Histórico</span>');
     const bt=x?'<button class="btn alt sm" data-emr="'+esc(x.id)+'">Emergencia</button>'+(r.virtual&&puedeF('pendientes')?'<button class="btn alt sm" data-emv="'+esc(x.id)+'">Vincular reporte</button>':'')+(esMaster()?'<button class="btn alt sm danger" data-emd="'+esc(x.id)+'">Eliminar</button>':''):'';
     return '<tr class="click" data-i="'+rows.indexOf(r)+'"'+(r.anulado||r.eliminado?' style="text-decoration:line-through;opacity:.6"':'')+'>'+(SM?'<td>'+(selOk(r)?'<input type="checkbox" class="selreg" data-t="'+esc(kOf(r))+'"'+(SELREG.has(kOf(r))?' checked':'')+'>':'')+'</td>':'')+'<td class="m">'+esc(r.id)+'</td><td>'+GEN.dmy(r.fecha)+' '+esc(r.hora||'')+'</td><td>'+esc(tc(r.cat))+'</td><td>'+esc(r.dir||'—')+'</td><td class="n">'+(r.uni==null?'—':r.uni)+'</td><td>'+esc(r.veh||'—')+'</td><td>'+(r.virtual?'Llamado':r.src==='app'?'App':'Excel')+'</td><td>'+est+'</td><td>'+esc((x&&x.cmdn)||'—')+'</td><td>'+rep+'</td><td>'+bt+'</td></tr>'}).join(''):'<tr><td colspan="12">Sin registros con estos filtros.</td></tr>');
   $('rtab').querySelectorAll('[data-emr]').forEach(b=>b.onclick=ev=>{ev.stopPropagation();emergResumen(b.dataset.emr)});
@@ -1900,12 +1900,14 @@ function drawNotices(){
     b.append(pr,ver,ce);d.append(t,b);box.append(d);
   });
 }
-function estadoPill(r){
+function estadoPill(r,corto){
   if(r.src!=='app')return '';
   if(r.anulado)return '<span class="pill bad">ANULADO</span>';
   if(r.borrador)return '<span class="pill bad">borrador pendiente por diligenciar</span>';
   const m=MODIF[r.tmp];
-  return (r.completo?'<span class="pill on">completo</span>':'<span class="pill bad">incompleto</span>')+(m?' <span class="pill mod" title="'+esc(new Date(m.cuando).toLocaleString('es-CO'))+'">modificado por '+esc(m.quien||'—')+'</span>':'');
+  const im=impDe(r),pi=im?' <span class="pill on" title="Impreso por '+esc(im.por||'')+'">🖨️ Impreso'+(im.n>1?' ('+im.n+')':'')+' · '+esc(fechaHora(im.t))+'</span>':'';
+  const pc=im?' <span class="pill on" title="Impreso'+(im.n>1?' '+im.n+' veces':'')+' · '+esc(fechaHora(im.t))+(im.por?' · por '+esc(im.por):'')+'">🖨️</span>':'';
+  return (r.completo?'<span class="pill on">completo</span>':'<span class="pill bad">incompleto</span>')+(corto?pc:pi)+(m?' <span class="pill mod" title="'+esc(new Date(m.cuando).toLocaleString('es-CO'))+'">modificado por '+esc(m.quien||'—')+'</span>':'');
 }
 /* ---------- detalle: consecutivo (solo superadministrador) ---------- */
 const SD0=showDetail;
@@ -4777,11 +4779,11 @@ function retraerGrupos(d,emId){
     const d=$('detail');if(!d||!r||r.src!=='app'||!r.tmp||d.querySelector('#dx-bar'))return rr;
     const pend=r.estado!=='final'&&!r.anulado,imp=impDe(r);
     const bar=document.createElement('div');bar.id='dx-bar';bar.className='dl';bar.style.margin='8px 0';
-    bar.innerHTML='<button class="btn alt sm" id="dx-prev">👁 Previsualizar '+(pend?'borrador':'reporte')+'</button>'+(r.nfotos?'<button class="btn alt sm" id="dx-fot">🖼 Ver fotos ('+r.nfotos+')</button>':'')+((pend&&puedeF('pendientes'))?'<button class="btn sm" id="dx-avis">🔔 Avisar al responsable</button>':'')+(imp?'<span class="pill on" title="Impreso por '+esc(imp.por||'')+'">🖨️ Impreso '+(imp.n>1?imp.n+' veces · ':'· ')+esc(fechaHora(imp.t))+'</span>':'');
+    bar.innerHTML='<button class="btn alt sm" id="dx-prev">👁 Previsualizar '+(pend?'borrador':'reporte')+'</button>'+(r.nfotos?'<button class="btn alt sm" id="dx-fot">🖼 Ver fotos ('+r.nfotos+')</button>':'')+((pend&&puedeF('pendientes'))?'<button class="btn sm" id="dx-avis">🔔 Avisar al responsable</button>':'');
     const pb=d.querySelector('#d-print'),rb=d.querySelector('#d-rep');
     if(pb&&pb.parentNode){bar.className='';bar.style.display='contents';pb.after(bar)}   /* entre «Imprimir reporte» y «Descargar Reporte» */
     else{const h3=d.querySelector('h3');if(h3)h3.after(bar);else d.prepend(bar)}
-    if(pb&&pb.parentNode){const fin=rb||bar;[bar.querySelector('#dx-avis'),bar.querySelector('.pill')].filter(Boolean).forEach(x=>fin.after(x))}   /* «Avisar» y la marca de impreso quedan al final */
+    if(pb&&pb.parentNode){const fin=rb||bar;[bar.querySelector('#dx-avis')].filter(Boolean).forEach(x=>fin.after(x))}   /* «Avisar» y la marca de impreso quedan al final */
     $('dx-prev').onclick=()=>previsualizarReg(r.tmp);
     const f=$('dx-fot');if(f)f.onclick=()=>verFotosReg(r.tmp);
     const av=$('dx-avis');if(av)av.onclick=async()=>{av.disabled=true;try{const j=need(await call('pendRecordar',{tipo:'reg',tmp:r.tmp}));toast(j.aviso)}catch(e){toast('No se pudo: '+humanErr(e),1)}av.disabled=false};
