@@ -3,7 +3,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#b4251b">
 <meta name="color-scheme" content="light dark">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -17,6 +17,8 @@
 <title>Registro de emergencias</title>
 <link rel="stylesheet" href="leaflet.css">
 <style>
+html,body,button,a,input,select,label,.tile,.chip{touch-action:manipulation}
+
 
 :root{
   --bg:#f6f7f8; --surface:#ffffff; --fg:#1b2127; --muted:#5b6670; --line:#d9dee3;
@@ -3369,14 +3371,20 @@ function abrirAsig(){ASG_ABIERTO=true;dlgA(asigHtml(),()=>{const b=$('asg-x');if
   if(ASG_ABIERTO&&$('dlg').open&&$('asg-x')){const x=$('asg-x');dlgA(asigHtml(),()=>{const b=$('asg-x');if(b)b.onclick=()=>{ASG_ABIERTO=false;$('dlg').close()}})}}catch(e){}}}
 
 /* ---------- cámara en ráfaga: varias fotos seguidas sin salir; si el navegador no la permite se usa la cámara normal ---------- */
-let CAM_S=null;
+let CAM_S=null,CAM_Q=Promise.resolve();
 async function camaraRafaga(){
   if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)){$('cam').click();return}
   let s;try{s=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920}},audio:false})}catch(e){$('cam').click();return}
   CAM_S=s;let n=0;
   dlgA('<h3>Cámara</h3><video id="cr-v" autoplay playsinline muted style="width:100%;max-height:60vh;object-fit:contain;background:#000;border-radius:8px"></video><p class="derived" id="cr-n">Toque «Tomar foto» las veces que necesite; todas se cargan al formulario.</p><div class="row"><button class="btn big" type="button" id="cr-t">📷 Tomar foto</button><button class="btn alt big" type="button" id="cr-ok">Listo</button></div>',()=>{
     const v=$('cr-v');v.srcObject=s;
-    const parar=()=>{try{CAM_S&&CAM_S.getTracks().forEach(t=>t.stop())}catch(e){}CAM_S=null};
+    /* vigilante (iPhone): si el video se pausa o el flujo se corta, se reanuda o se vuelve a abrir la cámara sin cerrar la ventana */
+    let vig=setInterval(async()=>{try{
+      if(!$('cr-v')){clearInterval(vig);return}
+      const tr=CAM_S&&CAM_S.getVideoTracks()[0];
+      if(!tr||tr.readyState==='ended'){const s2=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});CAM_S=s2;v.srcObject=s2}
+      if(v.paused)await v.play()}catch(e){}},1200);
+    const parar=()=>{clearInterval(vig);try{CAM_S&&CAM_S.getTracks().forEach(t=>t.stop())}catch(e){}CAM_S=null};
     $('dlg').addEventListener('close',parar,{once:true});
     $('cr-ok').onclick=()=>{parar();$('dlg').close()};
     $('cr-t').onclick=async()=>{
@@ -3386,8 +3394,11 @@ async function camaraRafaga(){
       const cx=c.getContext('2d');if(giro){c.width=vh;c.height=vw;cx.translate(vh/2,vw/2);cx.rotate((horiz?-90:90)*Math.PI/180);cx.drawImage(v,-vw/2,-vh/2)}else{c.width=vw;c.height=vh;cx.drawImage(v,0,0)}
       const b=await new Promise(r=>c.toBlob(r,'image/jpeg',.9));if(!b)return;
       const f=new File([b],'camara-'+Date.now()+'.jpg',{type:'image/jpeg',lastModified:Date.now()});
-      await addFotos([f],true);n++;$('cr-n').textContent=n+' foto'+(n>1?'s':'')+' tomada'+(n>1?'s':'')+' y cargada'+(n>1?'s':'')+'. Siga tomando o toque «Listo».';
-      v.style.opacity=.3;setTimeout(()=>{v.style.opacity=1},120)}
+      /* la foto se procesa en segundo plano (cola): la cámara queda libre para la siguiente sin esperar al GPS ni al guardado */
+      n++;CAM_Q=CAM_Q.then(()=>addFotos([f],true)).catch(()=>{}).then(()=>{const e=$('cr-n');if(e)e.textContent=n+' foto'+(n>1?'s':'')+' tomada'+(n>1?'s':'')+'. Siga tomando o toque «Listo».'});
+      $('cr-n').textContent=n+' foto'+(n>1?'s':'')+' tomada'+(n>1?'s':'')+' (cargando…). Siga tomando o toque «Listo».';
+      v.style.opacity=.3;setTimeout(()=>{v.style.opacity=1},120);
+      try{if(v.paused)v.play()}catch(e){}}
   });
 }
 
@@ -3802,6 +3813,10 @@ async function main(){
 }
 main();
 
+</script>
+<script>
+/* iPhone: sin zoom por pellizco (el doble toque lo evita touch-action: manipulation en el CSS; no se bloquea el toque para no perder fotos seguidas) */
+(function(){['gesturestart','gesturechange','gestureend'].forEach(function(k){document.addEventListener(k,function(e){e.preventDefault()})})})();
 </script>
 </body>
 </html>
