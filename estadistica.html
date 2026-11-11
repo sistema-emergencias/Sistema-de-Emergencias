@@ -2540,11 +2540,21 @@ function drawGeoResumen(){
     (lg.length?'<details><summary class="derived">Últimas entradas y salidas ('+lg.length+') · se limpian cada 2 días</summary><ul style="margin:4px 0 8px 18px;padding:0">'+lg.map(x=>'<li>'+fh(x.t)+' · '+esc(x.n)+' '+(x.e==='entro'?'<b>entró</b> a la estación':'<b>salió</b> de la estación')+'</li>').join('')+'</ul></details>':'')+
     '<p class="derived">Sólo se conoce la posición de quienes tienen la aplicación abierta y comparten su ubicación.</p>';
 }
+function unidadesSinAsignar(){const dOf=u=>(VIVO.despachos||[]).find(x=>x.pers.some(p=>(p.u&&p.u===u.u)||p.n===u.n));return (VIVO.usuarios||[]).filter(u=>(u.estado==='compartiendo'||u.estado==='ubic-antigua')&&!dOf(u))}
+function barraApagarSinAsignar(){
+  const t=$('uni-tab');if(!t)return;const card=t.closest('.card');if(!card)return;let b=$('uni-apt');
+  const puede=(esMaster()||puedeF('llamados'))&&!PREVIEW,n=puede?unidadesSinAsignar().length:0;
+  if(!n){if(b)b.remove();return}
+  if(!b){b=document.createElement('button');b.id='uni-apt';b.className='btn alt sm danger';b.type='button';b.style.margin='6px 0';card.insertBefore(b,card.querySelector('.scroll'));
+    b.onclick=async()=>{const l=unidadesSinAsignar();if(!l.length)return;if(!confirm('¿Apagar la ubicación de '+l.length+' persona(s) que NO están asignadas a una emergencia?\n\n'+l.map(u=>u.n).join(', ')+'\n\nQuedarán como «Sin señal» y su teléfono dejará de compartirla al conectarse. Las asignadas no se tocan.'))return;b.disabled=true;
+      try{const r=need(await call('ubicApagarVarias',{usuarios:l.map(u=>u.u)}));toast('Ubicaciones apagadas: '+r.apagadas+(r.omitidas?' · omitidas por estar asignadas: '+r.omitidas:'')+'.');pollVivo()}catch(e){toast('No se pudo: '+humanErr(e),1)}b.disabled=false}}
+  b.textContent='Apagar ubicaciones sin asignar ('+n+')';
+}
 function drawUnidades(){
-  const t=$('uni-tab');if(!t)return;drawGeoResumen();const qs=(($('uni-q')||{}).value||'').trim().toLowerCase(),sinAc=z=>String(z||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const t=$('uni-tab');if(!t)return;drawGeoResumen();barraApagarSinAsignar();const qs=(($('uni-q')||{}).value||'').trim().toLowerCase(),sinAc=z=>String(z||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   const GR=(VIVO.grupos||[]).filter(g=>g.estado==='activo'),dOf=u=>(VIVO.despachos||[]).find(x=>x.pers.some(p=>(p.u&&p.u===u.u)||p.n===u.n)),gOf=u=>{const d=dOf(u);return d&&d.grupo?GR.find(g=>g.id===d.grupo):null};
   const rango=u=>{const g=gOf(u);if(g)return GR.indexOf(g);return dOf(u)?900:999};
-  const us=(VIVO.usuarios||[]).filter(u=>!(u.sinSenal||u.estado==='detenido')).filter(u=>!qs||sinAc(u.n).includes(sinAc(qs))||String(u.cod||'').toLowerCase()===qs||(u.cod&&String(u.cod).toLowerCase().startsWith(qs))).sort((a,b)=>rango(a)-rango(b)||(b.tp||b.tc||0)-(a.tp||a.tc||0)),ahora=VIVO.ahora||Date.now();
+  const us=(VIVO.usuarios||[]).filter(u=>!(u.sinSenal||u.estado==='detenido'||(u.estado==='ubic-antigua'&&!dOf(u)))).filter(u=>!qs||sinAc(u.n).includes(sinAc(qs))||String(u.cod||'').toLowerCase()===qs||(u.cod&&String(u.cod).toLowerCase().startsWith(qs))).sort((a,b)=>rango(a)-rango(b)||(b.tp||b.tc||0)-(a.tp||a.tc||0)),ahora=VIVO.ahora||Date.now();
   if(!us.length){t.innerHTML='<tr><td>'+(qs?'Ninguna unidad coincide con «'+esc(qs)+'».':'Ninguna unidad está compartiendo su ubicación ahora.')+'</td></tr>';return}
   t.innerHTML='<tr><th>Persona</th><th>Estado</th><th>Ubicación</th><th>Estación</th><th>Emergencia asignada</th><th>Pendientes en su teléfono</th><th></th></tr>';
   let secAnt=null;
