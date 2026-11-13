@@ -704,8 +704,9 @@ async function sync(){
         }
         if(!f.up&&f.orig&&f.marca){
           /* la foto se marcó sin consecutivo: ahora que el registro ya lo tiene, se vuelve a marcar con él; si aún no lo tiene, sale sin esa línea */
-          try{const rg=await DB.get('regs',reg.tmp),m2=Object.assign({},f.marca);if(rg&&rg.num)m2.l1='Consecutivo: '+rg.num;
-            const c=await compress(f.orig,{marca:m2});f.blob=c.blob;f.thumb=c.thumb;await DB.upd('fotos',f.key,x=>{x.blob=c.blob;x.thumb=c.thumb;delete x.orig;delete x.marca})}catch(_){}
+          try{const rg=await DB.get('regs',reg.tmp),m2=Object.assign({},f.marca),want=(rg&&rg.num)?'Consecutivo: '+rg.num:'';
+            if(want&&want!==(f.marca.l1||'')){m2.l1=want;m2.pend=false;
+              const c=await compress(f.orig,{marca:m2});f.blob=c.blob;f.thumb=c.thumb;await DB.upd('fotos',f.key,x=>{x.blob=c.blob;x.thumb=c.thumb;x.marca=m2})}}catch(_){}
         }
         if(!f.up){
           const r=await call('foto',{tmp:f.tmp,n:f.n,d:await blobB64(f.blob,f.video?f.mime:null),desc:f.desc||''});
@@ -713,7 +714,7 @@ async function sync(){
             if(r.error==='clave'){sesionInvalida();return}
             if(r.error==='sin_registro'){await DB.upd('regs',reg.tmp,x=>{x.subida=0});throw new Error('reintentar')}
             throw new Error(r.detalle||r.error||'servidor')}
-          await DB.upd('fotos',f.key,x=>{x.up=true;x.dirtyDesc=false});
+          await DB.upd('fotos',f.key,x=>{x.up=true;x.dirtyDesc=false;delete x.orig;delete x.marca});
         }else if(f.dirtyDesc){
           const r=await call('foto',{tmp:f.tmp,n:f.n,desc:f.desc||''});
           if(!r.ok)throw new Error(r.error||'servidor');
@@ -1388,7 +1389,7 @@ async function addFotos(files,desdeCamara){
       try{const u0=D.extra&&D.extra._ubFoto;const c=desdeCamara?((u0&&u0.acc!=null&&u0.acc<=20)?null:await gpsAhora(7000)):await exifGps(files[i]);coordDeFoto(c)}catch(_){}
       const mk=await marcaDeFoto(files[i],desdeCamara);
       const c=await compress(files[i],{marca:mk});
-      let orig=null;if(mk&&mk.pend){try{orig=(await compress(files[i],{})).blob}catch(_){}}
+      let orig=null;if(mk){try{orig=(await compress(files[i],{})).blob}catch(_){}}   /* se guarda la foto sin marca hasta que sube: si el consecutivo cambia (por ejemplo al vincular), se vuelve a marcar */
       let n=0;await patchReg(r=>{n=r.sig++;r.pedido=true;r.ver++;r.datos=clone(D)});
       const f={key:REG.tmp+'#'+n,tmp:REG.tmp,n,blob:c.blob,thumb:c.thumb,w:c.w,h:c.h,desc:'',up:false,t:Date.now()};
       if(orig){f.orig=orig;f.marca=mk}
@@ -3247,6 +3248,28 @@ const llamDe=r=>(r&&r.datos&&r.datos.extra&&r.datos.extra._llam)||'';
     if(fin){toast('Esta emergencia ya tiene su reporte terminado ('+(fin.num||'')+').');show('list');return}
   }
   return rd5.apply(this,arguments);
+}}
+/* ---------- un borrador hecho sin internet (sin vincular) no se deja atrás: al hacer el reporte de una emergencia se ofrece usarlo ---------- */
+{const rd6=reporteDeLlamado;reporteDeLlamado=async function(x){
+  const id=x&&x.emerg;
+  if(id){try{
+    if(REG&&REG.estado!=='final'&&D&&hasContent({datos:D}))await flushSave();
+    const regs=(await DB.all('regs')).filter(r=>r&&!r.eliminado&&!r.cerrado);
+    const ya=regs.some(r=>r.estado!=='final'&&llamDe(r)===id)||regs.some(r=>r.estado==='final'&&llamDe(r)===id);
+    if(!ya){
+      const sueltos=regs.filter(r=>r.estado!=='final'&&!llamDe(r)&&editable(r)&&hasContent(r)).sort((p,q)=>(q.touch||q.creado||0)-(p.touch||p.creado||0));
+      if(sueltos.length){
+        const r=sueltos[0],dt=r.datos||{};
+        const usar=await new Promise(res=>{dlgA('<h3>Tiene un borrador sin vincular</h3><p>Ya empezó un borrador: <b>'+esc([r.num||'sin consecutivo',dt.cat?tc(dt.cat):'',dt.dir||''].filter(Boolean).join(' · '))+'</b>.</p><p class="derived">Si es de esta emergencia, se vincula y conserva toda su información (no se crea otro borrador ni otro consecutivo).</p><div class="chips"><button class="btn" type="button" id="bv-si">Sí, es de esta emergencia</button><button class="btn alt" type="button" id="bv-no">No, empezar uno nuevo</button></div>',()=>{$('bv-si').onclick=()=>{dlgC();res(true)};$('bv-no').onclick=()=>{dlgC();res(false)}})});
+        if(usar){
+          await DB.upd('regs',r.tmp,y=>{y.datos=y.datos||{};y.datos.extra=y.datos.extra||{};y.datos.extra._llam=id;y.ver++;y.pedido=true;y.touch=Date.now()});
+          await abrir(r.tmp);
+          if(REG&&REG.tmp===r.tmp){D.extra=D.extra||{};D.extra._llam=id;try{const e=x.emergencia||{};if(e.lugar&&!D.dir)D.dir=e.lugar}catch(er){}try{autollenarPersonal(x)}catch(er){}try{sync()}catch(er){}toast('Su borrador quedó vinculado a esta emergencia.');return}
+        }
+      }
+    }
+  }catch(er){}}
+  return rd6.apply(this,arguments);
 }}
 /* ---------- los reportes y borradores son de la persona, no del teléfono: se traen de la central al entrar con su usuario ---------- */
 let MR_T=0,MF_BUSY=false;

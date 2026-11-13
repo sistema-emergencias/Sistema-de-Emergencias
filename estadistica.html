@@ -495,12 +495,29 @@ async function rawCall(body,ms){
   }finally{clearTimeout(t)}
 }
 let CENT_GEO=null;
+/* Envío manual por WhatsApp Web: no depende del proveedor. Abre WhatsApp con el mensaje ya escrito; la persona elige el grupo y pulsa Enviar. */
+const WA_GRUPOS=['🚨EMERGENCIAS BOMBEROS 🚒🚒','Empleados cbv 🚒🚒','Cuerpo de Bomberos Voluntarios 🔥👨‍🚒👩‍🚒🚒'];
+function waOfrecer(texto,tel){
+  if(typeof PREVIEW!=='undefined'&&PREVIEW)return;
+  let b=document.getElementById('wa-man');if(b)b.remove();
+  b=document.createElement('div');b.id='wa-man';b.setAttribute('role','status');
+  b.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;max-width:min(94vw,720px);background:#fff;color:#1f1a1a;border:2px solid #25D366;border-radius:12px;padding:10px 12px;box-shadow:0 6px 24px #0004;font-size:14px';
+  const url=(t)=>'https://wa.me/'+(t?String(t).replace(/\D/g,''):'')+'?text='+encodeURIComponent(texto);
+  const ab=(t,txt)=>{const x=document.createElement('button');x.type='button';x.className='btn alt sm';x.style.margin='3px 4px 0 0';x.textContent=txt;x.onclick=()=>{window.open(url(t),'_blank','noopener')};return x};
+  b.innerHTML='<b>Avisar también por WhatsApp Web</b> <span class="derived">(manual, sin depender del proveedor)</span><br>';
+  if(tel){b.append(ab(tel,'📲 Abrir WhatsApp con el mensaje'))}
+  else{const p=document.createElement('div');p.className='derived';p.textContent='Se abre WhatsApp con el mensaje escrito. Copie el nombre del grupo, búsquelo y pulse Enviar:';b.append(p);
+    WA_GRUPOS.forEach(g=>{const x=ab('', g);x.onclick=async()=>{try{await navigator.clipboard.writeText(g)}catch(e){}window.open(url(''),'_blank','noopener');toast('Nombre del grupo copiado: péguelo en el buscador de WhatsApp.')};b.append(x)})}
+  const c=document.createElement('button');c.type='button';c.className='btn alt sm';c.textContent='Cerrar';c.onclick=()=>b.remove();b.append(c);
+  document.body.append(b);setTimeout(()=>{if(b.isConnected)b.remove()},120000);
+}
 async function call(a,extra,opt){
   let last;
   for(let i=0;i<3;i++){
     try{
       const j=await rawCall({u:USER,t:TOKEN,a,canal:'computador',ua:(navigator.userAgent||'').replace(/^Mozilla\/5.0 /,'').slice(0,90),...(typeof CENT_GEO!=='undefined'&&CENT_GEO?{geo:CENT_GEO}:{}),...(a==='llamado'||a==='llamadoRepetir'||a==='pendRecordar'?{appUrl:location.origin+location.pathname.replace(/[^\/]*$/,'')+'index.html'}:{}),...(extra||{})},opt&&opt.ms);
       if(j&&j.error==='clave'&&a!=='login'){salir('Su sesión ya no es válida (cambió la clave o el usuario). Entre de nuevo.');return j}
+      if(j&&j.ok&&j.waTexto&&a!=='avisoPrueba'){try{waOfrecer(j.waTexto,j.waTel)}catch(e){}}
       return j;
     }catch(e){last=e;if(e.message==='sin_url')throw e;await new Promise(r=>setTimeout(r,1200*(i+1)))}
   }
@@ -586,7 +603,7 @@ function refreshSelectors(first){
 }
 const toRow=o=>{
   const rpt=o.rpt||null,L=rpt&&rpt.les?rpt.les.filter(x=>x.n).length:0,tr=rpt&&rpt.les?((rpt.les.find(x=>x.t)||{}).t||null):null;
-  return {src:'app',id:o.num,tmp:o.tmp,cat:o.cat,tipo:o.tipo,fecha:o.fecha,hora:h24(o.hora)||'',hsal:h24(o.hsal)||null,hlle:h24(o.hlle)||null,hfin:h24(o.hfin)||null,hreg:h24(o.hreg)||null,durmin:o.durmin,dir:o.dir,bar:o.bar,desc:o.desc,
+  return {src:'app',id:o.num||(o.extra&&o.extra._numAnt?o.extra._numAnt+' (repetido, anulado)':''),tmp:o.tmp,cat:o.cat,tipo:o.tipo,fecha:o.fecha,hora:h24(o.hora)||'',hsal:h24(o.hsal)||null,hlle:h24(o.hlle)||null,hfin:h24(o.hfin)||null,hreg:h24(o.hreg)||null,durmin:o.durmin,dir:o.dir,bar:o.bar,desc:o.desc,
     area:o.area||null,veg:o.veg||null,uni:o.uni,veh:o.veh,lat:o.lat||null,lon:o.lon||null,canal:o.canal||null,rep:o.rep||null,pers:o.pers||[],nfotos:o.nfotos||0,
     borrador:o.estado!=='final',_nombre:o.por,rpt,les:L,lesionados:L||null,tras:tr,trasladado:tr,form:o.form,carpeta:o.carpeta,creado:o.creado,zona:o.zona,
     inc:o.inc||null,na:o.na||null,extra:o.extra||null,completo:!!o.completo,doc:o.doc||'',anulado:!!o.anulado,usuario:o.usuario||'',estado:o.estado,extraTxt:extraTxtDe(o)};
@@ -1360,7 +1377,7 @@ function editForm(r){
     const reduce=file=>new Promise((ok,no)=>{const u=URL.createObjectURL(file),im=new Image();im.onload=()=>{URL.revokeObjectURL(u);const k=Math.min(1,1600/Math.max(im.width,im.height)),cv=document.createElement('canvas');cv.width=Math.round(im.width*k);cv.height=Math.round(im.height*k);cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);ok(cv.toDataURL('image/jpeg',.72))};im.onerror=()=>{URL.revokeObjectURL(u);no(new Error('No se pudo leer una imagen.'))};im.src=u});
     fi.onchange=async()=>{const fs=[...fi.files];if(!fs.length)return;const mo=prompt('Motivo para agregar estas fotos (obligatorio):');if(!mo||!mo.trim()){fi.value='';return}
       try{let n=Math.max(0,...metas.filter(x=>!x.video).map(x=>x.n));
-        for(let i=0;i<fs.length;i++){fm.textContent='Subiendo foto '+(i+1)+' de '+fs.length+'…';n++;const d=await reduce(fs[i]);need(await call('foto',{tmp:o.tmp,n,d,desc:'',motivo:mo.trim()}))}
+        for(let i=0;i<fs.length;i++){fm.textContent='Subiendo foto '+(i+1)+' de '+fs.length+'…';n++;const d=await reduce(fs[i]);need(await call('foto',{tmp:o.tmp,n,d,desc:'',motivo:mo.trim(),sinmarca:true}))}
         fm.textContent='Listo: '+fs.length+' foto(s) agregada(s).';fi.value='';redib()}catch(e){fm.textContent=humanErr(e)}};
     redib()}
   const h=document.createElement('div');h.className='stepH';h.textContent='Estado del registro';card.append(h);
@@ -1471,8 +1488,12 @@ function admFrm(){
     const x=H('button',{className:'btn alt sm',textContent:'Quitar'});x.onclick=()=>{cats.splice(i,1);drawC()};row.append(n,t,x);cbox.append(row)})};drawC();
   const addC=H('button',{className:'btn alt sm',textContent:'Agregar categoría'});addC.onclick=()=>{cats.push({n:'NUEVA CATEGORÍA',t:'OTROS'});drawC()};
   out.push(card(H('h3',{},'Categorías de incidentes y actividades'),H('p',{className:'derived'},'Las categorías nuevas aparecen en el formulario y en la estadística. Ojo: el formato institucional «Reporte de Comandancia» solo tiene filas para las 23 originales; una categoría nueva no sale en ese archivo. Si cambia el nombre de una existente, los registros viejos conservan el nombre anterior.'),cbox,addC));
-  const vi=H('input',{value:veh.join(', ')});vi.oninput=()=>veh=vi.value.split(',').map(s=>s.trim()).filter(Boolean);
-  out.push(card(H('h3',{},'Vehículos'),H('p',{className:'derived'},'Separados por coma. Ojo: el formato «Reporte de Emergencias» solo tiene casillas para B-2, B-3, B-4, T-1, L-1, L-2 y L-3; otros salen en observaciones.'),vi));
+  const vbox=H('div');
+  const drawV=()=>{vbox.innerHTML='';veh.forEach((v,i)=>{const row=H('div',{className:'adm-f'});const n=H('input',{value:v});n.oninput=()=>{veh[i]=n.value.trim()};
+    const x=H('button',{className:'btn alt sm',textContent:'Quitar'});x.onclick=()=>{veh.splice(i,1);drawV()};row.append(n,x);vbox.append(row)})};drawV();
+  const addV=H('button',{className:'btn alt sm',textContent:'Agregar vehículo'});addV.onclick=()=>{veh=veh.filter(Boolean);veh.push('');drawV();const ins=vbox.querySelectorAll('input');if(ins.length)ins[ins.length-1].focus()};
+  const restV=H('button',{className:'btn alt sm',textContent:'Volver a la lista original',style:'margin-left:8px'});restV.onclick=()=>{veh=E.VEH.slice();drawV()};
+  out.push(card(H('h3',{},'Vehículos'),H('p',{className:'derived'},'Esta lista sale al elegir vehículos en la aplicación y en la plataforma (reportes, asignaciones y grupos). «Otros» sirve para un recurso que no está en la lista. Ojo: el formato «Reporte de Emergencias» solo tiene casillas para B-2, B-3, B-4, T-1, L-1, L-2 y L-3; los demás salen en observaciones. Recuerde pulsar «Guardar» al final.'),vbox,addV,restV));
   /* pasos y campos */
   fo.hideSteps=fo.hideSteps||{};fo.extraSteps=fo.extraSteps||[];fo.stepOrder=fo.stepOrder||[];fo.fieldOrder=fo.fieldOrder||{};
   const ordA=(arr,lista,key)=>{if(!lista||!lista.length)return arr;const ix=x=>{const i=lista.indexOf(key(x));return i<0?1e6:i};return arr.map((x,n)=>[x,n]).sort((a,b)=>ix(a[0])-ix(b[0])||a[1]-b[1]).map(a=>a[0])};
@@ -1534,7 +1555,7 @@ function admFrm(){
     try{
       need(await call('cfgSet',{clave:'form',valor:fo}));
       const sameC=JSON.stringify(cl)===JSON.stringify(E.CATS.map(c=>({n:c[0],t:c[1]})));need(await call('cfgSet',{clave:'cats',valor:sameC?null:cl}));
-      const sameV=JSON.stringify(veh)===JSON.stringify(E.VEH);need(await call('cfgSet',{clave:'veh',valor:sameV?null:veh}));
+      veh=veh.map(x=>String(x||'').trim()).filter((x,i,ar)=>x&&ar.indexOf(x)===i);const sameV=JSON.stringify(veh)===JSON.stringify(E.VEH);need(await call('cfgSet',{clave:'veh',valor:sameV?null:veh}));
       CFGP.form=fo;CFGP.cats=sameC?null:cl;CFGP.veh=sameV?null:veh;aplicarCfg(CFGP);fillFilters();msg.textContent='Guardado. Los teléfonos lo reciben al abrir la aplicación con internet.';
     }catch(e){msg.textContent='No se pudo guardar: '+humanErr(e)}
     save_.disabled=false;
@@ -1930,7 +1951,7 @@ showDetail=async function(r){
     b.onclick=async()=>{
       const n=prompt('Nuevo consecutivo para '+r.id+' (forma EM-2026-00001):',r.id);if(!n||n.trim().toUpperCase()===r.id)return;
       const mot=prompt('Motivo del cambio (queda anotado):');if(!mot)return;
-      try{const j=need(await call('consecutivo',{tmp:r.tmp,num:n,motivo:mot}));await loadAll();renderPanel();const o=REGS.get(r.tmp);if(o)showDetail(toRow(o));$('d-msg').textContent='Consecutivo cambiado a '+(j.num||n)+'.'}catch(e){$('d-msg').textContent='No se pudo: '+humanErr(e)}
+      try{const j=need(await call('consecutivo',{tmp:r.tmp,num:n,motivo:mot}));await loadAll();renderPanel();const o=REGS.get(r.tmp);if(o)showDetail(toRow(o));$('d-msg').textContent='Consecutivo cambiado a '+(j.num||n)+'. Actualizando fotos y copias…';propagarNum(r.tmp,j.antes||r.id,j.num||n)}catch(e){$('d-msg').textContent='No se pudo: '+humanErr(e)}
     };
     (d.querySelector('.dl:last-of-type')||d).append(b);
   }
@@ -1985,12 +2006,81 @@ async function carpetaPC(r,ask){
   const fy=String(r.fecha||'').slice(0,4)||String(new Date().getFullYear()),fm=Math.min(12,Math.max(1,+String(r.fecha||'').slice(5,7)||1));
   const dAnio=await h.getDirectoryHandle('EMERGENCIAS '+fy,{create:true});
   const dMes=await dAnio.getDirectoryHandle(fm+' - '+MESN[fm-1]+' '+fy,{create:true});
-  const sub=await dMes.getDirectoryHandle(limpiaNom(r.id+' '+tc(r.cat)),{create:true});
+  const nomSub=limpiaNom(r.id+' '+tc(r.cat)),nomMes=fm+' - '+MESN[fm-1]+' '+fy,nomAnio='EMERGENCIAS '+fy;
+  const sub=await dMes.getDirectoryHandle(nomSub,{create:true});
   const u8=await GEN.reporteEmergencia(JSZip,await tpl('reporte_emergencias.xlsx'),await repData(r));
-  await escribirPC(sub,'REPORTE DE EMERGENCIAS '+r.id+'.xlsx',u8);
+  const escritos=new Set(),docN='REPORTE DE EMERGENCIAS '+r.id+'.xlsx';
+  await escribirPC(sub,docN,u8);escritos.add(docN);
   const fs=await fotosBajadas(r);
-  for(let i=0;i<fs.length;i++){await escribirPC(sub,limpiaNom(r.id)+' · Foto '+String(i+1).padStart(3,'0')+'.jpg',b64(fs[i].d))}
+  for(let i=0;i<fs.length;i++){const nm=limpiaNom(r.id)+' · Foto '+String(i+1).padStart(3,'0')+'.jpg';await escribirPC(sub,nm,b64(fs[i].d));escritos.add(nm)}
+  /* una sola copia por reporte: se quitan los archivos que esta aplicación guardó antes con otro consecutivo, otra categoría o fotos que ya no están */
+  await limpiaCarpetaPC(sub,escritos);
+  try{
+    const reg=marcaCopia('cbv_cpcdir'),prev=reg[r.tmp];
+    if(prev&&(prev.a!==nomAnio||prev.m!==nomMes||prev.s!==nomSub))await quitarCarpetaPC(h,prev.a,prev.m,prev.s);
+    reg[r.tmp]={a:nomAnio,m:nomMes,s:nomSub};localStorage.setItem('cbv_cpcdir',JSON.stringify(reg));
+  }catch(e){}
   return true;
+}
+const PC_PROPIO=/^REPORTE DE EMERGENCIAS .*\.xlsx$|^.+ · Foto \d{3}\.jpg$/;
+async function limpiaCarpetaPC(dir,conservar){
+  const borrar=[];try{for await(const [nm,eh] of dir.entries()){if(eh.kind==='file'&&!(conservar&&conservar.has(nm))&&PC_PROPIO.test(nm))borrar.push(nm)}}catch(e){return}
+  for(const nm of borrar){try{await dir.removeEntry(nm)}catch(e){}}
+}
+/* quita la carpeta vieja de un reporte (solo lo que la aplicación guardó; si el usuario puso otros archivos, la carpeta se queda) */
+async function quitarCarpetaPC(h,a,m,s){
+  try{const dA=await h.getDirectoryHandle(a),dM=await dA.getDirectoryHandle(m),dS=await dM.getDirectoryHandle(s);
+    await limpiaCarpetaPC(dS,null);try{await dM.removeEntry(s)}catch(e){}}catch(e){}
+}
+/* ---------- una corrección de consecutivo se refleja en todo: fotos (marca de agua), Drive y carpeta del computador ---------- */
+/* La marca de agua queda dibujada en la foto; se vuelve a escribir la línea «Consecutivo: …» con la misma posición y tamaño con que la app la dibuja.
+   Si no se reconoce la marca (foto sin marca, o cambió el diseño), esa foto se deja como está y se avisa. */
+async function restamparNum(du,antes,nuevo){
+  if(!antes||!nuevo)return null;
+  const bm=await createImageBitmap(await (await fetch(du)).blob());
+  const w=bm.width,h=bm.height,cv=document.createElement('canvas');cv.width=w;cv.height=h;
+  const ctx=cv.getContext('2d',{willReadFrequently:true});ctx.drawImage(bm,0,0);bm.close&&bm.close();
+  const u=Math.max(9,Math.round(Math.min(w,h*1.4)*0.0098)),pad=Math.round(u*.55),lh=Math.round(u*1.25),gap=Math.round(u*.6),x0=Math.round(u*.8);
+  ctx.font='600 '+u+'px system-ui,-apple-system,Segoe UI,Roboto,sans-serif';
+  const t1='Consecutivo: '+antes,t2='Consecutivo: '+nuevo,tw=Math.ceil(Math.max(ctx.measureText(t1).width,ctx.measureText(t2).width))+4;
+  for(const n of [5,4,3]){
+    const bh=Math.round(pad*2+lh*n),y0=h-bh-Math.round(u*.8),sz=Math.max(lh*n,Math.round(u*2.6)),tx=x0+pad+sz+gap,ty=y0+pad;
+    if(y0<0||tx+tw>w)continue;
+    const d=ctx.getImageData(tx,ty,tw,lh).data;let bl=0;for(let i=0;i<d.length;i+=4)if(d[i]>215&&d[i+1]>215&&d[i+2]>215)bl++;
+    const ratio=bl/(d.length/4);if(ratio<.03||ratio>.6)continue;
+    const gx=Math.max(0,tx-Math.round(gap/2)-1),g=ctx.getImageData(gx,ty,2,lh).data;let R=0,G=0,B=0,k=0;for(let i=0;i<g.length;i+=4){R+=g[i];G+=g[i+1];B+=g[i+2];k++}
+    R=Math.round(R/k);G=Math.round(G/k);B=Math.round(B/k);if((R+G+B)/3>125)continue;   /* el recuadro de la marca es oscuro */
+    ctx.fillStyle='rgb('+R+','+G+','+B+')';ctx.fillRect(tx-2,ty,tw,lh);
+    ctx.fillStyle='#fff';ctx.textBaseline='top';ctx.textAlign='left';ctx.fillText(t2,tx,ty);
+    return cv.toDataURL('image/jpeg',.75);
+  }
+  return null;
+}
+async function actualizarMarcaFotos(tmp,antes,nuevo,prog){
+  const m=((await metaDe([tmp]))[tmp]||[]).filter(f=>!f.video&&!f.sm);let ok=0,omit=0;
+  const bl=await bajar(m);
+  for(let i=0;i<bl.length;i++){const f=bl[i];if(prog)prog(i+1,bl.length);
+    if(!f.d){omit++;continue}
+    try{const nd=await restamparNum(f.d,antes,nuevo);if(!nd){omit++;continue}
+      need(await call('fotoReemplazar',{tmp,n:f.n,d:nd},{ms:120000}));FOTOS_CACHE.delete(f.archivo);ok++}catch(e){omit++}}
+  return {ok,omit,total:bl.length};
+}
+let NUM_BUSY=false;
+async function propagarNum(tmp,antes,nuevo){
+  if(NUM_BUSY||!antes||!nuevo||antes===nuevo)return;NUM_BUSY=true;
+  try{
+    toast('Actualizando fotos, Drive y copias con el consecutivo '+nuevo+'…');
+    const r=await actualizarMarcaFotos(tmp,antes,nuevo,(i,t)=>toast('Actualizando marca de agua: foto '+i+' de '+t+'…'));
+    await loadAll();const o=REGS.get(tmp);
+    if(o&&o.estado==='final'&&!o.anulado){
+      try{const h=await pcGet();if(h&&o.fecha){const MESN=['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+        const fy=String(o.fecha).slice(0,4),fm=Math.min(12,Math.max(1,+String(o.fecha).slice(5,7)||1));
+        if(await pcPermiso(h,false))await quitarCarpetaPC(h,'EMERGENCIAS '+fy,fm+' - '+MESN[fm-1]+' '+fy,limpiaNom(antes+' '+tc(o.cat)))}}catch(e){}
+      await autoCopias(tmp,true);
+    }
+    toast('Consecutivo '+nuevo+' actualizado en todo el sistema.'+(r.total?' Fotos con marca nueva: '+r.ok+' de '+r.total+(r.omit?' ('+r.omit+' no se pudieron marcar de nuevo: se dejaron como estaban).':'.'):''));
+  }catch(e){toast('El consecutivo cambió, pero no se pudo actualizar todo: '+humanErr(e),1)}
+  finally{NUM_BUSY=false}
 }
 async function autoCopias(tmp){
   const o=REGS.get(tmp);if(!o||o.estado!=='final'||o.anulado)return;
@@ -3150,7 +3240,7 @@ function drawGrupos(){
     const us=ds.filter(x=>x.grupo===g.id),miembros=us.flatMap(x=>x.pers.map(p=>({u:p.u,n:p.n,veh:x.veh})));
     const rol=p=>p.rol?'<span class="rol">'+esc(p.rol)+'</span>':'';
     h+='<div class="gi" data-g="'+esc(g.id)+'" style="border-left-color:'+esc(g.color)+'"><h4><span class="dot" style="background:'+esc(g.color)+'"></span>'+esc(g.nombre)+'<span class="derived">'+(g.emerg?'→ '+esc(nomE(g.emerg)||'emergencia'):'Disponible')+'</span></h4>'+
-      (us.length?us.map(x=>'<div class="un"><b>'+esc(x.veh||'Sin vehículo')+'</b> · '+esc(EST_DESP[x.estado]||x.estado)+(x.conf&&x.conf.length?' · confirmó '+x.conf.length:'')+'<br>'+x.pers.map(p=>esc(p.n)+' '+rol(p)).join(' · ')+(ed?' <button class="btn alt sm" data-corr="'+esc(x.id)+'">Corregir vehículo y personal</button>':'')+(ed?'<br><label class="derived">Unir recurso a grupo de intervención: <select data-mv="'+esc(x.id)+'"><option value="">elegir grupo…</option>'+gs.filter(o=>o.id!==g.id).map(o=>'<option value="'+esc(o.id)+'">'+esc(o.nombre)+'</option>').join('')+'<option value="_nuevo">Nuevo grupo de intervención '+(gs.length+1)+'</option><option value="_ninguno">Sin grupo</option></select></label>':'')+'</div>').join(''):'<p class="derived">Sin unidades. Asígnelas desde «Despachar» en una emergencia.</p>')+
+      (us.length?us.map(x=>'<div class="un"><b>'+esc(x.veh||'Sin vehículo')+'</b> · '+esc(EST_DESP[x.estado]||x.estado)+(x.conf&&x.conf.length?' · confirmó '+x.conf.length:'')+'<br>'+x.pers.map(p=>esc(p.n)+' '+rol(p)).join(' · ')+(ed?'<br><label class="derived">Unir recurso a grupo de intervención: <select data-mv="'+esc(x.id)+'"><option value="">elegir grupo…</option>'+gs.filter(o=>o.id!==g.id).map(o=>'<option value="'+esc(o.id)+'">'+esc(o.nombre)+'</option>').join('')+'</select></label>':'')+'</div>').join(''):'<p class="derived">Sin unidades. Asígnelas desde «Despachar» en una emergencia.</p>')+
       ((g.pre||[]).filter(id=>nomE(id)).length?'<div class="derived">En cola: '+g.pre.filter(id=>nomE(id)).map(id=>'<span class="pill info">'+esc(nomE(id)||id)+(ed?' <a href="#" data-prx="'+esc(id)+'">✕</a>':'')+'</span>').join(' ')+'</div>':'')+
       (ed?'<div class="tools" style="margin-top:6px"><label>Emergencia<select data-em>'+optE(g.emerg)+'</select></label><label>Líder de equipo<select data-cmd><option value="">— sin asignar —</option>'+miembros.map(p=>'<option value="'+esc(p.u)+'"'+(p.u===g.cmd?' selected':'')+'>'+esc(p.n)+'</option>').join('')+'</select></label><label>Maquinista<select data-maq><option value="">— sin asignar —</option>'+miembros.map(p=>'<option value="'+esc(p.u)+'"'+(p.u===g.maq?' selected':'')+'>'+esc(p.n)+'</option>').join('')+'</select></label><label>Pre-asignar<select data-pre><option value="">preasignar emergencia ('+(g.pre||[]).length+'/5)…</option>'+al.filter(a=>a.id!==g.emerg&&!(g.pre||[]).includes(a.id)).map(a=>'<option value="'+esc(a.id)+'">'+esc(nomE(a.id))+'</option>').join('')+'</select></label></div><div class="dl"><button class="btn alt sm" data-gpers="'+esc(g.id)+'">Personal y vehículos del grupo</button><button class="btn alt sm" data-ren="1">Nombre y color</button><button class="btn alt sm" data-gterm="1">Terminar labores</button><button class="btn alt sm danger" data-dis="1">Disolver grupo</button></div>':'')+'</div>';
   });
@@ -3210,7 +3300,7 @@ async function historiaEmerg(arg){
     const bx=document.querySelector('#detail .dl');
     if(esMaster()&&!PREVIEW&&bx&&!bx.querySelector('.vin-btn')){const vb=document.createElement('button');vb.className='btn alt sm vin-btn';vb.textContent=ll?'Corregir vínculo con la emergencia':'Vincular con una emergencia';vb.onclick=()=>{
       const n=prompt('Consecutivo de la emergencia a vincular (ej. EM-2026-00012). Déjelo vacío para quitar el vínculo actual.',''); if(n===null)return;
-      call('vincular',{tmp:r.tmp,num:n.trim(),emerg:''}).then(x=>{need(x);toast(n.trim()?'Reporte vinculado a '+(x.num||n)+'.':'Vínculo quitado.');dlgCerrar&&dlgCerrar();pollVivo()}).catch(e=>toast('No se pudo vincular: '+humanErr(e),1))};bx.append(vb)}
+      const ant1=r.id;call('vincular',{tmp:r.tmp,num:n.trim(),emerg:''}).then(async x=>{need(x);toast((n.trim()?'Reporte vinculado a '+(x.num||n)+'.':'Vínculo quitado.')+(x.conflicto?' Atención: '+x.conflicto:''));if(n.trim()&&x.num&&ant1&&x.num!==ant1){try{await loadAll()}catch(e){}propagarNum(r.tmp,ant1,x.num)}dlgCerrar&&dlgCerrar();pollVivo()}).catch(e=>toast('No se pudo vincular: '+humanErr(e),1))};bx.append(vb)}
     if(ll&&bx&&!bx.querySelector('.hist-btn')){const b=document.createElement('button');b.className='btn alt sm hist-btn';b.textContent='Ver toda la información de la emergencia';b.onclick=()=>emergResumen(ll);bx.append(b)}
   }catch(e){}
 }}
@@ -3509,7 +3599,7 @@ async function vincularReporteUI(id,volver){
       '</div><div class="derived" id="vc-out" role="status"></div><div class="dl"><button class="btn" id="vc-ok">Vincular el reporte elegido</button><button class="btn alt" id="vc-no">Cancelar</button></div>',()=>{
       $('vc-no').onclick=()=>volver?volver():dlgCerrar();
       $('vc-ok').onclick=async()=>{const sel=document.querySelector('input[name=vc]:checked');if(!sel){$('vc-out').textContent='Elija un reporte.';return}
-        $('vc-ok').disabled=true;try{need(await call('vincular',{tmp:sel.value,emerg:id}));await loadAll();toast('Reporte vinculado: la emergencia quedó completa.');pollPend();AT.t=0;pintarAtendidas();pollVivo();volver?volver():dlgCerrar()}catch(e){$('vc-out').textContent='No se pudo: '+humanErr(e);$('vc-ok').disabled=false}}});
+        $('vc-ok').disabled=true;try{const ant0=(REGS.get(sel.value)||{}).num||'';const vj=need(await call('vincular',{tmp:sel.value,emerg:id}));await loadAll();toast('Reporte vinculado: la emergencia quedó completa.'+(vj.conflicto?' Atención: '+vj.conflicto:''));if(ant0&&vj.num&&vj.num!==ant0)propagarNum(sel.value,ant0,vj.num);pollPend();AT.t=0;pintarAtendidas();pollVivo();volver?volver():dlgCerrar()}catch(e){$('vc-out').textContent='No se pudo: '+humanErr(e);$('vc-ok').disabled=false}}});
   }catch(e){dlg('<h3>Vincular un reporte</h3><p>No se pudo cargar: '+esc(humanErr(e))+'</p><div class="dl"><button class="btn alt" id="vc-no">Cerrar</button></div>',()=>{$('vc-no').onclick=dlgCerrar})}
 }
 
@@ -3674,7 +3764,7 @@ async function pintarResumen(){
 }
 function unidadHtml(x,gs,ed,gid){
   return '<div class="un"><b>'+esc(x.veh||'Sin vehículo')+'</b><span class="est"> · '+esc(EST_DESP[x.estado]||x.estado)+(x.conf&&x.conf.length?' · confirmó '+x.conf.length:'')+'</span>'+x.pers.map(p=>filaPersona(p,x.veh)).join('')+
-    (ed?'<div class="tools"><label class="derived">Unir recurso a grupo de intervención <select data-mv="'+esc(x.id)+'"><option value="">elegir…</option>'+gs.filter(o=>o.id!==gid).map(o=>'<option value="'+esc(o.id)+'">'+esc(o.nombre)+'</option>').join('')+'<option value="_nuevo">Nuevo grupo de intervención</option>'+(gid?'<option value="_ninguno">Sin grupo</option>':'')+'</select></label>'+(gid?'':'<button class="btn alt sm" data-term="'+esc(x.id)+'">Terminar labores</button>')+'</div>':'')+'</div>';
+    (ed?'<div class="tools"><label class="derived">Unir recurso a grupo de intervención <select data-mv="'+esc(x.id)+'"><option value="">elegir grupo…</option>'+gs.filter(o=>o.id!==gid).map(o=>'<option value="'+esc(o.id)+'">'+esc(o.nombre)+'</option>').join('')+'</select></label>'+(gid?'':'<button class="btn alt sm" data-term="'+esc(x.id)+'">Terminar labores</button>')+'</div>':'')+'</div>';
 }
 function ligarResumen(a,id,ds,gs,act){
   const d=$('dlg');
@@ -3977,7 +4067,6 @@ async function eliminarReporteUI(tmp){
 /* ---------- corregir el vehículo y el personal de una asignación ---------- */
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-corr]');if(b){e.preventDefault();corregirDespacho(b.dataset.corr)}});
 document.addEventListener('input',e=>{if(e.target&&e.target.id==='uni-q')drawUnidades()});
-{const u0=unidadHtml;unidadHtml=function(x,gs,ed,gid){let s=u0.apply(this,arguments);if(ed){const i=s.lastIndexOf('</div>');if(i>0)s=s.slice(0,i)+'<div class="tools"><button class="btn alt sm" data-corr="'+esc(x.id)+'">Corregir vehículo y personal</button></div>'+s.slice(i)}return s}}
 async function corregirDespacho(id){
   const x=(VIVO.despachos||[]).find(z=>z.id===id);if(!x){toast('Esa asignación ya no existe.',1);return}
   if(!ROSTERD){try{ROSTERD=need(await call('roster'))}catch(e){toast('No se pudo cargar el personal: '+humanErr(e),1);return}}

@@ -1,6 +1,6 @@
 /* Service worker · V1.0 · Autor: Cristhian Steven Blandón Henao
    Deja la aplicación disponible sin internet y muestra avisos (llamados, SOS, puntos y chat), también con la aplicación cerrada. */
-const V = 'cbv-campo-1.0.11';
+const V = 'cbv-campo-1.0.12';
 const BASE = ['./', 'index.html', 'config.js', 'esquema.js', 'jszip.min.js', 'gen.js', 'leaflet.js', 'leaflet.css', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'marca.png', 'plantillas/reporte_emergencias.xlsx'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(V).then(c => Promise.all(BASE.map(u => fetch(new Request(u, { cache: 'reload' })).then(r => r.ok ? c.put(u, r) : null).catch(() => null)))).then(() => self.skipWaiting()));
