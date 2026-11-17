@@ -843,7 +843,7 @@ async function pintarBorradores(){
 }
 
 /* ================= BITÁCORA EN VIVO (comandante del incidente) ================= */
-const QUICK=[['Alerta recibida','hora','Se recibió el llamado de emergencia'],['Salida de la estación','hsal','La unidad salió desde la estación'],['Llegada al sitio','hlle','La unidad llegó al lugar del evento'],['Reconocimiento de la escena',null,'El personal realizó el reconocimiento y la evaluación inicial de la escena'],['Inicio del ataque / atención',null,'El personal inició las labores de ataque y atención del evento'],['Situación controlada',null,'La situación fue controlada'],['Se dejan recomendaciones de seguridad',null,'Se dejaron recomendaciones de seguridad'],['Se dan recomendaciones de seguridad',null,'Se dan recomendaciones de seguridad'],['Se dejan recomendaciones',null,'Se dejan recomendaciones'],['Terminación de la emergencia','hfin','Se dio por terminada la atención en el sitio'],['Desmovilización hacia el cuartel','hdes','La unidad inició la desmovilización hacia el cuartel'],['Llegada a la estación','hreg','La unidad llegó nuevamente a la estación']];
+const QUICK=[['Alerta recibida','hora','Se recibió el llamado de emergencia'],['Salida de la estación','hsal','La unidad salió desde la estación'],['Llegada al sitio','hlle','La unidad llegó al lugar del evento'],['Reconocimiento de la escena',null,'El personal realizó el reconocimiento y la evaluación inicial de la escena'],['Inicio del ataque / atención',null,'El personal inició las labores de ataque y atención del evento'],['Situación controlada',null,'La situación fue controlada'],['Se dejan recomendaciones',null,'Se dejan recomendaciones'],['Se dejan recomendaciones de seguridad',null,'Se dejaron recomendaciones de seguridad'],['Se dan recomendaciones de seguridad',null,'Se dan recomendaciones de seguridad'],['Terminación de la emergencia','hfin','Se dio por terminada la atención en el sitio'],['Desmovilización hacia el cuartel','hdes','La unidad inició la desmovilización hacia el cuartel'],['Llegada a la estación','hreg','La unidad llegó nuevamente a la estación']];
 function accList(){const a=getP(D,'rpt.acc');return Array.isArray(a)?a:[]}
 function logAdd(h,a,k){
   a=String(a||'').trim();if(!a||!h)return false;
@@ -957,7 +957,7 @@ function onChanged(p){
   if(p==='cat'){D.tipo=tipoDe(D.cat);if(!esAsk()&&D.extra)delete D.extra._modo;renderStep()}
   if(p==='extra._modo'||p==='extra._les')renderStep();
   if(modoSimple()&&(p==='hsal'||p==='hreg')){if(D.hsal)D.hora=D.hsal;if(D.hreg)D.hfin=D.hreg}
-  if(p==='hora'||p==='hfin'){const d=lapse(D.hora,D.hfin);if(d!=null&&d>0&&d<1440&&!(D.na&&D.na.durmin)){D.durmin=d;const i=document.querySelector('[data-p="durmin"] input');if(i)i.value=d;fieldMark('durmin')}}
+  if(p==='hora'||p==='hfin'){const d=durDeBitacora()??lapse(D.hora,D.hfin);if(d!=null&&d>0&&d<1440&&!(D.na&&D.na.durmin)){D.durmin=d;const i=document.querySelector('[data-p="durmin"] input');if(i)i.value=d;fieldMark('durmin')}}
   if(p==='pers'){D.uni=(D.pers||[]).length;const i=document.querySelector('[data-p="uni"] input');if(i)i.value=D.uni}
   if(p==='rpt.cmd.n'){const o=Object.assign({grupos:[]},getP(D,'rpt.sci')||{});o.ci=getP(D,'rpt.cmd.n')||'';setP(D,'rpt.sci',o)}
   if(p==='rpt.sci'){const ci=(getP(D,'rpt.sci')||{}).ci;if(nonEmpty(ci)&&ci!==getP(D,'rpt.cmd.n')){setP(D,'rpt.cmd.n',ci);const pl=(AJ.plantilla||[]).find(x=>x.n===ci);if(pl&&pl.g)setP(D,'rpt.cmd.g',pl.g);try{autoCargoCmd(ci)}catch(e){}}}
@@ -3464,6 +3464,17 @@ async function mapaVivoCI(e){
 const CRONO_TX={hora:'Se recibió el llamado de emergencia',hsal:'La unidad salió desde la estación',hlle:'La unidad llegó al lugar del evento',hfin:'Se dio por terminada la atención en el sitio',hdes:'La unidad inició la desmovilización hacia el cuartel',hreg:'La unidad llegó nuevamente a la estación'};
 const CRONO_K=Object.keys(CRONO_TX);
 const CRONO_P=k=>k==='hdes'?'rpt.hdes':k;
+/* La duración se cuenta desde la acción que SIGUE a la llamada (la hora de la llamada puede ser mucho antes) hasta la última acción de la bitácora.
+   Si la bitácora no tiene al menos dos acciones con hora después de la llamada, se usa el cálculo anterior (hora de alerta → hora de fin). */
+function durDeBitacora(){
+  const l=accList().filter(x=>x&&x.h&&tmin(x.h)!=null);if(l.length<2)return null;
+  const ic=l.findIndex(x=>x.k==='hora'||/^Se recibió el llamado/i.test(String(x.a||'').trim()));
+  const i0=ic<0?0:ic+1;if(i0>=l.length-1)return null;
+  return lapse(l[i0].h,l[l.length-1].h);
+}
+function recalcDur(){
+  try{const d=durDeBitacora();if(d!=null&&d>0&&d<1440&&!(D.na&&D.na.durmin)&&D.durmin!==d){D.durmin=d;const i=document.querySelector('[data-p="durmin"] input');if(i)i.value=d;fieldMark('durmin')}}catch(e){}
+}
 function derivarTiempos(){
   if(!D)return;D.extra=D.extra||{};
   const l=accList(),prev=D.extra._bk||{},nuevo={};let cambio=false;
@@ -3472,6 +3483,7 @@ function derivarTiempos(){
     else if(prev[k]&&getP(D,p)===prev[k]){setP(D,p,'');cambio=true}});
   D.extra._bk=nuevo;
   if(cambio){try{onChanged('hora');onChanged('hfin')}catch(e){}}
+  recalcDur();
   autosave();
 }
 function sincronizarCrono(){

@@ -1538,7 +1538,7 @@ function admFrm(){
       row.append(l,op,H('label',{},show,'Mostrar'),H('label',{},na,'No aplica'));c.append(row);
     });
     /* orden de las preguntas del paso */
-    {const base=s.f.map(f=>({p:f.p,l:fo.labels[f.p]||f.l})).concat(fo.extras.filter(x=>x.step===s.id&&x.l&&x.l.trim()).map(x=>({p:'extra.'+x.id,l:x.l})));
+    {const base=s.f.map(f=>({p:f.p,l:fo.labels[f.p]||f.l})).concat(fo.extras.filter(x=>x.step===s.id).map(x=>({p:'extra.'+x.id,l:(x.l&&x.l.trim())||'(punto nuevo sin título)'})));
       const lista=ordA(base,fo.fieldOrder[s.id],x=>x.p);
       if(lista.length>1){const ob=H('div',{className:'adm-f'});ob.append(H('b',{},'Orden en que aparecen las preguntas'));c.append(ob);
         lista.forEach((q,i)=>{const row=H('div',{className:'adm-f'});const ids=lista.map(x=>x.p);
@@ -1546,12 +1546,15 @@ function admFrm(){
           const dn=H('button',{className:'btn alt sm',textContent:'↓',disabled:i===lista.length-1,ariaLabel:'Bajar: '+q.l});dn.onclick=()=>{fo.fieldOrder[s.id]=mover(ids,i,1);guardarYRedibujar()};
           row.append(H('span',{},(i+1)+'. '+q.l),H('span',{}),up,dn);c.append(row)})}}
     /* extras */
-    const ex=H('div');const drawE=()=>{ex.innerHTML='';fo.extras.forEach((x,i)=>{if(x.step!==s.id)return;const row=H('div',{className:'adm-f'});
+    const ex=H('div');const drawE=()=>{ex.innerHTML='';const orden0=ordA(s.f.map(f=>({p:f.p})).concat(fo.extras.filter(z=>z.step===s.id).map(z=>({p:'extra.'+z.id}))),fo.fieldOrder[s.id],z=>z.p).map(z=>z.p);fo.extras.filter(z=>z.step===s.id).sort((u,v)=>orden0.indexOf('extra.'+u.id)-orden0.indexOf('extra.'+v.id)).forEach(x=>{const row=H('div',{className:'adm-f'});
       const l=H('input',{value:x.l||'',placeholder:'Texto de la pregunta nueva'});l.oninput=()=>x.l=l.value;
       const t=H('select');[['text','Texto corto'],['area','Texto largo'],['num','Número'],['sel','Lista de opciones']].forEach(([v,n])=>t.append(new Option(n,v)));t.value=x.t||'text';t.onchange=()=>{x.t=t.value;drawE()};
       const o=H('input',{value:(x.o||[]).join(', '),placeholder:'Opciones separadas por coma'});o.hidden=x.t!=='sel';o.oninput=()=>x.o=o.value.split(',').map(a=>a.trim()).filter(Boolean);
-      const q=H('button',{className:'btn alt sm',textContent:'Quitar'});q.onclick=()=>{fo.extras.splice(i,1);drawE()};
-      row.append(l,H('span',{},t,o),H('label',{},H('span',{className:'derived'},'campo nuevo')),q);ex.append(row)})};drawE();
+      const q=H('button',{className:'btn alt sm',textContent:'Quitar'});q.onclick=()=>{fo.extras.splice(fo.extras.indexOf(x),1);drawE()};
+      const ids=ordA(s.f.map(f=>({p:f.p})).concat(fo.extras.filter(z=>z.step===s.id).map(z=>({p:'extra.'+z.id}))),fo.fieldOrder[s.id],z=>z.p).map(z=>z.p),pos=ids.indexOf('extra.'+x.id);
+      const up=H('button',{className:'btn alt sm',textContent:'↑',title:'Subir esta pregunta',disabled:pos<=0}),dn=H('button',{className:'btn alt sm',textContent:'↓',title:'Bajar esta pregunta',disabled:pos<0||pos>=ids.length-1});
+      up.onclick=()=>{fo.fieldOrder[s.id]=mover(ids,pos,-1);CFGP.form=fo;admFrm()};dn.onclick=()=>{fo.fieldOrder[s.id]=mover(ids,pos,1);CFGP.form=fo;admFrm()};
+      row.append(l,H('span',{},t,o),H('label',{},H('span',{className:'derived'},'campo nuevo')),H('span',{},up,dn,q));ex.append(row)})};drawE();
     const add=H('button',{className:'btn alt sm',textContent:'Agregar un punto nuevo a este paso'});add.onclick=()=>{fo.extras.push({id:'x'+Date.now().toString(36),step:s.id,l:'',t:'text'});drawE()};
     c.append(ex,add);out.push(c);
   });
@@ -4306,7 +4309,7 @@ async function importarPersonalExcel(file){
 const BIT0={titulo:'Bitácora en vivo',pregunta:'¿Qué está haciendo o qué ocurre ahora?',acciones:[
  {t:'Salida de la estación',tx:'La unidad salió desde la estación',k:'hsal',f:''},{t:'Llegada al sitio',tx:'La unidad llegó al lugar del evento',k:'hlle',f:'amarillo'},
  {t:'Reconocimiento de la escena',tx:'El personal realizó el reconocimiento y la evaluación inicial de la escena',k:'',f:'amarillo'},{t:'Inicio del ataque / atención',tx:'El personal inició las labores de ataque y atención del evento',k:'',f:'amarillo'},
- {t:'Situación controlada',tx:'La situación fue controlada',k:'',f:'amarillo'},{t:'Desmovilización hacia el cuartel',tx:'La unidad inició la desmovilización hacia el cuartel',k:'',f:'amarillo'},
+ {t:'Situación controlada',tx:'La situación fue controlada',k:'',f:'amarillo'},{t:'Se dejan recomendaciones',tx:'Se dejan recomendaciones',k:'',f:'amarillo'},{t:'Desmovilización hacia el cuartel',tx:'La unidad inició la desmovilización hacia el cuartel',k:'',f:'amarillo'},
  {t:'Terminación de la emergencia',tx:'Se dio por terminada la atención en el sitio',k:'hfin',f:'verde'},{t:'Llegada a la estación',tx:'La unidad llegó nuevamente a la estación',k:'hreg',f:''}]};
 const DZ_SEC={
   cel:[['frm','Formulario','formulario campos categorías vehículos pasos puntos'],['txt','Textos y nombres','textos nombres botones títulos rótulos'],['dis','Menú del celular','menú botones orden esconder'],['bit','Bitácora en vivo','bitácora acciones rápidas fase texto']],
