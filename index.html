@@ -286,6 +286,9 @@ html,body{overflow-x:hidden}
 
 .mapa-full{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;max-height:none!important;z-index:100000!important;border-radius:0!important}
 
+#btnNext{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+#btnNext.sosteniendo{background-image:linear-gradient(90deg,rgba(255,255,255,.35),rgba(255,255,255,.35));background-repeat:no-repeat;background-size:0 100%;animation:sost 1s linear forwards}
+@keyframes sost{to{background-size:100% 100%}}
 </style>
 </head>
 <body>
@@ -3699,7 +3702,17 @@ function bindForm(){
   const onFiles=cam=>e=>{const fs=[...e.target.files];e.target.value='';if(fs.length)addFotos(fs,cam)};
   $('barcam').onclick=()=>camaraRafaga();$('cam').onchange=onFiles(true);$('fotos').onchange=onFiles(false);$('vids').onchange=async e=>{const l=[...e.target.files];e.target.value='';if(l.length)await addVideos(l)};
   $('btnPrev').onclick=()=>{msg('');goStep(stepIdx-1)};
-  $('btnNext').onclick=nextStep;
+  /* «Siguiente» mantenido 1 segundo: salta directo a la revisión y envío (para cuando ya tiene todo completo) */
+  {const bn=$('btnNext');let tm=null,largo=false,x0=0,y0=0;
+    const parar=()=>{clearTimeout(tm);tm=null;bn.classList.remove('sosteniendo')};
+    bn.title='Toque: siguiente paso · Mantenga 1 segundo: ir directo a «Terminar y enviar»';
+    bn.addEventListener('pointerdown',e=>{if(bn.disabled)return;largo=false;x0=e.clientX;y0=e.clientY;parar();const S=stepsEff();if(stepIdx>=S.length)return;
+      bn.classList.add('sosteniendo');
+      tm=setTimeout(()=>{tm=null;bn.classList.remove('sosteniendo');const S2=stepsEff();if(stepIdx>=S2.length)return;largo=true;try{navigator.vibrate&&navigator.vibrate(40)}catch(_){}msg('');goStep(S2.length);toast('Revisión y envío: revise lo que falte y toque «Terminar y enviar».')},1000)});
+    bn.addEventListener('pointermove',e=>{if(tm&&Math.hypot(e.clientX-x0,e.clientY-y0)>24)parar()});
+    ['pointerup','pointerleave','pointercancel'].forEach(n=>bn.addEventListener(n,parar));
+    bn.addEventListener('contextmenu',e=>e.preventDefault());
+    bn.onclick=e=>{if(largo){largo=false;e.preventDefault();return}nextStep()}}
   $('stepsel').onchange=e=>{showBad=true;goStep(+e.target.value)};
   $('btnDraft').onclick=async()=>{await guardar(false)};
   $('btnOtra').onclick=async()=>{
