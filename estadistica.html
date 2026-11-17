@@ -727,7 +727,8 @@ function renderRecs(){
   const rows=base.concat(extra).filter(r=>!q||[r.id,r.cat,r.dir,r.bar,r.desc,r.em&&r.em.cmdn].join(' ').toLowerCase().includes(q)).slice().sort((a,b)=>String(a.fecha+(a.hora||'')).localeCompare(String(b.fecha+(b.hora||'')))).reverse();
   if(RSORT.dir){
     const vac=v=>v==null||v===''||v==='—';
-    const kv={id:r=>r.id,fecha:r=>String(r.fecha||'')+' '+String(r.hora||''),cat:r=>tc(r.cat||''),dir:r=>r.dir||'',uni:r=>r.uni==null?null:+r.uni,veh:r=>r.veh||'',
+    const nOf=r=>{const m=/^[A-Za-zÁÉÍÓÚ]+-(?:(\d{4})-)?(\d+)/.exec(String(r.id||'').trim());if(!m)return null;const y=+(m[1]||String(r.fecha||'').slice(0,4))||0;return y*1e7+ +m[2]};   /* EM-2026-00568 y HI-5: primero el año, luego el número; no importa el prefijo */
+    const kv={id:nOf,fecha:r=>String(r.fecha||'')+' '+String(r.hora||''),cat:r=>tc(r.cat||''),dir:r=>r.dir||'',uni:r=>r.uni==null?null:+r.uni,veh:r=>r.veh||'',
       origen:r=>r.virtual?'Llamado':r.src==='app'?'App':'Excel',est:r=>r.em?(r.em.estado==='activa'?'Activa':'Terminada'):'',cmd:r=>(r.em&&r.em.cmdn)||'',
       rep:r=>r.virtual?((r.em&&r.em.completada)?'completada sin reporte':(r.em&&r.em.estado==='activa')?'en curso':'pendiente'):(r.src==='app'?(r.borrador?'borrador':'completo'):'histórico')}[RSORT.k];
     const des=rows.map((r,i)=>({r,i,v:kv(r)}));
