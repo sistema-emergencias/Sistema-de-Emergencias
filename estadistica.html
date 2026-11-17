@@ -376,7 +376,7 @@ table th{position:relative}
           <h3>Mapa de calor</h3>
           <div class="tools">
             <label>Qué mostrar<select id="calor-capa"><option value="emerg">Dónde ocurren las emergencias</option><option value="rec">Por dónde se mueven las unidades</option></select></label>
-            <label>Periodo<select id="calor-per"><option value="filtros">Usar el periodo de arriba</option><option value="hoy">Hoy</option><option value="7">Últimos 7 días</option><option value="30">Últimos 30 días</option><option value="90">Últimos 90 días</option><option value="anio">Este año</option><option value="todo">Todo el histórico</option><option value="rango">Rango de fechas…</option></select></label>
+            <label>Periodo<select id="calor-per"><option value="filtros">Usar el periodo de estadística</option><option value="hoy">Hoy</option><option value="7">Últimos 7 días</option><option value="30">Últimos 30 días</option><option value="90">Últimos 90 días</option><option value="anio">Este año</option><option value="todo">Todo el histórico</option><option value="rango">Rango de fechas…</option></select></label>
             <label id="cl-d1" hidden>Desde<input type="date" id="calor-d1"></label><label id="cl-d2" hidden>Hasta<input type="date" id="calor-d2"></label>
             <label id="cl-cat">Categoría<select id="calor-cat"></select></label>
             <label id="cl-veh" hidden>Vehículo<select id="calor-veh"></select></label>
@@ -716,6 +716,7 @@ function repEmerg(x){
   if(x&&x.estado==='activa')return '<span class="derived">en curso</span>';
   return x&&x.vencido?'<span class="pill bad">pendiente · vencido</span>':'<span class="pill warn">pendiente</span>';
 }
+let RSORT={k:'',dir:0};
 function renderRecs(){
   const q=$('q').value.trim().toLowerCase(),base=CUR.concat([...REGS.values()].filter(o=>o.cat&&o.fecha&&!o.anulado&&o.estado!=='final').map(toRow),$('showanul')&&$('showanul').checked?[...REGS.values()].filter(o=>o.anulado&&o.cat).map(toRow).concat(typeof ELIMROWS!=='undefined'?ELIMROWS:[]):[]);
   /* una sola tabla: cada registro con los datos de su emergencia; las emergencias sin reporte aparecen como filas propias */
@@ -724,15 +725,26 @@ function renderRecs(){
   base.forEach(r=>{const x=porNum[r.id];if(x){r.em=x;usados.add(x.id)}});
   const extra=em.filter(x=>!usados.has(x.id)&&!(x.reporte&&REGS.has(x.reporte.tmp))).map(x=>{const f=new Date(x.cuando);const p=n=>String(n).padStart(2,'0');return {src:'llamado',id:x.num||'—',fecha:f.getFullYear()+'-'+p(f.getMonth()+1)+'-'+p(f.getDate()),hora:p(f.getHours())+':'+p(f.getMinutes()),cat:x.msg,dir:x.lugar,uni:null,veh:'',em:x,virtual:true}});
   const rows=base.concat(extra).filter(r=>!q||[r.id,r.cat,r.dir,r.bar,r.desc,r.em&&r.em.cmdn].join(' ').toLowerCase().includes(q)).slice().sort((a,b)=>String(a.fecha+(a.hora||'')).localeCompare(String(b.fecha+(b.hora||'')))).reverse();
-  const PS=10,pages=Math.max(1,Math.ceil(rows.length/PS));if(page>=pages)page=pages-1;
+  if(RSORT.dir){
+    const vac=v=>v==null||v===''||v==='—';
+    const kv={id:r=>r.id,fecha:r=>String(r.fecha||'')+' '+String(r.hora||''),cat:r=>tc(r.cat||''),dir:r=>r.dir||'',uni:r=>r.uni==null?null:+r.uni,veh:r=>r.veh||'',
+      origen:r=>r.virtual?'Llamado':r.src==='app'?'App':'Excel',est:r=>r.em?(r.em.estado==='activa'?'Activa':'Terminada'):'',cmd:r=>(r.em&&r.em.cmdn)||'',
+      rep:r=>r.virtual?((r.em&&r.em.completada)?'completada sin reporte':(r.em&&r.em.estado==='activa')?'en curso':'pendiente'):(r.src==='app'?(r.borrador?'borrador':'completo'):'histórico')}[RSORT.k];
+    const des=rows.map((r,i)=>({r,i,v:kv(r)}));
+    des.sort((p,q)=>{const a=p.v,b=q.v,va=vac(a),vb=vac(b);if(va||vb){if(va&&vb)return p.i-q.i;return va?1:-1}   /* los vacíos siempre al final */
+      const c=(typeof a==='number'&&typeof b==='number')?a-b:String(a).localeCompare(String(b),'es',{numeric:true,sensitivity:'base'});return (c*RSORT.dir)||(p.i-q.i)});
+    rows.splice(0,rows.length,...des.map(x=>x.r));
+  }
+  const PS=100,pages=Math.max(1,Math.ceil(rows.length/PS));if(page>=pages)page=pages-1;
   const sl=rows.slice(page*PS,page*PS+PS);
   const SM=esMaster(),kOf=r=>r.virtual&&r.em?'e:'+r.em.id:'r:'+r.tmp,selOk=r=>SM&&!r.eliminado&&((r.src==='app'&&r.tmp&&!r.virtual)||(r.virtual&&r.em&&r.em.id));window.SELREG=window.SELREG||new Set();
   const selPag=sl.filter(selOk);
-  $('rtab').innerHTML='<tr>'+(SM?'<th style="width:28px"><input type="checkbox" id="selall" title="Seleccionar los de esta página"'+(selPag.length&&selPag.every(r=>SELREG.has(kOf(r)))?' checked':'')+'></th>':'')+'<th>N°</th><th>Día</th><th>Categoría</th><th>Lugar</th><th class="n">Unid.</th><th>Vehículo</th><th>Origen</th><th>Estado</th><th>Comandante</th><th>Reporte</th><th></th></tr>'+(sl.length?sl.map(r=>{const x=r.em;
+  $('rtab').innerHTML='<tr>'+(SM?'<th style="width:28px"><input type="checkbox" id="selall" title="Seleccionar los de esta página"'+(selPag.length&&selPag.every(r=>SELREG.has(kOf(r)))?' checked':'')+'></th>':'')+[['id','N°'],['fecha','Día'],['cat','Categoría'],['dir','Lugar'],['uni','Unid.','n'],['veh','Vehículo'],['origen','Origen'],['est','Estado'],['cmd','Comandante'],['rep','Reporte']].map(c=>'<th data-rs="'+c[0]+'"'+(c[2]?' class="'+c[2]+'"':'')+' style="cursor:pointer;user-select:none;white-space:nowrap" title="Ordenar por esta columna (otra vez: al revés; otra más: quita el orden)">'+c[1]+(RSORT.k===c[0]&&RSORT.dir?(RSORT.dir>0?' ▲':' ▼'):' ↕')+'</th>').join('')+'<th></th></tr>'+(sl.length?sl.map(r=>{const x=r.em;
     const est=x?(x.estado==='activa'?'<span class="pill on">Activa</span>':'<span class="pill off">Terminada</span>'):'<span class="derived">—</span>';
     const rep=r.virtual?repEmerg(x):(r.src==='app'?estadoPill(r,1):'<span class="derived">Histórico</span>');
     const bt=x?'<button class="btn alt sm" data-emr="'+esc(x.id)+'">Emergencia</button>'+(r.virtual&&puedeF('pendientes')?'<button class="btn alt sm" data-emv="'+esc(x.id)+'">Vincular reporte</button>':'')+(esMaster()?'<button class="btn alt sm danger" data-emd="'+esc(x.id)+'">Eliminar</button>':''):'';
     return '<tr class="click" data-i="'+rows.indexOf(r)+'"'+(r.anulado||r.eliminado?' style="text-decoration:line-through;opacity:.6"':'')+'>'+(SM?'<td>'+(selOk(r)?'<input type="checkbox" class="selreg" data-t="'+esc(kOf(r))+'"'+(SELREG.has(kOf(r))?' checked':'')+'>':'')+'</td>':'')+'<td class="m">'+esc(r.id)+'</td><td>'+GEN.dmy(r.fecha)+' '+esc(r.hora||'')+'</td><td>'+esc(tc(r.cat))+'</td><td>'+esc(r.dir||'—')+'</td><td class="n">'+(r.uni==null?'—':r.uni)+'</td><td>'+esc(r.veh||'—')+'</td><td>'+(r.virtual?'Llamado':r.src==='app'?'App':'Excel')+'</td><td>'+est+'</td><td>'+esc((x&&x.cmdn)||'—')+'</td><td>'+rep+'</td><td>'+bt+'</td></tr>'}).join(''):'<tr><td colspan="12">Sin registros con estos filtros.</td></tr>');
+  $('rtab').querySelectorAll('th[data-rs]').forEach(th=>th.onclick=()=>{const k=th.dataset.rs;RSORT=RSORT.k!==k?{k,dir:1}:RSORT.dir===1?{k,dir:-1}:{k:'',dir:0};page=0;renderRecs()});
   $('rtab').querySelectorAll('[data-emr]').forEach(b=>b.onclick=ev=>{ev.stopPropagation();emergResumen(b.dataset.emr)});
   $('rtab').querySelectorAll('[data-emv]').forEach(b=>b.onclick=ev=>{ev.stopPropagation();vincularReporteUI(b.dataset.emv)});
   $('rtab').querySelectorAll('[data-emd]').forEach(b=>b.onclick=ev=>{ev.stopPropagation();eliminarEmergenciaUI(b.dataset.emd)});
@@ -1400,7 +1412,7 @@ function editForm(r){
   };
 }
 /* foto en grande al tocar una miniatura */
-document.addEventListener('click',e=>{const im=e.target.closest&&e.target.closest('.fotos img');if(!im||!im.src)return;
+document.addEventListener('click',e=>{const im=e.target.closest&&e.target.closest('.fotos img');if(!im||!im.src||im.classList.contains('zoomf'))return;   /* las miniaturas del detalle ya abren el visor principal; este queda para las demás fotos */
   const all=[...im.parentNode.querySelectorAll('img')];let i=all.indexOf(im);
   const o=document.createElement('div');o.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:12px';
   const g=document.createElement('img');g.style.cssText='max-width:96vw;max-height:80vh;object-fit:contain';const t=document.createElement('div');t.style.cssText='color:#fff;font-size:14px;text-align:center;max-width:90vw';
@@ -3508,7 +3520,7 @@ function renderAnios(){
       '<p class="derived">'+datos.map((d,i)=>'<span style="color:'+YCOL[i%YCOL.length]+'">■</span> '+d.y).join(' &nbsp; ')+'</p>';
     h+='<div class="dl"><button class="btn alt sm" id="anios-csv">Descargar esta tabla (Excel/CSV)</button><button class="btn alt sm" id="anios-png">Descargar gráfico (PNG)</button></div>';
   }
-  h+='<p class="derived" style="margin-top:6px">'+(YACT?'<b>Los gráficos y cuadros de abajo muestran '+(sel.length>1?'estos años, uno al lado del otro':'este año')+'.</b> <button class="btn alt sm" id="anios-rs" type="button">Volver al periodo de arriba</button>':'Los gráficos de abajo siguen el periodo elegido arriba. Marque o desmarque años aquí para verlos por año.')+'</p>';
+  h+='<p class="derived" style="margin-top:6px">'+(YACT?'<b>Los gráficos y cuadros de abajo muestran '+(sel.length>1?'estos años, uno al lado del otro':'este año')+'.</b> <button class="btn alt sm" id="anios-rs" type="button">Volver al periodo de estadística</button>':'Los gráficos de abajo siguen el periodo elegido arriba. Marque o desmarque años aquí para verlos por año.')+'</p>';
   box.innerHTML=h+'</div>';
   box.querySelectorAll('[data-y]').forEach(i=>i.onchange=()=>{YACT=true;i.checked?YSEL.add(i.dataset.y):YSEL.delete(i.dataset.y);renderPanel()});
   box.querySelectorAll('[name=ymode]').forEach(i=>i.onchange=()=>{YMODE=i.value;lsSet('cbv_ymode',YMODE);YACT=true;renderPanel()});
@@ -4508,7 +4520,7 @@ window.addEventListener('message',async ev=>{const m=ev.data||{};if(!m)return;
 /* ================= Orden de cualquier listado: toque el encabezado de una columna (otra vez invierte; una tercera quita el orden) ================= */
 (function(){
   const ST=new Map();             // clave de tabla → {col,dir}
-  const NOSORT='table.heat,table[data-nosort],table#heat';
+  const NOSORT='table.heat,table[data-nosort],table#heat,table#rtab';
   const clave=t=>{const p=t.closest('[id]');return (t.id||'')+'|'+(p?p.id:'')+'|'+[...t.querySelectorAll('th')].map(x=>x.textContent.replace(/[\s▲▼↕]+$/,'').trim()).join('/').slice(0,120)};
   const celda=td=>{if(!td)return '';
     const i=td.querySelector('input:not([type=checkbox]):not([type=radio]),textarea'),s=td.querySelector('select'),c=td.querySelector('input[type=checkbox]');
