@@ -201,31 +201,27 @@
   async function actividades(JSZip, tpl, { rows, titulo }) {
     rows = sortRows(rows);
     const zip = await load(JSZip, tpl);
-    let st = await zip.file('xl/styles.xml').async('string');
-    const m = st.match(/<cellXfs count="(\d+)">/);
-    const dateXf = +m[1];
-    st = st.replace(m[0], `<cellXfs count="${dateXf + 1}">`).replace('</cellXfs>', '<xf numFmtId="14" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf></cellXfs>');
-    zip.file('xl/styles.xml', st);
-    let s = await zip.file('xl/worksheets/sheet1.xml').async('string');
-    s = setCell(s, 'A1', titulo);
-    const head = s.slice(0, s.indexOf('<row r="3"'));
-    let tail = s.slice(s.indexOf('</sheetData>')).replace(/<sortState[\s\S]*?<\/sortState>/, '');
+    const HD = 11, TT = 12, TX = 13, DT = 14, L = 'ABCDEFGHIJKL';
+    const W = [20, 16, 26, 14, 16, 28, 24, 38, 14, 14, 18, 30];
+    const heads = ['N.° CONSECUTIVO', 'TIPO DE INCIDENTE', 'INCIDENTES Y ACTIVIDADES', 'DÍA DEL EVENTO', 'DURACIÓN DEL EVENTO', 'DIRECCIÓN O LUGAR DE REFERENCIA', 'BARRIO CORREGIMIENTO O VEREDA', 'DESCRIPCIÓN DEL EVENTO', 'AREA', 'N° DE UNIDADES QUE ASISTIERON', 'VEHÍCULO', 'COORDENADAS'];
+    const coordTxt = r => { const a = gmsLat(r.lat), o = gmsLon(r.lon); return a && o ? a + ' ' + o : (r.coord ? String(r.coord) : 'N/A'); };
     let body = '';
     rows.forEach((r, i) => {
-      const n = i + 3;
-      body += `<row r="${n}" spans="1:11" ht="${altoFila([[r.cat, 21], [na(r.dir), 21], [na(r.bar), 22], [na(r.desc), 23], [na(r.veh), 14]])}" customHeight="1">` + istr('A' + n, 2, r.tipo || 'OTROS') + istr('B' + n, 2, r.cat) + numc('C' + n, dateXf, serial(r.fecha)) + istr('D' + n, 2, durOf(r)) +
-        istr('E' + n, 2, na(r.dir)) + istr('F' + n, 2, na(r.bar)) + istr('G' + n, 2, na(r.desc)) + istr('H' + n, 2, na(r.area)) +
-        (r.uni != null && r.uni !== '' ? numc('I' + n, 2, +r.uni) : istr('I' + n, 2, 'N/A')) + istr('J' + n, 2, na(r.veh)) + istr('K' + n, 2, r.id || '') + '</row>';
+      const n = i + 3, co = coordTxt(r);
+      body += `<row r="${n}" ht="${altoFila([[r.cat, W[2]], [na(r.dir), W[5]], [na(r.bar), W[6]], [na(r.desc), W[7]], [na(r.veh), W[10]], [co, W[11]], [durOf(r), W[4]]])}" customHeight="1">` +
+        istr('A' + n, TX, r.src === 'app' && r.id ? r.id : 'N/A') + istr('B' + n, TX, r.tipo || 'OTROS') + istr('C' + n, TX, r.cat) + numc('D' + n, DT, serial(r.fecha)) + istr('E' + n, TX, durOf(r)) +
+        istr('F' + n, TX, na(r.dir)) + istr('G' + n, TX, na(r.bar)) + istr('H' + n, TX, na(r.desc)) + istr('I' + n, TX, na(r.area)) +
+        (r.uni != null && r.uni !== '' ? numc('J' + n, TX, +r.uni) : istr('J' + n, TX, 'N/A')) + istr('K' + n, TX, na(r.veh)) + istr('L' + n, TX, co) + '</row>';
     });
     const last = Math.max(rows.length + 2, 3);
-    let h = head.replace(/<dimension ref="[^"]*"\/>/, `<dimension ref="A1:K${last}"/>`);
-    h = h.replace(/(<c r="J2"[^>]*>[\s\S]*?<\/c>)/, '$1' + istr('K2', 4, 'N.° CONSECUTIVO')).replace('<col min="11" max="18" width="18.875" style="6" customWidth="1"/>', '<col min="11" max="11" width="19" style="2" customWidth="1"/><col min="12" max="18" width="18.875" style="6" customWidth="1"/>');
-    h = h.replace(/(<c r="J1" s=")10("\/>)/, '$19$2<c r="K1" s="10"/>')
-      .replace('<outlinePr summaryBelow="0" summaryRight="0"/>', '<outlinePr summaryBelow="0" summaryRight="0"/><pageSetUpPr fitToPage="1"/>');
-    tail = tail.replace('<mergeCell ref="F1:J1"/>', '<mergeCell ref="F1:K1"/>');
-    { const wb = await zip.file('xl/workbook.xml').async('string'); zip.file('xl/workbook.xml', wb.replace(/(Print_Area[^>]*>[^<]*?)\$J\$\d+/, '$1$K$' + Math.max(last, 3))); }
-    tail = tail.replace(/<pageSetup [^>]*?scale="80"/, m => m.replace('scale="80"', 'fitToWidth="1" fitToHeight="0"'));
-    zip.file('xl/worksheets/sheet1.xml', h + body + tail);
+    const r1 = `<row r="1" ht="30" customHeight="1">` + istr('A1', TT, titulo) + L.slice(1).split('').map(c => `<c r="${c}1" s="${TT}"/>`).join('') + '</row>';
+    const r2 = `<row r="2" ht="55" customHeight="1">` + heads.map((h, i) => istr(L[i] + '2', HD, h)).join('') + '</row>';
+    const xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>' +
+      `<dimension ref="A1:L${last}"/><sheetViews><sheetView tabSelected="1" workbookViewId="0"><pane ySplit="2" topLeftCell="A3" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/>` +
+      '<cols>' + W.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join('') + '</cols>' +
+      `<sheetData>${r1}${r2}${body}</sheetData><mergeCells count="1"><mergeCell ref="A1:L1"/></mergeCells><pageMargins left="0.4" right="0.4" top="0.4" bottom="0.4" header="0.3" footer="0.3"/><pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0" r:id="rId1"/></worksheet>`;
+    zip.file('xl/worksheets/sheet1.xml', xml);
+    { const wb = await zip.file('xl/workbook.xml').async('string'); zip.file('xl/workbook.xml', wb.replace(/(Print_Area[^>]*>[^<]*?)\$J\$\d+/, '$1$L$' + last)); }
     return out(zip);
   }
 
@@ -1382,10 +1378,40 @@ ${fotos.length ? `<div class="sec" style="page-break-before:always">14. REGISTRO
   const numCell = (col, n, s, v) => '<c r="' + col + n + '"' + (s ? ' s="' + s + '"' : '') + '><v>' + v + '</v></c>';
   const vacCell = (col, n, s) => '<c r="' + col + n + '"' + (s ? ' s="' + s + '"' : '') + '/>';
 
+  const colL = n => { let t = ''; while (n > 0) { const m = (n - 1) % 26; t = String.fromCharCode(65 + m) + t; n = Math.floor((n - 1) / 26); } return t; };
+  /* corre una referencia (A1, $B$2, C4:C18, B:B) una columna a la derecha */
+  const corre = rg => rg.replace(/(\$?)([A-Z]{1,3})(?=\$?\d|:|$)/g, (m0, d, c) => d + colL(colN(c) + 1));
+  const correForm = f => f.replace(/((?:'[^']+'|[A-Za-z_][\w.]*)!)?(\$?[A-Z]{1,3}(?:\$?\d+)?(?::\$?[A-Z]{1,3}(?:\$?\d+)?)?)(?![\w(])/g, (m0, pre, rg, off, all) => (pre || (off > 0 && /[\w.'!$]/.test(all[off - 1]))) ? m0 : corre(rg));
+  /* inserta la columna «N.° CONSECUTIVO» al inicio de la hoja del año y corre todo lo demás */
+  function insertarColA(xml, cons) {
+    const a0 = xml.indexOf('<sheetData>') + 11, a1 = xml.indexOf('</sheetData>');
+    let sd = xml.slice(a0, a1);
+    sd = sd.replace(/<row r="(\d+)"([^>]*?)(\/>|>([\s\S]*?)<\/row>)/g, (m0, rn, at, end, body) => {
+      at = at.replace(/ spans="[^"]*"/, '');
+      body = body || '';
+      const ca = body.match(/<c r="A\d+"([^>]*?)(?:\/>|>[\s\S]*?<\/c>)/);
+      const sA = ca ? (ca[1].match(/ s="(\d+)"/) || [])[1] : (at.match(/ s="(\d+)"/) || [])[1];
+      body = body.replace(/<c r="([A-Z]+)(\d+)"/g, (m1, c, r) => '<c r="' + colL(colN(c) + 1) + r + '"')
+        .replace(/<f>([^<]*)<\/f>/g, (m1, f) => '<f>' + correForm(f) + '</f>');
+      const nueva = +rn === 1 ? txtCell('A', rn, sA, 'N.° CONSECUTIVO') : (cons[rn] ? txtCell('A', rn, sA, cons[rn]) : vacCell('A', rn, sA));
+      return '<row r="' + rn + '"' + at + '>' + nueva + body + '</row>';
+    });
+    let o = xml.slice(0, a0) + sd + xml.slice(a1);
+    o = o.replace(/<dimension ref="A1:([A-Z]+)(\d+)"\/>/, (m0, c, r) => '<dimension ref="A1:' + colL(colN(c) + 1) + r + '"/>');
+    o = o.replace(/<cols>([\s\S]*?)<\/cols>/, (m0, cs) => {
+      const st1 = (cs.match(/<col min="1" max="1"[^>]*? style="(\d+)"/) || [])[1];
+      return '<cols><col min="1" max="1" width="22" ' + (st1 ? 'style="' + st1 + '" ' : '') + 'customWidth="1"/>' + cs.replace(/<col min="(\d+)" max="(\d+)"/g, (m1, a, b) => '<col min="' + (+a + 1) + '" max="' + Math.min(16384, +b + 1) + '"') + '</cols>';
+    });
+    o = o.replace(/<autoFilter ref="[A-Z]+1:([A-Z]+)1"/, (m0, c) => '<autoFilter ref="A1:' + colL(colN(c) + 1) + '1"');
+    o = o.replace(/<mergeCells count="\d+">([\s\S]*?)<\/mergeCells>/, (m0, ms) => { const l = (ms.match(/<mergeCell ref="[^"]*"\/>/g) || []).map(m => m.replace(/ref="([^"]*)"/, (m2, rg) => 'ref="' + corre(rg) + '"')); l.unshift('<mergeCell ref="A1:A2"/>'); return '<mergeCells count="' + l.length + '">' + l.join('') + '</mergeCells>'; });
+    o = o.replace(/<conditionalFormatting sqref="([^"]*)">([\s\S]*?)<\/conditionalFormatting>/g, (m0, sq, inner) => '<conditionalFormatting sqref="' + sq.split(' ').map(corre).join(' ') + '">' + inner.replace(/<formula>([^<]*)<\/formula>/g, (m1, f) => '<formula>' + correForm(f) + '</formula>') + '</conditionalFormatting>');
+    return o;
+  }
+
   /** opts: {anio, rows:[{cat,tipo,fecha,dir,bar,desc,area,uni,veh,lat,lon,durmin}]}  → {bytes, agregados, duplicados, sinFila[], hoja} */
   async function estadisticaInst(JSZip, tpl, opts) {
     const zip = await JSZip.loadAsync(tpl);
-    const wb = await zip.file('xl/workbook.xml').async('string');
+    let wb = await zip.file('xl/workbook.xml').async('string');
     const rels = await zip.file('xl/_rels/workbook.xml.rels').async('string');
     const hojas = {}; (wb.match(/<sheet [^>]*\/>/g) || []).forEach(s => { const n = unX((s.match(/name="([^"]*)"/) || [])[1]), id = (s.match(/r:id="([^"]*)"/) || [])[1]; const t = (rels.match(new RegExp('<Relationship [^>]*Id="' + id + '"[^>]*Target="([^"]*)"')) || rels.match(new RegExp('<Relationship [^>]*Target="([^"]*)"[^>]*Id="' + id + '"')) || [])[1]; hojas[n] = 'xl/' + t; });
     const anio = String(opts.anio), pathAnio = hojas[anio], pathDet = hojas['DETALLADO X MES ' + (Object.keys(hojas).filter(k => /^\d{4}$/.test(k)).sort().pop())] || hojas[Object.keys(hojas).find(k => /^DETALLADO/.test(k))], pathCon = hojas[Object.keys(hojas).find(k => /^CONSOLIDADO A.O \d{4}$/.test(k))];
@@ -1414,14 +1440,14 @@ ${fotos.length ? `<div class="sec" style="page-break-before:always">14. REGISTRO
     /* duplicados: misma fecha + categoría + inicio de la dirección */
     const clave = (n, cat, dir) => n + '|' + norm(cat) + '|' + norm(dir).slice(0, 14);
     const vistos = new Set(); bloques.forEach(b => b.datos.forEach(f => vistos.add(clave(f.fecha, f.cat, f.dir))));
-    const nuevos = [], dup = [], sinFila = [], otroAnio = [];
+    const nuevos = [], dup = [], sinFila = [], otroAnio = [], consPorClave = {}, consFila = {};
     (opts.rows || []).slice().sort((p, q) => String(p.fecha).localeCompare(String(q.fecha))).forEach(r => {
       const n = serial(r.fecha); if (n == null) return;
       if (String(r.fecha).slice(0, 4) !== anio) { otroAnio.push(r); return; }
       if (r.anulado) return;
       if (oficiales.size && !oficiales.has(norm(r.cat))) { sinFila.push(r); return; }
       const k = clave(n, r.cat, r.dir);
-      if (vistos.has(k)) { dup.push(r); return; }
+      if (vistos.has(k)) { dup.push(r); if (r.src === 'app' && r.id && !consPorClave[k]) consPorClave[k] = r.id; return; }
       vistos.add(k); nuevos.push({ r, n });
     });
     const altStyles = (b, idx) => (b.datos.length >= 2 ? b.datos[b.datos.length >= 2 && idx % 2 ? b.datos.length - 1 : b.datos.length - 2] : b.datos[0]);
@@ -1455,7 +1481,8 @@ ${fotos.length ? `<div class="sec" style="page-break-before:always">14. REGISTRO
         if (d.nuevoReg) {
           const { r } = d.nuevoReg, dn = d.donante, st = col => dn && dn.cells[col] ? dn.cells[col].s : undefined;
           const lugar = UP(r.dir) || '.', bar = UP(r.bar) || '.';
-          const coord = (r.lat !== '' && r.lat != null && r.lon !== '' && r.lon != null && isFinite(+r.lat)) ? (+r.lat).toFixed(6) + ', ' + (+r.lon).toFixed(6) : '.';
+          const coord = (r.lat !== '' && r.lat != null && r.lon !== '' && r.lon != null && isFinite(+r.lat) && isFinite(+r.lon)) ? GEN.gmsLat(r.lat) + ' ' + GEN.gmsLon(r.lon) : '.';
+          if (r.src === 'app' && r.id) consFila[rn] = r.id;
           const aPart = UP(r.area); const area = !aPart || aPart === 'N/A' ? '.' : aPart;
           const cel = [txtCell('A', rn, st('A'), UP(r.tipo)), txtCell('B', rn, st('B'), UP(r.cat)), k === 0 ? vacCell('C', rn, sPrim) : vacCell('C', rn, sResto), numCell('D', rn, st('D'), d.nuevoReg.n),
             txtCell('E', rn, st('E'), UP(r.dur_txt || durTxt(r.durmin))), txtCell('F', rn, st('F'), lugar), txtCell('G', rn, st('G'), bar), txtCell('H', rn, st('H'), UP(r.desc) || '.'), txtCell('I', rn, st('I'), area),
@@ -1466,6 +1493,9 @@ ${fotos.length ? `<div class="sec" style="page-break-before:always">14. REGISTRO
         } else {
           mapaViejo[d.r] = rn;
           let x = renum(d.xml, rn);
+          { const kk = clave(d.fecha, d.cat, d.dir); if (consPorClave[kk]) { consFila[rn] = consPorClave[kk]; consPorClave[kk] = null; } }
+          { const cv = String(valCelda(d.cells.L, ss) || '').trim(); const mc = /^(-?\d+(?:\.\d+)?)\s*[,;]\s*(-?\d+(?:\.\d+)?)$/.exec(cv);
+            if (mc && Math.abs(+mc[1]) <= 90 && Math.abs(+mc[2]) <= 180) { const sL = (d.cells.L && d.cells.L.s) || undefined; x = x.replace(/<c r="L\d+"[^>]*?(?:\/>|>[\s\S]*?<\/c>)/, txtCell('L', rn, sL, GEN.gmsLat(+mc[1]) + ' ' + GEN.gmsLon(+mc[2]))); } }
           x = x.replace(/<c r="C\d+"[^>]*?(?:\/>|>[\s\S]*?<\/c>)/, '<c r="C' + rn + '" s="' + (k === 0 ? sPrim : sResto) + '"/>');
           salida.push(x);
         }
@@ -1495,6 +1525,8 @@ ${fotos.length ? `<div class="sec" style="page-break-before:always">14. REGISTRO
     const mp = r => mapaViejo[r] || (r > 3 ? (r >= (total ? total.r : 1e9) ? mapaViejo[total.r] : ultimo) : r);
     nuevo = nuevo.replace(/(<conditionalFormatting sqref=")([^"]*)"/g, (m0, a, b) => a + b.split(' ').map(t => t.replace(/^([A-Z]+)(\d+)(?::([A-Z]+)(\d+))?$/, (m1, c1, r1, c2_, r2) => c2_ ? (+r2 >= 1048576 ? c1 + mp(+r1 > 559 ? hasta + 1 : +r1) + ':' + c2_ + r2 : c1 + mp(+r1) + ':' + c2_ + mp(+r2)) : c1 + mp(+r1))).join(' ') + '"');
     nuevo = nuevo.replace(/<pane [^>]*\/>/, '<pane ySplit="2" topLeftCell="A3" activePane="bottomLeft" state="frozen"/>').replace(/<selection pane="bottomLeft"[^>]*\/>/, '<selection pane="bottomLeft" activeCell="A3" sqref="A3"/>');
+    nuevo = insertarColA(nuevo, consFila);
+    wb = wb.replace(new RegExp("('" + anio + "'!\\$A\\$1:\\$)([A-Z]+)(\\$1)"), (m0, a, c, b) => a + colL(colN(c) + 1) + b);
     zip.file(pathAnio, nuevo);
 
     /* fórmulas mensuales del libro (hoja DETALLADO): SUM('año'!C a:C b) */
@@ -1519,6 +1551,13 @@ ${fotos.length ? `<div class="sec" style="page-break-before:always">14. REGISTRO
         });
         zip.file(pathDet, dx);
       }
+    }
+    /* las demás hojas que leen esta hoja (CONSOLIDADO, DETALLADO) pasan a la columna siguiente */
+    for (const f of Object.keys(zip.files).filter(n => /^xl\/worksheets\/sheet\d+\.xml$/.test(n) && n !== pathAnio)) {
+      const x0 = await zip.file(f).async('string');
+      const reF = new RegExp("('" + anio + "'!)(\\$?[A-Z]{1,3}(?:\\$?\\d+)?(?::\\$?[A-Z]{1,3}(?:\\$?\\d+)?)?)", 'g');
+      const x1 = x0.replace(/<f([^>]*)>([^<]*)<\/f>/g, (m0, at, ft) => '<f' + at + '>' + ft.replace(reF, (m1, pre, rg) => pre + corre(rg)) + '</f>');
+      if (x1 !== x0) zip.file(f, x1);
     }
     /* recálculo al abrir; se retira la cadena de cálculo (Excel la reconstruye) */
     let wbx = wb.replace(/<calcPr[^>]*\/>/, '<calcPr calcId="191029" iterateDelta="1E-4" fullCalcOnLoad="1"/>');
