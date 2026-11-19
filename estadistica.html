@@ -866,25 +866,26 @@ async function informe(btn){
     const sn=await snifBuild(per);
     if(sn)z.file(dir+'4 FORMATO INCENDIOS FORESTALES SNIF - '+per.file+'.xlsm',sn.data);
     const conF=rows.filter(r=>r.src==='app'&&r.nfotos);
-    let ph=[];
+    let ph=0;
     if(conF.length){
       m.textContent='Buscando fotografías…';
-      const meta=await metaDe(conF.map(r=>r.tmp));
-      const lista=[];conF.forEach(r=>(meta[r.tmp]||[]).forEach(x=>lista.push({...x,_r:r})));
-      const got=await bajar(lista,(a,b)=>{m.textContent='Reuniendo fotografías ('+a+' de '+b+')…'});
-      ph=await paraDocx(got,x=>tituloFoto(x._r));
-    }
-    if(ph.length){
-      const P=84,partes=Math.ceil(ph.length/P);
-      for(let k=0;k<partes;k++){
-        m.textContent='Armando anexo fotográfico '+(k+1)+' de '+partes+'…';
-        z.file(dir+'3 ANEXO FOTOGRAFICO - '+per.file+(partes>1?' (parte '+(k+1)+' de '+partes+')':'')+'.docx',await GEN.fotografico(JSZip,await tpl('registro_fotografico.docx'),{titulo:('ANEXO FOTOGRÁFICO · '+per.label+(partes>1?' · parte '+(k+1)+' de '+partes:'')).toUpperCase().slice(0,120),fotos:ph.slice(k*P,(k+1)*P)}));
+      const meta=await metaDe(conF.map(r=>r.tmp));const items=[];let k=0;
+      for(const r of conF){
+        m.textContent='Reuniendo fotografías ('+(++k)+' de '+conF.length+' emergencias)…';
+        const got=await bajar((meta[r.tmp]||[]).slice(0,3));
+        const fp=await paraDocx(got,x=>x.desc||tc(r.cat));
+        if(fp.length){items.push({titulo:tituloFoto(r),fotos:fp});ph+=fp.length}
+      }
+      const P=25,partes=Math.ceil(items.length/P);
+      for(let i=0;i<partes;i++){
+        m.textContent='Armando registro fotográfico '+(i+1)+' de '+partes+'…';
+        z.file(dir+'3 REGISTRO FOTOGRAFICO - '+per.file+(partes>1?' (parte '+(i+1)+' de '+partes+')':'')+'.docx',await GEN.fotograficoMulti(JSZip,await tpl('registro_fotografico.docx'),items.slice(i*P,(i+1)*P)));
       }
     }
     m.textContent='Comprimiendo…';
     const out=await z.generateAsync({type:'uint8array',compression:'DEFLATE'});
     await save('INFORME '+per.file+'.zip',out);
-    m.textContent='Listo: '+rows.length+' registros'+(ph.length?' y '+ph.length+' fotografías':', sin fotografías en este periodo')+'.';
+    m.textContent='Listo: '+rows.length+' registros'+(ph?' y '+ph+' fotografías':', sin fotografías en este periodo')+'.';
   });
   btn.disabled=false;
 }
