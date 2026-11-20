@@ -94,6 +94,7 @@ textarea{min-height:76px;resize:vertical}
 table{border-collapse:collapse;width:100%;font-size:13.5px}
 th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
 th{font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);background:var(--bg);white-space:nowrap}
+.cmpw{overflow-x:auto;border:1px solid var(--line);background:var(--surface,#fff)}#est-anios fieldset.aud label{min-width:0;flex-direction:row;white-space:nowrap}#est-anios fieldset.aud input{width:auto;min-height:0;margin:0}.cmpy td,.cmpy th{vertical-align:middle}.cmpy td.n,.cmpy th.n{line-height:1.25;min-width:170px;width:170px}.cmpy .cy-n{display:block;font-size:15px}.cmpy .cy-s{display:block;font-size:11.5px;color:var(--muted)}.cmpy th .sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px}.cmpy td:first-child,.cmpy th:first-child{position:sticky;left:0;background:var(--surface,#fff);z-index:2;white-space:normal;min-width:150px}.cmpy td+td,.cmpy th+th{border-left:1px solid var(--line)}
 td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 tr.tot td{font-weight:600;background:var(--bg)}
 tr:last-child td{border-bottom:0}
@@ -3534,11 +3535,12 @@ function renderAnios(){
     const a=datos[0],z=datos[datos.length-1];
     const vr=(p,c)=>p>0?{t:(c>p?'▲ +':c<p?'▼ ':'= ')+(((c-p)/p)*100).toLocaleString('es-CO',{maximumFractionDigits:0})+' %',cl:c>p?'up':c<p?'down':''}:(c>0?{t:'▲ nuevo',cl:'up'}:{t:'—',cl:''});
     const tots=datos.map(d=>d.rows.length),pc=(x,i)=>tots[i]?pf(x/tots[i]):'0,0 %';
-    h+='<div class="tw"><table><tr><th rowspan="2">Categoría</th>'+datos.map((d,i)=>'<th class="n" colspan="'+(i?3:2)+'">'+d.y+'</th>').join('')+(sel.length>2?'<th class="n" rowspan="2">'+z.y+' vs '+a.y+'</th>':'')+'</tr><tr>'+datos.map((d,i)=>i?'<th class="n">Cantidad</th><th class="n">% incidencia</th><th class="n">Variación vs '+datos[i-1].y+'</th>':'<th class="n">Cantidad</th><th class="n">% incidencia</th>').join('')+'</tr>';
+    h+='<p class="derived" style="margin:6px 0 4px"><b>Cómo leer cada casilla:</b> el número grande es la <b>cantidad</b> de ese año; debajo, su <b>% de incidencia</b> (parte de la categoría en el total del año) y la <b>variación</b> frente al año de la columna anterior.</p>';
+    h+='<div class="cmpw"><table class="cmpy"><thead><tr><th>Categoría</th>'+datos.map((d,i)=>'<th class="n"><span class="sw" style="background:'+YCOL[i%YCOL.length]+'"></span>'+d.y+'</th>').join('')+(sel.length>2?'<th class="n">'+z.y+' vs '+a.y+'</th>':'')+'</tr></thead><tbody>';
     const fila=(nom,fn,cls)=>{const q=datos.map(d=>fn(d.rows));
-      return '<tr'+(cls?' class="'+cls+'"':'')+'><td>'+esc(nom)+'</td>'+q.map((x,i)=>{const base='<td class="n">'+nf.format(x)+'</td><td class="n">'+pc(x,i)+'</td>';if(!i)return base;const v=vr(q[i-1],x);return base+'<td class="n '+v.cl+'">'+v.t+'</td>'}).join('')+(sel.length>2?(()=>{const v=vr(q[0],q[q.length-1]);return '<td class="n '+v.cl+'">'+v.t+'</td>'})():'')+'</tr>'};
+      return '<tr'+(cls?' class="'+cls+'"':'')+'><td>'+esc(nom)+'</td>'+q.map((x,i)=>{const v=i?vr(q[i-1],x):null;return '<td class="n"><b class="cy-n">'+nf.format(x)+'</b><span class="cy-s">'+pc(x,i)+(v?' · <span class="'+v.cl+'">'+v.t+'</span>':'')+'</span></td>'}).join('')+(sel.length>2?(()=>{const v=vr(q[0],q[q.length-1]);return '<td class="n"><b class="'+v.cl+'">'+v.t+'</b></td>'})():'')+'</tr>'};
     cats.forEach(c=>h+=fila(c,rows=>rows.filter(r=>r.cat===c).length));
-    h+=fila('TOTAL',rows=>rows.length,'tot')+'</table></div>';
+    h+=fila('TOTAL',rows=>rows.length,'tot')+'</tbody></table></div>';
     if(per.p==='mes'){
       const top=cats.slice().sort((x,y)=>datos.reduce((t,d)=>t+d.rows.filter(r=>r.cat===y).length,0)-datos.reduce((t,d)=>t+d.rows.filter(r=>r.cat===x).length,0)).slice(0,8);
       h+='<div class="gsvg">'+svgBarras({labels:top.map(c=>tc(c).slice(0,12)),series:datos.map((d,i)=>({n:d.y,c:YCOL[i%YCOL.length],v:top.map(c=>d.rows.filter(r=>r.cat===c).length)})),alt:'Comparación por categoría en '+mesNom+' de los años '+sel.join(', '),maxEt:8})+'</div>';
