@@ -305,16 +305,13 @@ table th{position:relative}
           <p class="derived" style="margin-top:8px" id="dlmsg"></p>
         </div>
         <div class="chart"><h3>Incidentes por mes</h3><div id="cm"></div></div>
-        <div>
-          <div class="tools" style="margin-bottom:6px"><label style="min-width:0;display:flex;align-items:center;gap:8px;flex-direction:row"><input type="checkbox" id="fcmp" checked style="width:auto"> Comparar con el mismo periodo del año anterior</label></div>
-          <div class="scroll"><table id="ctab"></table></div>
-        </div>
+        <div id="est-anios" class="sec"></div>
         <div id="est-nuevo" class="sec"></div>
         <div class="card"><h3>Tiempos de respuesta</h3><p class="derived" id="tr-sum"></p><div class="scroll"><table id="trtab"></table></div></div>
         <div class="card"><h3>Cuándo ocurren: día de la semana por mes</h3><div class="scroll"><table id="heat" class="heat"></table></div></div>
         <div class="card"><h3>Dónde ocurren: barrios y veredas con más eventos</h3><div class="scroll"><table id="barr"></table></div></div>
         <div class="card"><h3>Uso de vehículos</h3><div class="scroll"><table id="vtab"></table></div></div>
-        <div id="est-anios" class="sec"></div>
+        <div id="est-temp" class="sec"></div>
       </div>
 
       <div id="p-reg" class="sec" hidden>
@@ -572,7 +569,7 @@ async function initPanel(){
   const m=(()=>{try{return sessionStorage.getItem('cbv_msg')}catch(e){return ''}})();if(m){note(m);try{sessionStorage.removeItem('cbv_msg')}catch(e){}}
   fillFilters();
   $('ptabs').onclick=e=>{const b=e.target.closest('button');if(b)showTab(b.dataset.p)};
-  ['fper','fanio','fmes','fd1','fd2','ftipo','fcat','fcmp'].forEach(id=>$(id).onchange=()=>{togglePer();renderPanel();if(!$('p-calor').hidden)drawCalor()});
+  ['fper','fanio','fmes','fd1','fd2','ftipo','fcat'].forEach(id=>$(id).onchange=()=>{togglePer();renderPanel();if(!$('p-calor').hidden)drawCalor()});
   $('q').oninput=()=>{page=0;renderRecs()};$('prev').onclick=()=>{page=Math.max(0,page-1);renderRecs()};$('next').onclick=()=>{page++;renderRecs()};
   $('gen').onclick=()=>informe($('gen'));$('gen-snif').onclick=()=>snifSolo($('gen-snif'));
   $('refresh').onclick=async()=>{const b=$('refresh');b.disabled=true;b.classList.add('girando');try{await loadAll();renderPanel();try{ROSTERD=null}catch(e){}try{await pollVivo()}catch(e){}try{await pollPend()}catch(e){}try{await pollNotif()}catch(e){}toast('Información actualizada ('+new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'})+').')}catch(e){toast('No se pudo actualizar: '+humanErr(e),1)}finally{b.disabled=false;b.classList.remove('girando')}};
@@ -671,7 +668,7 @@ let CUR=[],page=0;
 function renderPanel(){
   const per=period();CUR=filtered(per,false);
   const prev=per.p==='todo'?null:filtered(per,true);
-  $('fsum').innerHTML='<b>Está viendo:</b> '+esc(per.label)+(filtroTxt()?' · '+esc(filtroTxt()):'')+' · <b>'+nf.format(CUR.length)+' registros</b>. Todo lo de esta pestaña (cifras, cuadros y gráficos) usa este periodo; para ver otros años use «Comparación entre años», al final.';
+  $('fsum').innerHTML='<b>Está viendo:</b> '+esc(per.label)+(filtroTxt()?' · '+esc(filtroTxt()):'')+' · <b>'+nf.format(CUR.length)+' registros</b>. Todo lo de esta pestaña (cifras, cuadros y gráficos) usa este periodo; para ver otros años use «Comparación entre años», justo debajo de «Incidentes por mes».';
   const cnt=c=>CUR.filter(r=>r.cat===c).length,cntP=c=>prev?prev.filter(r=>r.cat===c).length:0;
   const tot=CUR.length,top=CATS.map(c=>[c,cnt(c)]).sort((a,b)=>b[1]-a[1])[0];
   const months=new Set(CUR.map(r=>r.fecha.slice(0,7))).size;
@@ -680,14 +677,6 @@ function renderPanel(){
     ['Promedio por mes',months?(tot/months).toLocaleString('es-CO',{maximumFractionDigits:1}):'—','en '+months+' meses con registros'],
     ['Contra el año anterior',dv==null?'—':(dv>0?'▲ +':'▼ ')+(dv*100).toLocaleString('es-CO',{maximumFractionDigits:0})+' %',prev?nf.format(prev.length)+' en el periodo anterior':'']]
     .map((k,i)=>'<div class="kpi"><div class="v'+(i===1?' s':'')+'">'+esc(k[1])+'</div><div class="k">'+esc(k[0])+(k[2]?' · '+esc(k[2]):'')+'</div></div>').join('');
-  const cmp=$('fcmp').checked&&prev;
-  let h='<tr><th>Emergencias</th><th class="n">Cantidad</th><th class="n">% incidencia</th>'+(cmp?'<th class="n">Año anterior</th><th class="n">Variación</th>':'')+'</tr>';
-  CATS.forEach(c=>{const q=cnt(c);let extra='';
-    if(cmp){const p=cntP(c);let v='—',cl='';if(p>0){const d=(q-p)/p;v=(d>0?'▲ +':d<0?'▼ ':'= ')+(d*100).toLocaleString('es-CO',{maximumFractionDigits:0})+' %';cl=d>0?'up':d<0?'down':''}else if(q>0){v='▲ nuevo';cl='up'}
-      extra='<td class="n">'+p+'</td><td class="n '+cl+'">'+v+'</td>'}
-    h+='<tr><td>'+esc(c)+'</td><td class="n">'+q+'</td><td class="n">'+(tot?pf(q/tot):'0,0 %')+'</td>'+extra+'</tr>'});
-  h+='<tr class="tot"><td>TOTAL</td><td class="n">'+nf.format(tot)+'</td><td class="n">'+(tot?'100,0 %':'0,0 %')+'</td>'+(cmp?'<td class="n">'+nf.format(prev.length)+'</td><td class="n"></td>':'')+'</tr>';
-  $('ctab').innerHTML=h;
   drawMonths();page=0;renderRecs();renderExtras();
   if(!$('p-per').hidden)renderPers();
 }
@@ -3101,6 +3090,16 @@ function renderEstNuevo(){
     if(lp.length)h+=tarjetaGrafico('g-pers','Personal con más asistencias ('+per.label+')','<b>Qué muestra:</b> las '+lp.length+' personas que más veces figuran atendiendo emergencias y actividades en el periodo ('+esc(per.label)+'), con el número de asistencias y las horas acumuladas. <b>Cómo leerlo:</b> cuenta cada registro en que la persona fue marcada en el formulario; las horas suman la duración de esos registros. Sirve para reconocer la participación y repartir la carga.',svgHoriz(lp.map(([k,v])=>[k,v.n,v.n+' · '+(v.m?(v.m/60).toLocaleString('es-CO',{maximumFractionDigits:1})+' h':'sin horas')])));
     else h+='<div class="chart" id="g-pers"><h3>Personal con más asistencias ('+esc(per.label)+')</h3><p class="exp2">En este periodo ningún registro tiene personal marcado.</p></div>';
   }
+  /* 7b. reincidencia por sector y por dirección */
+  if(tot){
+    const nbz=x=>String(x||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/\b(BARRIO|BR|B\/|VEREDA|CORREGIMIENTO|CORREJIMIENTO|DE|DEL|LA|EL|LAS|LOS)\b/g,' ').replace(/[^A-Z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+    const tit=x=>String(x||'').toLowerCase().replace(/(^|\s)\S/g,c=>c.toUpperCase());
+    const agr=(campoFn,nomFn)=>{const o={};cur.forEach(r=>{const k=campoFn(r);if(!k||k.length<3||/^(N A|NA|SIN DATO)$/.test(k))return;const q=o[k]=o[k]||{n:0,nom:nomFn(r),c:{},f:[]};q.n++;q.c[r.cat]=(q.c[r.cat]||0)+1;q.f.push(r.fecha)});return Object.values(o).filter(x=>x.n>=2).sort((a,b)=>b.n-a.n).slice(0,10)};
+    const secs=agr(r=>nbz(r.bar),r=>r.bar),dirs=agr(r=>nbz(r.dir).slice(0,40),r=>r.dir);
+    const cats=o=>Object.entries(o.c).sort((a,b)=>b[1]-a[1]).slice(0,2).map(([k,v])=>tc(k)+' ('+v+')').join(', ');
+    const tabla=(l,cab)=>l.length?'<div class="scroll"><table><tr><th>'+cab+'</th><th class="n">Veces</th><th>Qué se repite</th><th>Última vez</th></tr>'+l.map(o=>'<tr><td>'+esc(tit(o.nom))+'</td><td class="n"><b>'+o.n+'</b></td><td>'+esc(cats(o))+'</td><td>'+esc(GEN.dmy(o.f.slice().sort().pop()))+'</td></tr>').join('')+'</table></div>':'<p class="derived">Ningún sector se repite en este periodo.</p>';
+    h+='<div class="chart" id="g-reinc"><h3>Reincidencia: dónde se repite la emergencia ('+esc(per.label)+')</h3><p class="exp2"><b>Qué muestra:</b> los barrios o veredas y las direcciones que aparecen <b>2 veces o más</b> en el periodo, con la categoría que más se repite. <b>Cómo leerlo:</b> un sector con la misma categoría varias veces (cortos circuitos, caída de árboles, fugas, quemas) es candidato a una acción de prevención: inspección, poda, visita casa a casa o campaña. Se agrupan nombres escritos de forma parecida.</p><h4 style="margin:8px 0 4px">Barrios y veredas</h4>'+tabla(secs,'Barrio o vereda')+'<h4 style="margin:10px 0 4px">Direcciones</h4>'+tabla(dirs,'Dirección')+'</div>';
+  }
   /* 8. incendios forestales: área afectada, tipo y causa */
   if(!$('fcat').value||$('fcat').value==='INCENDIO FORESTAL'){
     let it=[];try{it=snifItems(per.from,per.to).items}catch(e){}
@@ -3124,13 +3123,11 @@ function renderEstNuevo(){
     const t=cm.previousElementSibling;t.textContent='Incidentes por mes ('+per.label+')';
     const p=document.createElement('p');p.className='exp2';p.innerHTML='<b>Qué muestra:</b> los registros de cada mes dentro del periodo elegido arriba ('+esc(per.label)+'). <b>Cómo leerlo:</b> las barras más altas son los meses con más trabajo.';t.after(p);
     const d=document.createElement('div');d.className='dl';d.innerHTML='<button class="btn alt sm" id="dg-cm">Descargar este gráfico (imagen PNG)</button>';cm.after(d);d.firstChild.onclick=()=>descargarGrafico(cm.querySelector('svg'),'GRAFICO POR MES - '+per.file,'Incidentes por mes ('+per.label+')');
-  }else if(cm&&$('dg-cm')){cm.previousElementSibling.previousElementSibling.textContent='Incidentes por mes ('+per.label+')'}
+  }else if(cm&&$('dg-cm')){const t=cm.previousElementSibling.previousElementSibling;t.textContent='Incidentes por mes ('+per.label+')';const pe=t.nextElementSibling;if(pe&&pe.classList.contains('exp2'))pe.innerHTML='<b>Qué muestra:</b> los registros de cada mes dentro del periodo elegido arriba ('+esc(per.label)+'). <b>Cómo leerlo:</b> las barras más altas son los meses con más trabajo.';$('dg-cm').onclick=()=>descargarGrafico(cm.querySelector('svg'),'GRAFICO POR MES - '+per.file,'Incidentes por mes ('+per.label+')')}
   /* cuadro comparativo: se dice exactamente qué años se comparan */
   const prevLbl=per.p==='anio'?'Año '+(+$('fanio').value-1):per.p==='mes'?MES[+per.from.slice(5,7)-1]+' '+(+per.from.slice(0,4)-1):per.p==='rango'?GEN.dmy(shiftYear(per.from,-1))+' al '+GEN.dmy(shiftYear(per.to,-1)):'';
   if(prevLbl){
-    const ct=$('ctab');if(ct){const ths=ct.querySelectorAll('tr:first-child th');ths.forEach(t=>{if(t.textContent==='Cantidad')t.textContent='Cantidad ('+per.label+')';if(t.textContent==='Año anterior')t.textContent='Cantidad ('+prevLbl+')';if(t.textContent==='Variación')t.textContent='Variación frente a '+prevLbl})}
     document.querySelectorAll('#kpis .k').forEach(k=>{if(/^Contra el año anterior/.test(k.textContent))k.textContent='Contra '+prevLbl+' · '+nf.format(filtered(per,true).length)+' registros'});
-    const lb=$('fcmp')&&$('fcmp').parentNode;if(lb&&lb.lastChild&&lb.lastChild.nodeType===3)lb.lastChild.textContent=' Comparar '+per.label+' con '+prevLbl;
   }
 }
 {const rp0=renderPanel;renderPanel=function(){rp0();try{renderEstNuevo()}catch(e){console.error(e)}}}
@@ -3526,7 +3523,7 @@ function renderAnios(){
   const sel=ys.filter(y=>YSEL.has(y));
   const mesNom=per.p==='mes'?MES[+per.from.slice(5,7)-1]:'';
   const cuando=per.p==='mes'?'el mes de '+mesNom.toLowerCase():per.p==='rango'?'el rango del '+GEN.dmy(per.from).slice(0,5)+' al '+GEN.dmy(per.to).slice(0,5):(YMODE==='ytd'?'el año del 1 de enero al '+GEN.dmy(hoy).slice(0,5):'el año completo');
-  let h='<div class="chart" id="g-compar"><h3>Comparación entre años: '+esc(cuando)+'</h3><p class="exp2"><b>Qué muestra:</b> '+esc(cuando)+' contado en cada año que marque, uno al lado del otro. Es el mismo periodo que eligió arriba, repetido en otros años'+(per.p==='todo'?' (con «Todo el histórico» se comparan años completos)':'')+'. <b>Esta sección no cambia los gráficos de arriba</b>, que siempre usan el periodo elegido en la parte superior.</p>';
+  let h='<div class="chart" id="g-compar"><h3>Comparación entre años: '+esc(cuando)+'</h3><p class="exp2"><b>Qué muestra:</b> '+esc(cuando)+' contado en cada año que marque, uno al lado del otro, con la <b>variación en %</b> de cada año frente al año marcado anterior'+(per.p==='todo'?' (con «Todo el histórico» se comparan años completos)':'. Es el mismo periodo que eligió arriba, repetido en otros años')+'. <b>Esta sección no cambia los gráficos de arriba</b>, que siempre usan el periodo elegido en la parte superior.</p>';
   if(per.p==='rango'&&per.from.slice(0,4)!==per.to.slice(0,4)){box.innerHTML=h+'<p class="derived">El rango elegido abarca varios años, así que no se puede repetir en cada año. Elija un año, un mes o un rango dentro de un mismo año.</p></div>';return}
   h+='<div class="tools"><fieldset class="aud" style="margin:0"><legend>Años a comparar</legend>'+ys.map(y=>'<label><input type="checkbox" data-y="'+y+'"'+(YSEL.has(y)?' checked':'')+'> '+y+'</label>').join('')+'</fieldset>'+
     ((per.p==='anio'||per.p==='todo')?'<fieldset class="aud" style="margin:0"><legend>Cómo contar cada año</legend><label><input type="radio" name="ymode" value="completo"'+(YMODE==='completo'?' checked':'')+'> Año completo</label><label><input type="radio" name="ymode" value="ytd"'+(YMODE==='ytd'?' checked':'')+'> Hasta hoy ('+GEN.dmy(hoy).slice(0,5)+')</label></fieldset>':'')+'</div>';
@@ -3535,9 +3532,11 @@ function renderAnios(){
   if(sel.length<1)h+='<p class="derived">Marque al menos un año.</p>';
   else{
     const a=datos[0],z=datos[datos.length-1];
-    h+='<div class="tw"><table><tr><th>Categoría</th>'+datos.map(d=>'<th class="n">'+d.y+'</th>').join('')+(sel.length>1?'<th class="n">'+z.y+' vs '+a.y+'</th>':'')+'</tr>';
-    const fila=(nom,fn,cls)=>{const q=datos.map(d=>fn(d.rows));let v='';if(sel.length>1){const p=q[0],c=q[q.length-1];v=p>0?(c>p?'▲ +':c<p?'▼ ':'= ')+(((c-p)/p)*100).toLocaleString('es-CO',{maximumFractionDigits:0})+' %':(c>0?'▲ nuevo':'—')}
-      return '<tr'+(cls?' class="'+cls+'"':'')+'><td>'+esc(nom)+'</td>'+q.map(x=>'<td class="n">'+nf.format(x)+'</td>').join('')+(sel.length>1?'<td class="n">'+v+'</td>':'')+'</tr>'};
+    const vr=(p,c)=>p>0?{t:(c>p?'▲ +':c<p?'▼ ':'= ')+(((c-p)/p)*100).toLocaleString('es-CO',{maximumFractionDigits:0})+' %',cl:c>p?'up':c<p?'down':''}:(c>0?{t:'▲ nuevo',cl:'up'}:{t:'—',cl:''});
+    const tots=datos.map(d=>d.rows.length),pc=(x,i)=>tots[i]?pf(x/tots[i]):'0,0 %';
+    h+='<div class="tw"><table><tr><th rowspan="2">Categoría</th>'+datos.map((d,i)=>'<th class="n" colspan="'+(i?3:2)+'">'+d.y+'</th>').join('')+(sel.length>2?'<th class="n" rowspan="2">'+z.y+' vs '+a.y+'</th>':'')+'</tr><tr>'+datos.map((d,i)=>i?'<th class="n">Cantidad</th><th class="n">% incidencia</th><th class="n">Variación vs '+datos[i-1].y+'</th>':'<th class="n">Cantidad</th><th class="n">% incidencia</th>').join('')+'</tr>';
+    const fila=(nom,fn,cls)=>{const q=datos.map(d=>fn(d.rows));
+      return '<tr'+(cls?' class="'+cls+'"':'')+'><td>'+esc(nom)+'</td>'+q.map((x,i)=>{const base='<td class="n">'+nf.format(x)+'</td><td class="n">'+pc(x,i)+'</td>';if(!i)return base;const v=vr(q[i-1],x);return base+'<td class="n '+v.cl+'">'+v.t+'</td>'}).join('')+(sel.length>2?(()=>{const v=vr(q[0],q[q.length-1]);return '<td class="n '+v.cl+'">'+v.t+'</td>'})():'')+'</tr>'};
     cats.forEach(c=>h+=fila(c,rows=>rows.filter(r=>r.cat===c).length));
     h+=fila('TOTAL',rows=>rows.length,'tot')+'</table></div>';
     if(per.p==='mes'){
@@ -3550,10 +3549,28 @@ function renderAnios(){
   box.innerHTML=h+'</div>';
   box.querySelectorAll('[data-y]').forEach(i=>i.onchange=()=>{i.checked?YSEL.add(i.dataset.y):YSEL.delete(i.dataset.y);renderAnios()});
   box.querySelectorAll('[name=ymode]').forEach(i=>i.onchange=()=>{YMODE=i.value;lsSet('cbv_ymode',YMODE);renderAnios()});
-  const csv=$('anios-csv');if(csv)csv.onclick=()=>{const rows=[['Categoría'].concat(datos.map(d=>d.y))].concat(cats.map(c=>[c].concat(datos.map(d=>d.rows.filter(r=>r.cat===c).length)))).concat([['TOTAL'].concat(datos.map(d=>d.rows.length))]);
+  const csv=$('anios-csv');if(csv)csv.onclick=()=>{const vp=(p,c)=>p>0?(((c-p)/p)*100).toFixed(0)+' %':(c>0?'nuevo':'');const tt=datos.map(d=>d.rows.length),pj=(x,i)=>tt[i]?(x/tt[i]*100).toFixed(1)+' %':'0.0 %';const lin=(nom,q)=>[nom].concat(...q.map((x,i)=>i?[x,pj(x,i),vp(q[i-1],x)]:[x,pj(x,i)]));
+    const rows=[['Categoría'].concat(...datos.map((d,i)=>i?[d.y,'% incidencia '+d.y,'Variación vs '+datos[i-1].y]:[d.y,'% incidencia '+d.y]))].concat(cats.map(c=>lin(c,datos.map(d=>d.rows.filter(r=>r.cat===c).length)))).concat([lin('TOTAL',datos.map(d=>d.rows.length))]);
     const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+rows.map(r=>r.map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(';')).join('\n')],{type:'text/csv'}));a.download='comparacion-anios-'+sel.join('-')+'-'+cuando.replace(/\W+/g,'-')+'.csv';document.body.append(a);a.click();a.remove()};
   const png=$('anios-png');if(png)png.onclick=()=>descargarGrafico(box.querySelector('svg'),'COMPARACION AÑOS '+sel.join('-'),'Comparación entre años: '+cuando+' ('+sel.join(', ')+')');
 }
+/* Meses críticos: usa TODOS los años (solo respeta tipo y categoría), porque una temporada solo se ve con historia */
+function renderTemporada(){
+  const box=$('est-temp');if(!box)return;
+  const base=filtroAll();if(!base.length){box.innerHTML='';return}
+  const hoy=new Date(),ya=hoy.getFullYear(),mh=hoy.getMonth()+1;
+  const anios=[...new Set(base.map(r=>+r.fecha.slice(0,4)).filter(y=>y>=2000))].sort();
+  const nAn=m=>anios.filter(y=>y<ya||m<=mh).length||1;
+  const tot={};base.forEach(r=>{tot[r.cat]=(tot[r.cat]||0)+1});
+  const cats=Object.entries(tot).sort((a,b)=>b[1]-a[1]).slice(0,10).map(x=>x[0]);
+  const g=cats.map(c=>{const v=new Array(12).fill(0);base.forEach(r=>{if(r.cat===c)v[+r.fecha.slice(5,7)-1]++});return v.map((x,i)=>x/nAn(i+1))});
+  const mx=Math.max(0.0001,...g.flat());
+  const f=x=>x.toLocaleString('es-CO',{maximumFractionDigits:1});
+  const filas=g.map((v,i)=>{const pico=v.indexOf(Math.max(...v)),orden=v.map((x,j)=>[x,j]).sort((a,b)=>b[0]-a[0]).slice(0,2).filter(x=>x[0]>0);
+    return '<tr><td>'+esc(tc(cats[i]))+'</td>'+v.map((x,j)=>'<td class="n" title="'+esc(tc(cats[i]))+' · '+MES[j]+': '+f(x)+' por año" style="background:color-mix(in srgb,var(--accent) '+(x?Math.round(8+67*x/mx):0)+'%,transparent)">'+(x?f(x):'')+'</td>').join('')+'<td><b>'+orden.map(o=>MES[o[1]].slice(0,3).toLowerCase()).join(' y ')+'</b></td></tr>'}).join('');
+  box.innerHTML='<div class="chart" id="g-temp"><h3>Meses críticos por categoría (promedio por año, '+anios[0]+'–'+anios[anios.length-1]+')</h3><p class="exp2"><b>Qué muestra:</b> cuántos eventos de cada categoría se presentan, <b>en promedio por año</b>, en cada mes; la última columna marca los dos meses más cargados. <b>Cómo leerlo:</b> cuanto más oscuro el cuadro, más frecuente es esa categoría ese mes. Sirve para anticipar la temporada (por ejemplo, forestales en la época seca, avispas y abejas en ciertos meses) y preparar equipos y campañas con tiempo. <b>Ojo:</b> este cuadro usa <b>todos los años</b> con datos (no el periodo de arriba), porque una temporada solo se ve con historia; respeta el tipo y la categoría elegidos arriba. Los meses del año en curso que aún no llegan no cuentan.</p><div class="scroll"><table class="heat"><tr><th>Categoría</th>'+MES.map(m=>'<th class="n">'+m.slice(0,3).toLowerCase()+'</th>').join('')+'<th>Meses pico</th></tr>'+filas+'</table></div></div>';
+}
+{const rp2=renderPanel;renderPanel=function(){rp2();try{renderTemporada()}catch(e){console.error(e)}}}
 {const rp1=renderPanel;renderPanel=function(){rp1();try{renderAnios()}catch(e){console.error(e)}}}
 
 /* ================= V2.2 · un solo Histórico: archivo base, cargas y series en la misma pestaña ================= */
