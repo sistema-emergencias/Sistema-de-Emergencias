@@ -94,6 +94,7 @@ textarea{min-height:76px;resize:vertical}
 table{border-collapse:collapse;width:100%;font-size:13.5px}
 th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
 th{font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);background:var(--bg);white-space:nowrap}
+#est-orden{display:flex;flex-direction:column}#est-orden>*{min-width:0}#est-nuevo{display:contents}#est-orden #c-mes{order:1}#est-orden #est-anios{order:2}#est-orden #g-cat{order:3}#est-orden #g-tipo{order:4}#est-orden #g-cifras{order:5}#est-orden #g-hora{order:6}#est-orden #c-tiempos{order:7}#est-orden #c-heat{order:8}#est-orden #c-barr{order:9}#est-orden #g-reinc{order:10}#est-orden #est-temp{order:11}#est-orden #g-for-area{order:12}#est-orden #g-for-tipo{order:13}#est-orden #g-for-causa{order:14}#est-orden #c-veh{order:15}#est-orden #g-pers{order:16}
 .cmpw{overflow-x:auto;border:1px solid var(--line);background:var(--surface,#fff)}#est-anios fieldset.aud label{min-width:0;flex-direction:row;white-space:nowrap}#est-anios fieldset.aud input{width:auto;min-height:0;margin:0}.cmpy td,.cmpy th{vertical-align:middle}.cmpy td.n,.cmpy th.n{line-height:1.25;min-width:170px;width:170px}.cmpy .cy-n{display:block;font-size:15px}.cmpy .cy-s{display:block;font-size:11.5px;color:var(--muted)}.cmpy th .sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px}.cmpy td:first-child,.cmpy th:first-child{position:sticky;left:0;background:var(--surface,#fff);z-index:2;white-space:normal;min-width:150px}.cmpy td+td,.cmpy th+th{border-left:1px solid var(--line)}
 td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 tr.tot td{font-weight:600;background:var(--bg)}
@@ -305,14 +306,16 @@ table th{position:relative}
           <div class="dl rp-btns"><button class="btn" id="rp-com">Reporte Comandancia</button><button class="btn" id="rp-fa">Registro fotográfico y Registro de Actividades</button><button class="btn" id="gen-snif">Incendios Forestales</button><button class="btn" id="rp-est">Estadística Global</button><button class="btn" id="gen">Reportes en general</button></div>
           <p class="derived" style="margin-top:8px" id="dlmsg"></p>
         </div>
-        <div class="chart"><h3>Incidentes por mes</h3><div id="cm"></div></div>
+        <div id="est-orden">
+        <div class="chart" id="c-mes"><h3>Incidentes por mes</h3><div id="cm"></div></div>
         <div id="est-anios" class="sec"></div>
         <div id="est-nuevo" class="sec"></div>
-        <div class="card"><h3>Tiempos de respuesta</h3><p class="derived" id="tr-sum"></p><div class="scroll"><table id="trtab"></table></div></div>
-        <div class="card"><h3>Cuándo ocurren: día de la semana por mes</h3><div class="scroll"><table id="heat" class="heat"></table></div></div>
-        <div class="card"><h3>Dónde ocurren: barrios y veredas con más eventos</h3><div class="scroll"><table id="barr"></table></div></div>
-        <div class="card"><h3>Uso de vehículos</h3><div class="scroll"><table id="vtab"></table></div></div>
+        <div class="card" id="c-tiempos"><h3>Tiempos de respuesta</h3><p class="derived" id="tr-sum"></p><div class="scroll"><table id="trtab"></table></div></div>
+        <div class="card" id="c-heat"><h3>Cuándo ocurren: día de la semana por mes</h3><div class="scroll"><table id="heat" class="heat"></table></div></div>
+        <div class="card" id="c-barr"><h3>Dónde ocurren: barrios y veredas con más eventos</h3><div class="scroll"><table id="barr"></table></div></div>
+        <div class="card" id="c-veh"><h3>Uso de vehículos</h3><div class="scroll"><table id="vtab"></table></div></div>
         <div id="est-temp" class="sec"></div>
+        </div>
       </div>
 
       <div id="p-reg" class="sec" hidden>
